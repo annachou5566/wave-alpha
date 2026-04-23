@@ -3511,16 +3511,16 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     .btn-legal-accept { width: 100%; padding: 12px; }
 }
 
-/* Multiplier Path Styles - Đã update vệt chạy lấp đầy (Progress Fill) */
+/* --- UI MỚI CHO THANH EARLY BIRD --- */
 .multiplier-path-container {
-    margin-top: 6px;
+    margin-top: 4px;
     width: 140px;
     position: relative;
-    padding-bottom: 12px;
+    padding-bottom: 8px;
 }
 
 .multiplier-path-line {
-    height: 2px;
+    height: 3px;
     background: rgba(255, 255, 255, 0.1);
     width: 100%;
     position: relative;
@@ -3530,73 +3530,42 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     border-radius: 2px;
 }
 
-/* Vệt màu chạy lấp đầy thanh */
+/* Vệt màu chạy (Dùng gradient cho mượt) */
 .path-fill {
     position: absolute;
     top: 0;
     left: 0;
     height: 100%;
-    background: var(--brand); 
+    background: linear-gradient(90deg, rgba(0, 240, 255, 0.1), var(--brand));
     box-shadow: 0 0 5px var(--brand);
-    z-index: 0; /* Nằm dưới các dấu chấm */
+    z-index: 0;
     transition: width 0.5s ease-in-out;
     border-radius: 2px;
 }
 
-/* Chấm mốc ngày */
+/* Viên bi phát sáng dẫn đầu (Thay cho cờ) */
+.path-spark {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #fff, 0 0 15px var(--brand);
+    z-index: 5;
+    transition: left 0.5s ease-out;
+}
+
 .path-dot {
-    width: 6px;
-    height: 6px;
-    background: #333;
+    width: 4px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
     border-radius: 50%;
     position: relative;
-    z-index: 1; /* Nổi lên trên vệt màu */
-    transition: all 0.3s ease;
+    z-index: 1;
 }
 
-/* Ngày đã trôi qua */
 .path-dot.passed {
     background: var(--brand);
-    opacity: 0.5; /* Mờ đi để biết là đã nhận hệ số xong */
-}
-
-/* Ngày hiện tại (Active) */
-.path-dot.active {
-    background: var(--brand);
-    box-shadow: 0 0 10px var(--brand);
-    transform: scale(1.4); /* Phóng to nổi bật chấm của hôm nay */
-}
-
-/* Text hiển thị hệ số (1.4x, 1.3x...) ở dưới chấm */
-.path-dot::after {
-    content: attr(data-mul);
-    position: absolute;
-    bottom: -14px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 7px;
-    color: #555;
-    font-weight: bold;
-}
-
-.path-dot.active::after {
-    color: var(--brand);
-}
-/* Lá cờ mini chạy trên thanh tiến trình */
-.moving-flag {
-    position: absolute;
-    top: -11px; /* Nhấc cờ lên ngay trên vạch */
-    transform: translateX(-50%);
-    color: var(--brand); /* Màu neon của dự án */
-    font-size: 10px;
-    z-index: 5; /* Nổi lên trên tất cả các chấm */
-    transition: left 0.5s ease-out; /* Chạy mượt khi data update */
-    text-shadow: 0px 0px 4px #000; /* Đổ bóng để không bị chìm vào nền */
-}
-
-/* Ẩn bớt độ sáng của chấm active cũ vì giờ ta đã có cờ làm điểm nhấn */
-.path-dot.active {
-    background: var(--brand);
-    box-shadow: 0 0 5px var(--brand);
-    transform: scale(1); /* Không phóng to nữa */
 }

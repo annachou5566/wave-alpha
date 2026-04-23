@@ -4,50 +4,47 @@ function formatCompact(num) {
 
 function renderMultiplierPath(c) {
     let isEarlyBird = c.earlyBird || (c.data && c.data.earlyBird) || false;
-    
     if (!c || !c.start || !isEarlyBird) return ''; 
     
+    // --- XỬ LÝ THỜI GIAN BẮT ĐẦU CHUẨN XÁC ---
+    let sTime = c.startTime || "13:00:00";
+    if (sTime.length === 5) sTime += ":00"; // Vá lỗi nếu Admin nhập "13:00" thiếu giây
+    
     const now = new Date();
-    const startTime = new Date(c.start + 'T' + (c.startTime || "13:00:00") + 'Z');
+    const startTime = new Date(c.start + 'T' + sTime + 'Z');
     
-    // Tính khoảng thời gian đã trôi qua (miligiây)
     const diffTime = now - startTime;
-    
-    // Tính chính xác số ngày đã trôi qua (BAO GỒM CẢ SỐ THẬP PHÂN, ví dụ: 0.5 là nửa ngày)
     let elapsedDaysExact = diffTime / (1000 * 60 * 60 * 24);
     
-    // Tính % lấp đầy (Có 6 đoạn khoảng cách giữa 7 ngày)
+    // Nếu giải chưa tới giờ bắt đầu
+    if (elapsedDaysExact < 0) elapsedDaysExact = 0;
+    
     let fillPercentage = (elapsedDaysExact / 6) * 100;
-
-    // Giới hạn thanh chạy từ 0% đến 100%
-    if (fillPercentage < 0) fillPercentage = 0;
     if (fillPercentage > 100) fillPercentage = 100;
 
-    // Tính ngày hiện tại (số nguyên) để hiện Tooltip
     let currentDayInt = Math.floor(elapsedDaysExact) + 1;
     if (currentDayInt < 1) currentDayInt = 1;
     if (currentDayInt > 7) currentDayInt = 7;
 
     const multipliers = [1.4, 1.3, 1.2, 1.2, 1.1, 1.1, 1.0];
+    let currentMul = multipliers[currentDayInt - 1]; // Lấy hệ số của ngày hôm nay
+
     let dotsHtml = '';
-    
     multipliers.forEach((mul, index) => {
-        // Chấm sẽ mờ đi (passed) nếu vệt màu đã chạy qua nó
         let isPassed = elapsedDaysExact >= index;
         let statusClass = isPassed ? 'passed' : '';
-        
-        dotsHtml += `<div class="path-dot ${statusClass}" data-mul="${mul}x"></div>`;
+        dotsHtml += `<div class="path-dot ${statusClass}"></div>`;
     });
 
     return `
-        <div class="multiplier-path-container" title="Lộ trình Early Bird (Đang ở Ngày ${currentDayInt})">
+        <div class="multiplier-path-container" title="Lộ trình Early Bird">
+            <div style="font-size: 0.65rem; color: var(--brand); margin-bottom: 5px; font-weight: 700; letter-spacing: 0.5px;">
+                ⚡ BOOST: ${currentMul}x <span style="color:#848e9c; font-weight: 500;">(DAY ${currentDayInt})</span>
+            </div>
+            
             <div class="multiplier-path-line">
                 <div class="path-fill" style="width: ${fillPercentage}%"></div>
-                
-                <div class="moving-flag" style="left: ${fillPercentage}%">
-                    <i class="fas fa-flag"></i>
-                </div>
-                
+                <div class="path-spark" style="left: ${fillPercentage}%"></div>
                 ${dotsHtml}
             </div>
         </div>`;
