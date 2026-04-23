@@ -3569,7 +3569,7 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
        -18px : Nâng lên cao hơn nữa (xa thanh tiến trình hơn)
        -6px  : Hạ xuống sát rịt vào thanh tiến trình
     */
-    top: -12px; 
+    top: -14px; 
     
     transform: translateX(-50%);
     color: var(--brand);
