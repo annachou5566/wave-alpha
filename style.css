@@ -3555,38 +3555,42 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 .eb-capsule-dot.passed { background: var(--brand); }
 
 /* ===================================================
-   VIÊN NANG ĐỘNG (CHỨA ICON + ĐẾM NGƯỢC)
+   TÙY CHỈNH KÍCH THƯỚC KHỐI CON NGƯỜI & ĐẾM NGƯỢC
 =================================================== */
+
 .eb-dynamic-pill {
     position: absolute;
-    /* CHỈNH ĐỘ CAO Ở ĐÂY: 
-       -22px: Bay vừa phải
-       -30px: Bay cao hẳn lên trên
-    */
-    top: -22px; 
-    
+    top: -22px; /* Khoảng cách bay lơ lửng so với thanh bar */
     transform: translateX(-50%);
     display: flex;
     align-items: center;
-    gap: 6px; /* Khoảng cách giữa người chạy và chữ */
-    background: #000; /* Nền đen */
-    border: 1px solid var(--brand); /* Viền màu xanh */
-    padding: 2px 8px;
+    background: #000; 
+    border: 1px solid var(--brand); 
     border-radius: 20px;
     white-space: nowrap;
     z-index: 10;
     transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* 👇 1. CHỈNH ĐỘ DÀY/MỎNG CỦA KHỐI Ở ĐÂY 👇 */
+    padding: 1px 6px; /* Mặc định cũ là 2px 8px. Giảm số này xuống thì cái khung đen sẽ ôm sát vào chữ và icon hơn */
+    
+    /* 👇 2. CHỈNH KHOẢNG CÁCH GIỮA NGƯỜI VÀ CHỮ Ở ĐÂY 👇 */
+    gap: 4px; /* Mặc định cũ là 6px. Giảm xuống thì người và chữ đứng sát nhau hơn */
 }
 
 .eb-capsule-icon {
     color: var(--brand);
-    font-size: 11px;
+
+    /* 👇 3. CHỈNH ĐỘ TO NHỎ CỦA ICON NGƯỜI CHẠY 👇 */
+    font-size: 10px; /* Mặc định cũ là 11px. Giảm xuống 9px hoặc 10px để người nhỏ xíu lại */
 }
 
 .eb-capsule-timer {
     color: var(--brand);
-    font-size: 0.6rem;
     font-weight: 800;
+
+    /* 👇 4. CHỈNH ĐỘ TO NHỎ CỦA CHỮ ĐẾM NGƯỢC 👇 */
+    font-size: 0.55rem; /* Mặc định cũ là 0.6rem. Giảm xuống 0.5rem hoặc 0.55rem để chữ bé lại */
 }
 
 /* Nhãn hệ số 1.4, 1.3... dưới chân */
