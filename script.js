@@ -7,6 +7,7 @@ function renderMultiplierPath(c) {
     if (!c || !c.start || !isEarlyBird) return ''; 
 
     const multipliers = [1.4, 1.3, 1.2, 1.2, 1.1, 1.1, 1.0];
+    
     let sTime = c.startTime || "13:00:00";
     if (sTime.length === 5) sTime += ":00";
     
@@ -17,54 +18,57 @@ function renderMultiplierPath(c) {
     let elapsedDays = Math.max(0, diffMs / 86400000);
     let currentDayInt = Math.min(7, Math.floor(elapsedDays) + 1);
     let fillPct = Math.min(100, (elapsedDays / 6) * 100);
+    
     const currentMul = multipliers[currentDayInt - 1];
 
-    // Tính đếm ngược
+    // Đếm ngược
     const nextBoundary = new Date(startTime.getTime() + currentDayInt * 86400000);
     const msLeft = nextBoundary - now;
     let countdownStr = '';
     if (msLeft > 0 && currentDayInt < 7) {
         const h = Math.floor(msLeft / 3600000);
         const m = Math.floor((msLeft % 3600000) / 60000);
-        countdownStr = `${h}h${m}m left`;
+        countdownStr = `${h}h ${m}m`;
     } else if (currentDayInt === 7) {
-        countdownStr = 'Final';
+        countdownStr = 'Final Day';
     }
 
-    // Chọn Icon
+    // Đổi icon theo tốc độ
     let runnerIcon = 'fa-running'; 
     if (currentMul >= 1.3) runnerIcon = 'fa-skating'; 
+    if (currentMul === 1.1) runnerIcon = 'fa-walking'; 
     if (currentDayInt === 7) runnerIcon = 'fa-flag-checkered'; 
 
-    // Render 7 mốc nhãn (Labels) và 7 Chấm (Dots)
-    let labelsHtml = '';
+    // Vẽ 7 chấm và 7 nhãn bằng Tọa độ Tuyệt đối (%)
     let dotsHtml = '';
+    let labelsHtml = '';
+    
     multipliers.forEach((mul, i) => {
         const day = i + 1;
+        const positionPct = (i / 6) * 100; // Ra kết quả: 0%, 16.6%, 33.3%, 50%, 66.6%, 83.3%, 100%
+        
         let cls = '';
         if (day < currentDayInt) cls = 'passed';
         else if (day === currentDayInt) cls = 'active';
 
-        labelsHtml += `<div class="eb-label-item ${cls}">${mul}x</div>`;
-        dotsHtml += `<div class="eb-dot-item ${cls}"></div>`;
+        dotsHtml += `<div class="eb-full-dot ${cls}" style="left: ${positionPct}%;"></div>`;
+        labelsHtml += `<div class="eb-full-label ${cls}" style="left: ${positionPct}%;">${mul}x</div>`;
     });
 
     return `
-        <div class="eb-roadmap-container">
-            <div class="eb-milestone-labels">${labelsHtml}</div>
-            
-            <div class="eb-track-main">
-                <div class="eb-fill-main" style="width:${fillPct}%"></div>
-                <div class="eb-dots-main">${dotsHtml}</div>
-                <div class="eb-runner-main" style="left:${fillPct}%">
-                    <i class="fas ${runnerIcon}"></i>
-                </div>
+        <div class="eb-full-container" title="Early Bird Boost">
+            <div class="eb-full-header">
+                <div class="eb-mul-title">⚡ ${currentMul}x</div>
+                ${countdownStr ? `<div class="eb-countdown-clean"><i class="far fa-clock"></i> ${countdownStr}</div>` : ''}
             </div>
-
-            <div class="eb-info-footer">
-                <div class="eb-current-mul">${currentMul}x</div>
-                <div class="eb-countdown-pill-new">
-                    <span class="dot"></span> ${countdownStr}
+            
+            <div class="eb-full-track">
+                <div class="eb-full-fill" style="width: ${fillPct}%"></div>
+                ${dotsHtml}
+                ${labelsHtml}
+                
+                <div class="eb-full-runner" style="left: ${fillPct}%">
+                    <i class="fas ${runnerIcon}"></i>
                 </div>
             </div>
         </div>`;

@@ -3512,127 +3512,92 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 }
 
 /* ===================================================
-   EARLY BIRD - PROFESSIONAL ROADMAP (NO OVERLAP)
+   EARLY BIRD - FULL WIDTH ROADMAP (CHỐNG DÍNH CHÙM)
 =================================================== */
-.eb-roadmap-container {
-    position: relative;
+.eb-full-container {
     width: 100%;
-    margin-top: 25px; /* Chừa khoảng trống phía trên cho các nhãn multiplier */
-    margin-bottom: 10px;
-    padding: 0 5px;
-}
-
-/* Các nhãn multiplier nhỏ nằm trên từng đầu chấm */
-.eb-milestone-labels {
-    position: absolute;
-    top: -18px; /* Đẩy lên trên track */
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: space-between;
-    pointer-events: none;
-}
-
-.eb-label-item {
-    font-family: var(--font-num);
-    font-size: 0.6rem;
-    font-weight: 700;
-    color: rgba(255,255,255,0.2);
-    text-align: center;
-    width: 25px;
-}
-.eb-label-item.passed { color: var(--brand); opacity: 0.6; }
-.eb-label-item.active { color: var(--brand); text-shadow: 0 0 5px var(--brand-glow); font-size: 0.65rem; }
-
-/* Thanh rãnh chạy chính */
-.eb-track-main {
-    position: relative;
-    height: 6px;
-    background: rgba(255, 255, 255, 0.06);
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    width: 100%;
-}
-
-.eb-fill-main {
-    position: absolute;
-    top: 0; left: 0;
-    height: 100%;
-    border-radius: 10px;
-    background: linear-gradient(90deg, rgba(0,240,255,0.1), var(--brand));
-    box-shadow: 0 0 8px var(--brand-glow);
-    z-index: 1;
-}
-
-/* 7 Chấm mốc */
-.eb-dots-main {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 2px;
-    z-index: 2;
-}
-
-.eb-dot-item {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.15);
-    border: 1px solid rgba(0,0,0,0.3);
-    transition: all 0.3s ease;
-}
-.eb-dot-item.passed { background: var(--brand); box-shadow: 0 0 4px var(--brand); }
-.eb-dot-item.active { background: #fff; transform: scale(1.3); box-shadow: 0 0 8px #fff; }
-
-/* Icon người chạy */
-.eb-runner-main {
-    position: absolute;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 24px; height: 24px;
-    border-radius: 50%;
-    background: #171a24;
-    border: 1.5px solid var(--brand);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--brand);
-    font-size: 11px;
-    z-index: 5;
-    box-shadow: 0 0 10px var(--brand-glow);
-}
-
-/* Phần thông tin phía dưới */
-.eb-info-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    min-width: 180px; /* Đảm bảo luôn có độ rộng tối thiểu */
     margin-top: 8px;
+    margin-bottom: 8px; /* Chừa chỗ cho các nhãn phía dưới */
+    font-family: var(--font-num);
 }
 
-.eb-current-mul {
-    font-family: var(--font-num);
-    font-size: 1rem;
-    font-weight: 800;
+/* Hàng 1: Header (Hệ số + Đếm ngược) */
+.eb-full-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 16px; /* Cách thanh ngang một khoảng an toàn cho người chạy */
+}
+
+.eb-mul-title {
+    font-size: 0.8rem;
     color: var(--brand);
+    font-weight: 800;
+    line-height: 1;
     text-shadow: 0 0 5px var(--brand-glow);
 }
 
-.eb-countdown-pill-new {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 20px;
-    padding: 1px 8px;
-    font-family: var(--font-num);
+.eb-countdown-clean {
     font-size: 0.65rem;
     color: #848e9c;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 8px;
+    border-radius: 12px;
 }
-.eb-countdown-pill-new .dot {
-    width: 4px; height: 4px;
+
+/* Hàng 2: Thanh tiến trình 100% */
+.eb-full-track {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    position: relative;
+}
+
+.eb-full-fill {
+    height: 100%;
+    background: linear-gradient(90deg, rgba(0,240,255,0.1), var(--brand));
+    box-shadow: 0 0 8px var(--brand-glow);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+/* Định vị tuyệt đối cho chấm và nhãn, ÉP giãn đều 100% */
+.eb-full-dot {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    background: var(--brand);
-    animation: pulse 1.5s infinite;
+    background: #333;
+    border: 1px solid #111;
+    z-index: 1;
+}
+.eb-full-dot.passed { background: var(--brand); box-shadow: 0 0 5px var(--brand); border-color: transparent; }
+.eb-full-dot.active { background: #fff; box-shadow: 0 0 8px #fff; transform: translate(-50%, -50%) scale(1.4); z-index: 2;}
+
+.eb-full-label {
+    position: absolute;
+    top: 8px; /* Đẩy chữ xuống dưới thanh ngang */
+    transform: translateX(-50%);
+    font-size: 0.55rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.2);
+}
+.eb-full-label.passed { color: rgba(0, 240, 255, 0.5); }
+.eb-full-label.active { color: var(--brand); font-weight: 800; font-size: 0.65rem; text-shadow: 0 0 5px var(--brand-glow); }
+
+/* Icon người chạy */
+.eb-full-runner {
+    position: absolute;
+    top: -14px; /* Nằm ngay trên vạch, không đè chữ ở Header */
+    transform: translateX(-50%);
+    color: var(--brand);
+    font-size: 14px;
+    z-index: 5;
+    filter: drop-shadow(0 0 4px var(--brand));
+    transition: left 0.3s ease;
 }
