@@ -31,7 +31,7 @@ function renderMultiplierPath(c) {
     if (msLeft > 0 && currentDayInt < 7) {
         let h = Math.floor(msLeft / 3600000);
         let m = Math.floor((msLeft % 3600000) / 60000);
-        countdownStr = `${h}h${m}m left`;
+        countdownStr = `${h}h ${m}m left`;
     }
 
     let runnerIcon = "fa-running"; 
@@ -47,10 +47,6 @@ function renderMultiplierPath(c) {
 
     return `
         <div class="multiplier-path-container" title="Early Bird Boost Schedule">
-            <div class="multiplier-path-header">
-                <span style="font-size: 0.7rem; color: var(--brand); font-weight: 800;">${currentMul}x</span>
-                <span class="countdown-text">${countdownStr}</span>
-            </div>
             
             <div class="multiplier-path-line">
                 <div class="path-fill" style="width: ${fillPercentage}%"></div>
@@ -59,6 +55,12 @@ function renderMultiplierPath(c) {
                 </div>
                 ${dotsHtml}
             </div>
+
+            <div class="multiplier-path-footer">
+                <span style="font-size: 0.7rem; color: var(--brand); font-weight: 800;">${currentMul}x</span>
+                <span class="countdown-text">${countdownStr}</span>
+            </div>
+            
         </div>`;
 }
 

@@ -3511,21 +3511,12 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     .btn-legal-accept { width: 100%; padding: 12px; }
 }
 
-/* --- UI EARLY BIRD PRO --- */
+/* --- UI EARLY BIRD PRO: CHỮ NẰM DƯỚI --- */
 .multiplier-path-container {
-    margin-top: 6px;
+    margin-top: 16px; /* Chừa không gian rộng rãi phía trên cho icon chạy */
     width: 150px;
     position: relative;
     padding-bottom: 5px;
-}
-
-/* Phần chữ phía trên (1.4x & đếm ngược) */
-.multiplier-path-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    line-height: 1;
-    margin-bottom: 14px; /* Cố định chừa đúng 14px để làm "làn" cho icon chạy */
 }
 
 .multiplier-path-line {
@@ -3551,13 +3542,13 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     transition: width 0.3s ease-in-out;
 }
 
-/* Icon người chạy */
+/* Icon người chạy bây giờ tha hồ tung hoành ở trên */
 .path-runner {
     position: absolute;
-    top: -14px; /* Nằm khít vào khoảng trống 14px vừa tạo ở trên, chạm đáy chữ nhưng KHÔNG đè */
+    top: -16px; /* Kéo hẳn lên trên thanh */
     transform: translateX(-50%);
     color: var(--brand);
-    font-size: 12px;
+    font-size: 14px; /* Cho icon to lên một chút cho rõ ràng */
     z-index: 5;
     transition: left 0.3s ease-out;
     filter: drop-shadow(0 0 3px var(--brand));
@@ -3574,6 +3565,15 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 
 .path-dot.passed {
     background: var(--brand);
+}
+
+/* Chữ được đưa xuống dưới */
+.multiplier-path-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    line-height: 1;
+    margin-top: 8px; /* Khoảng cách từ thanh tiến trình xuống chữ */
 }
 
 .countdown-text {
