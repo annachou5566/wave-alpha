@@ -1231,21 +1231,41 @@ function roundRect(ctx, x, y, w, h, r) {
     }));
 
     for (let i = startIdx; i < endIdx; i++) {
-      const d = dataList[i]; if (!d || !d.volume) continue;
-      const cRange = d.high - d.low;
-      let upV = cRange === 0 ? (d.close >= d.open ? d.volume : 0) : d.volume * ((d.close - d.low) / cRange);
-      let dnV = d.volume - upV;
+        const d = dataList[i]; if (!d || !d.volume) continue;
+        const isUp = d.close >= d.open;
+        const bodyTop = Math.max(d.open, d.close);
+        const bodyBot = Math.min(d.open, d.close);
+        const cRange = d.high - d.low;
+        const bodyRange = bodyTop - bodyBot;
 
-      const s = Math.max(0, Math.floor((d.low - minP) / step));
-      const e = Math.min(rowCount - 1, Math.floor((d.high - minP) / step));
+        const s = Math.max(0, Math.floor((d.low - minP) / step));
+        const e = Math.min(rowCount - 1, Math.floor((d.high - minP) / step));
 
-      for (let j = s; j <= e; j++) {
-        const bin = bins[j], oL = Math.max(d.low, bin.pLow), oH = Math.min(d.high, bin.pHigh);
-        if (oH > oL) {
-          const ratio = (oH - oL) / (cRange || step);
-          bin.upVol += upV * ratio; bin.downVol += dnV * ratio; bin.total += d.volume * ratio;
+        for (let j = s; j <= e; j++) {
+            const bin = bins[j];
+            const oL = Math.max(d.low, bin.pLow);
+            const oH = Math.min(d.high, bin.pHigh);
+            
+            if (oH > oL) {
+                let binVol = 0;
+                const overlapRange = oH - oL;
+                const overlapBody = Math.max(0, Math.min(oH, bodyTop) - Math.max(oL, bodyBot));
+                const overlapWick = overlapRange - overlapBody;
+
+                if (cRange === 0) {
+                    binVol = d.volume * (overlapRange / step);
+                } else {
+                    // 🚀 LOGIC CHUÔNG GAUSS: Dồn 70% Volume vào Body, 30% cho Wick
+                    const wBody = bodyRange > 0 ? (overlapBody / bodyRange) * 0.70 : 0;
+                    const wWick = (cRange - bodyRange) > 0 ? (overlapWick / (cRange - bodyRange)) * 0.30 : 0;
+                    binVol = d.volume * (wBody + wWick);
+                }
+
+                if (isNaN(binVol)) binVol = 0;
+                if (isUp) { bin.upVol += binVol; } else { bin.downVol += binVol; }
+                bin.total += binVol;
+            }
         }
-      }
     }
 
     let pocBin = bins[0], maxBinVol = 0;
@@ -1256,15 +1276,26 @@ function roundRect(ctx, x, y, w, h, r) {
     let curVA = pocBin.total, tgt = totalVol * (vaPercent / 100);
     let ui = pocBin.idx + 1, di = pocBin.idx - 1;
 
+    // 🚀 LOGIC STEIDLMAYER: So sánh tổng 2 Bins thay vì 1 Bin
     while (curVA < tgt && (ui < rowCount || di >= 0)) {
-      let vu = 0, vd = 0;
-      if (ui < rowCount) vu += bins[ui].total; if (ui + 1 < rowCount) vu += bins[ui + 1].total;
-      if (di >= 0) vd += bins[di].total; if (di - 1 >= 0) vd += bins[di - 1].total;
+        let volUp = 0, volDown = 0;
+        let u1 = ui < rowCount ? bins[ui].total : 0;
+        let u2 = (ui + 1) < rowCount ? bins[ui + 1].total : 0;
+        volUp = u1 + u2;
 
-      if (vu >= vd && ui < rowCount) { bins[ui].inVA = true; curVA += bins[ui].total; ui++; } 
-      else if (di >= 0) { bins[di].inVA = true; curVA += bins[di].total; di--; } 
-      else if (ui < rowCount) { bins[ui].inVA = true; curVA += bins[ui].total; ui++; } 
-      else break;
+        let d1 = di >= 0 ? bins[di].total : 0;
+        let d2 = (di - 1) >= 0 ? bins[di - 1].total : 0;
+        volDown = d1 + d2;
+
+        if (volUp === 0 && volDown === 0) break;
+
+        if (volUp >= volDown) {
+            if (ui < rowCount) { bins[ui].inVA = true; curVA += bins[ui].total; ui++; }
+            if (ui < rowCount && curVA < tgt) { bins[ui].inVA = true; curVA += bins[ui].total; ui++; }
+        } else {
+            if (di >= 0) { bins[di].inVA = true; curVA += bins[di].total; di--; }
+            if (di >= 0 && curVA < tgt) { bins[di].inVA = true; curVA += bins[di].total; di--; }
+        }
     }
 
     let vahBin = null, valBin = null;
@@ -1793,90 +1824,114 @@ function roundRect(ctx, x, y, w, h, r) {
               const sessions = _waTpoGroupData(dataList, from, to, C.groupMode);
 
               profiles = sessions.map((s, idx) => {
-                  if (s.end - s.start <= 0) return null;
-                  let maxP = -Infinity, minP = Infinity;
-                  for (let i = s.start; i < s.end; i++) {
-                      if (!dataList[i]) continue;
-                      if (dataList[i].high > maxP) maxP = dataList[i].high;
-                      if (dataList[i].low  < minP) minP = dataList[i].low;
-                  }
-                  if (maxP === -Infinity || maxP === minP) return null;
+                if (s.end - s.start <= 0) return null;
+                let maxP = -Infinity, minP = Infinity;
+                for (let i = s.start; i < s.end; i++) {
+                    if (!dataList[i]) continue;
+                    if (dataList[i].high > maxP) maxP = dataList[i].high;
+                    if (dataList[i].low  < minP) minP = dataList[i].low;
+                }
+                if (maxP === -Infinity || maxP === minP) return null;
 
-                  const step = (maxP - minP) / C.rowCount;
-                  let totalTPO = 0;
-                  const bins = Array.from({ length: C.rowCount }, (_, i) => ({
-                      idx: i, pLow: minP + i * step, pHigh: minP + (i + 1) * step, count: 0, letters: [], inVA: false
-                  }));
+                const step = (maxP - minP) / C.rowCount;
+                let totalTPO = 0;
+                const bins = Array.from({ length: C.rowCount }, (_, i) => ({
+                    idx: i, pLow: minP + i * step, pHigh: minP + (i + 1) * step, count: 0, letters: [], inVA: false
+                }));
 
-                  for (let i = s.start; i < s.end; i++) {
-                      if (!dataList[i]) continue;
-                      const d = dataList[i], lIdx = i - s.start;
-                      const sI = Math.max(0, Math.floor((d.low  - minP) / step));
-                      const eI = Math.min(C.rowCount - 1, Math.floor((d.high - minP) / step));
-                      for (let j = sI; j <= eI; j++) { bins[j].count++; bins[j].letters.push(lIdx); totalTPO++; }
-                  }
-                  if (totalTPO === 0) return null;
+                for (let i = s.start; i < s.end; i++) {
+                    if (!dataList[i]) continue;
+                    const d = dataList[i], lIdx = i - s.start;
+                    const sI = Math.max(0, Math.floor((d.low  - minP) / step));
+                    const eI = Math.min(C.rowCount - 1, Math.floor((d.high - minP) / step));
+                    for (let j = sI; j <= eI; j++) { bins[j].count++; bins[j].letters.push(lIdx); totalTPO++; }
+                }
+                if (totalTPO === 0) return null;
 
-                  let pocBin = bins[0], maxTPO = 0;
-                  bins.forEach(b => { if (b.count > maxTPO) { maxTPO = b.count; pocBin = b; } });
+                let pocBin = bins[0], maxTPO = 0;
+                bins.forEach(b => { if (b.count > maxTPO) { maxTPO = b.count; pocBin = b; } });
 
-                  pocBin.inVA = true;
-                  let curVA = pocBin.count, ui = pocBin.idx + 1, di = pocBin.idx - 1;
-                  while (curVA < totalTPO * (C.vaPercent / 100) && (ui < C.rowCount || di >= 0)) {
-                      let vu = 0, vd = 0;
-                      if (ui < C.rowCount) vu += bins[ui].count; if (ui + 1 < C.rowCount) vu += bins[ui + 1].count;
-                      if (di >= 0) vd += bins[di].count; if (di - 1 >= 0) vd += bins[di - 1].count;
-                      if (vu >= vd && ui < C.rowCount) { bins[ui].inVA = true; curVA += bins[ui].count; ui++; }
-                      else if (di >= 0) { bins[di].inVA = true; curVA += bins[di].count; di--; }
-                      else if (ui < C.rowCount) { bins[ui].inVA = true; curVA += bins[ui].count; ui++; }
-                      else break;
-                  }
+                pocBin.inVA = true;
+                let curVA = pocBin.count, targetVA = totalTPO * (C.vaPercent / 100);
+                let ui = pocBin.idx + 1, di = pocBin.idx - 1;
 
-                  let vahBin = null, valBin = null;
-                  for (let i = C.rowCount - 1; i >= 0; i--) if (bins[i].inVA && !vahBin) vahBin = bins[i];
-                  for (let i = 0;              i <  C.rowCount; i++) if (bins[i].inVA && !valBin) valBin = bins[i];
+                // 🚀 LOGIC STEIDLMAYER KÉP (DÀNH RIÊNG CHO TPO)
+                while (curVA < targetVA && (ui < C.rowCount || di >= 0)) {
+                    let volUp = 0, volDown = 0;
+                    let u1 = ui < C.rowCount ? bins[ui].count : 0;
+                    let u2 = (ui + 1) < C.rowCount ? bins[ui + 1].count : 0;
+                    volUp = u1 + u2;
 
-                  let ibHigh = null, ibLow = null;
-                  if (s.end - s.start >= 2) {
-                      ibHigh = Math.max(dataList[s.start].high, dataList[s.start + 1].high);
-                      ibLow  = Math.min(dataList[s.start].low,  dataList[s.start + 1].low);
-                  }
+                    let d1 = di >= 0 ? bins[di].count : 0;
+                    let d2 = (di - 1) >= 0 ? bins[di - 1].count : 0;
+                    volDown = d1 + d2;
 
-                  const pocMid = (pocBin.pLow + pocBin.pHigh) / 2;
-                  let isNaked = true;
-                  for (let i = s.end; i < dataList.length; i++) {
-                      if (dataList[i] && dataList[i].low <= pocMid && dataList[i].high >= pocMid) { isNaked = false; break; }
-                  }
+                    if (volUp === 0 && volDown === 0) break;
 
-                  let topC = 0, botC = 0;
-                  bins.forEach(b => {
-                      if (b.inVA) {
-                          if (b.idx > pocBin.idx) topC += b.count;
-                          else if (b.idx < pocBin.idx) botC += b.count;
-                      }
-                  });
-                  let imb = 'BALANCED';
-                  if (Math.abs(topC - botC) / Math.max(1, topC + botC) > 0.3) imb = topC > botC ? 'BUYING' : 'SELLING';
+                    if (volUp >= volDown) {
+                        if (ui < C.rowCount) { bins[ui].inVA = true; curVA += bins[ui].count; ui++; }
+                        if (ui < C.rowCount && curVA < targetVA) { bins[ui].inVA = true; curVA += bins[ui].count; ui++; }
+                    } else {
+                        if (di >= 0) { bins[di].inVA = true; curVA += bins[di].count; di--; }
+                        if (di >= 0 && curVA < targetVA) { bins[di].inVA = true; curVA += bins[di].count; di--; }
+                    }
+                }
 
-                  const closePrice = dataList[s.end - 1]?.close ?? pocMid;
-                  const closePos   = (closePrice - minP) / Math.max(1e-9, maxP - minP);
-                  const inValueClose = !!(valBin && vahBin && closePrice >= valBin.pLow && closePrice <= vahBin.pHigh);
+                let vahBin = null, valBin = null;
+                for (let i = C.rowCount - 1; i >= 0; i--) if (bins[i].inVA && !vahBin) vahBin = bins[i];
+                for (let i = 0;              i <  C.rowCount; i++) if (bins[i].inVA && !valBin) valBin = bins[i];
 
-                  const prof = {
-                      bins, maxTPO, pocBin, pocMid, vahBin, valBin, ibHigh, ibLow, imbalance: imb, isNaked,
-                      totalTPO, minP, maxP, step, startIdx: s.start, endIdx: s.end, close: closePrice, closePos, inValueClose,
-                      sessionIdx: idx, sessionTotal: sessions.length
-                  };
+                // 🚀 CỐ ĐỊNH THỜI GIAN INITIAL BALANCE (60 PHÚT)
+                let ibHigh = -Infinity, ibLow = Infinity;
+                let sessionStartTime = dataList[s.start].timestamp || dataList[s.start].time || 0;
+                for (let i = s.start; i < s.end; i++) {
+                    let d = dataList[i];
+                    let t = d.timestamp || d.time || 0;
+                    // 3600000 ms = 1 giờ. Nếu nến nằm trong 1h đầu thì cập nhật IB
+                    if (t - sessionStartTime <= 3600000) {
+                        if (d.high > ibHigh) ibHigh = d.high;
+                        if (d.low < ibLow) ibLow = d.low;
+                    } else {
+                        break;
+                    }
+                }
+                if (ibHigh === -Infinity) { ibHigh = null; ibLow = null; }
 
-                  prof.shape        = _waTpoClassifyProfileShape(bins, pocBin.idx);
-                  const exc         = _waTpoDetectExcessTail(bins); prof.excessTop = exc.top; prof.excessBottom = exc.bottom;
-                  const poor        = _waTpoDetectPoorHighLow(bins); prof.poorHigh = poor.poorHigh; prof.poorLow = poor.poorLow;
-                  prof.dayType      = _waTpoClassifyDayType(prof, dataList);
-                  prof.auctionState = _waTpoAuctionState(prof);
-                  prof.isSuperPoc   = _waCheckSuperPoc(pocMid, step);
+                const pocMid = (pocBin.pLow + pocBin.pHigh) / 2;
+                let isNaked = true;
+                for (let i = s.end; i < dataList.length; i++) {
+                    if (dataList[i] && dataList[i].low <= pocMid && dataList[i].high >= pocMid) { isNaked = false; break; }
+                }
 
-                  return prof;
-              }).filter(Boolean);
+                let topC = 0, botC = 0;
+                bins.forEach(b => {
+                    if (b.inVA) {
+                        if (b.idx > pocBin.idx) topC += b.count;
+                        else if (b.idx < pocBin.idx) botC += b.count;
+                    }
+                });
+                let imb = 'BALANCED';
+                if (Math.abs(topC - botC) / Math.max(1, topC + botC) > 0.3) imb = topC > botC ? 'BUYING' : 'SELLING';
+
+                const closePrice = dataList[s.end - 1]?.close ?? pocMid;
+                const closePos   = (closePrice - minP) / Math.max(1e-9, maxP - minP);
+                const inValueClose = !!(valBin && vahBin && closePrice >= valBin.pLow && closePrice <= vahBin.pHigh);
+
+                const prof = {
+                    bins, maxTPO, pocBin, pocMid, vahBin, valBin, ibHigh, ibLow, imbalance: imb, isNaked,
+                    totalTPO, minP, maxP, step, startIdx: s.start, endIdx: s.end, close: closePrice, closePos, inValueClose,
+                    sessionIdx: idx, sessionTotal: sessions.length
+                };
+
+                prof.shape        = _waTpoClassifyProfileShape(bins, pocBin.idx);
+                const exc         = _waTpoDetectExcessTail(bins); prof.excessTop = exc.top; prof.excessBottom = exc.bottom;
+                const poor        = _waTpoDetectPoorHighLow(bins); prof.poorHigh = poor.poorHigh; prof.poorLow = poor.poorLow;
+                prof.dayType      = _waTpoClassifyDayType(prof, dataList);
+                prof.auctionState = _waTpoAuctionState(prof);
+                prof.isSuperPoc   = _waCheckSuperPoc(pocMid, step);
+
+                return prof;
+            }).filter(Boolean);
 
               _waTpoCacheSet(cacheKey, profiles);
           }
