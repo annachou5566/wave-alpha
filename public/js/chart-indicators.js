@@ -1992,359 +1992,360 @@ function roundRect(ctx, x, y, w, h, r) {
   }
 
   kc.registerIndicator({
-      name: 'WAVE_TPO',
-      shortName: 'TPO',
-      description: 'Time Price Opportunity (Market Profile) ULTIMATE v3.0',
-      category: 'wave_alpha',
-      series: 'price',
-      isStack: true,
+    name: 'WAVE_TPO',
+    shortName: 'TPO',
+    description: 'Time Price Opportunity (Market Profile) ULTIMATE v3.1',
+    category: 'wave_alpha',
+    series: 'price',
+    isStack: true,
 
-      // 🚀 Chặn hiển thị thông số lằng nhằng trên góc Chart
-      createTooltipDataSource: function(args) {
-          return { name: 'TPO', calcParamsText: ' ', values: [] };
-      },
+    // Chặn hiển thị thông số lằng nhằng trên góc Chart
+    createTooltipDataSource: function(args) {
+        return { name: 'TPO', calcParamsText: ' ', values: [] };
+    },
 
-      calcParams: [
-          60, 70, 35, 0, 0, 0,
-          "#9C27B0", "#9C27B0", "#141822", "#F0B90B",
-          "#BA68C8", "#FFD600", "#FF9800", "#2196F3",
-          75, 15, 0, 2, 1, 0, 0, 9, 1
-      ],
-      figures: [],
+    calcParams: [
+        60, 70, 35, 0, 0, 0,
+        "#9C27B0", "#9C27B0", "#141822", "#F0B90B",
+        "#BA68C8", "#FFD600", "#FF9800", "#2196F3",
+        75, 15, 0, 2, 1, 0, 0, 9, 1
+    ],
+    figures: [],
 
-      calc: function (dataList) { return dataList.map(() => ({})); },
+    calc: function (dataList) { return dataList.map(() => ({})); },
 
-      draw: function (args) {
-          const { ctx, bounding, xAxis, yAxis, indicator } = args;
-          const dataList = args.kLineDataList || args.dataList || [];
-          const visibleRange = args.visibleRange || { from: 0, to: dataList.length };
+    draw: function (args) {
+        const { ctx, bounding, xAxis, yAxis, indicator } = args;
+        const dataList = args.kLineDataList || args.dataList || [];
+        const visibleRange = args.visibleRange || { from: 0, to: dataList.length };
 
-          if (!dataList || dataList.length === 0 || !bounding) return false;
+        if (!dataList || dataList.length === 0 || !bounding) return false;
 
-          const p = indicator.calcParams;
-          
-          // Đọc Cấu Hình Lõi
-          const rowCount = Math.max(10, Math.min(200, +(p[0] ?? 60)));
-          const vaPercent = Math.max(10, Math.min(100, +(p[1] ?? 70)));
-          const widthPct = Math.max(10, Math.min(100, +(p[2] ?? 35)));
-          const isLeft = +(p[3] ?? 0) === 0;
-          const useLetter = +(p[4] ?? 0) === 1;
-          const colorMode = +(p[5] ?? 0); // 0: Đơn, 1: Đa Phiên, 2: Heatmap
+        const p = indicator.calcParams;
+        
+        const rowCount = Math.max(10, Math.min(200, +(p[0] ?? 60)));
+        const vaPercent = Math.max(10, Math.min(100, +(p[1] ?? 70)));
+        const widthPct = Math.max(10, Math.min(100, +(p[2] ?? 35)));
+        const isLeft = +(p[3] ?? 0) === 0;
+        const useLetter = +(p[4] ?? 0) === 1;
+        const colorMode = +(p[5] ?? 0); 
 
-          // Đọc Bảng Màu và Styles (Config C)
-          const C = {
-              clrVa: p[6] || "#9C27B0",
-              clrOut: p[7] || "#9C27B0",
-              clrBg: p[8] || "#141822",
-              clrPoc: p[9] || "#F0B90B",
-              clrVahVal: p[10] || "#BA68C8",
-              clrIb: p[11] || "#FFD600",
-              clrNpoc: p[12] || "#FF9800",
-              clrImb: p[13] || "#2196F3",
-              opVa: Math.max(0, Math.min(100, +(p[14] ?? 75))) / 100,
-              opOut: Math.max(0, Math.min(100, +(p[15] ?? 15))) / 100,
-              opBg: Math.max(0, Math.min(100, +(p[16] ?? 0))) / 100, // Mặc định nền mờ = 0 (Tắt)
-              pocWidth: Math.max(1, Math.min(5, +(p[17] ?? 2))),
-              vaWidth: Math.max(1, Math.min(4, +(p[18] ?? 1))),
-              vaStyle: Math.round(+(p[19] ?? 0)),
-              npocStyle: Math.round(+(p[20] ?? 0)),
-              fontSize: Math.max(8, Math.min(16, +(p[21] ?? 9))),
-              showLabels: +(p[22] ?? 1) === 1
-          };
+        const C = {
+            clrVa: p[6] || "#9C27B0",
+            clrOut: p[7] || "#9C27B0",
+            clrBg: p[8] || "#141822",
+            clrPoc: p[9] || "#F0B90B",
+            clrVahVal: p[10] || "#BA68C8",
+            clrIb: p[11] || "#FFD600",
+            clrNpoc: p[12] || "#FF9800",
+            clrImb: p[13] || "#2196F3",
+            opVa: Math.max(0, Math.min(100, +(p[14] ?? 75))) / 100,
+            opOut: Math.max(0, Math.min(100, +(p[15] ?? 15))) / 100,
+            opBg: Math.max(0, Math.min(100, +(p[16] ?? 0))) / 100,
+            pocWidth: Math.max(1, Math.min(5, +(p[17] ?? 2))),
+            vaWidth: Math.max(1, Math.min(4, +(p[18] ?? 1))),
+            vaStyle: Math.round(+(p[19] ?? 0)),
+            npocStyle: Math.round(+(p[20] ?? 0)),
+            fontSize: Math.max(8, Math.min(16, +(p[21] ?? 9))),
+            showLabels: +(p[22] ?? 1) === 1
+        };
 
-          let from = Math.max(0, visibleRange.from !== undefined ? visibleRange.from : 0);
-          let to = Math.min(dataList.length, visibleRange.to !== undefined ? visibleRange.to : dataList.length);
-          if (from >= to) return false;
+        let from = Math.max(0, visibleRange.from !== undefined ? visibleRange.from : 0);
+        let to = Math.min(dataList.length, visibleRange.to !== undefined ? visibleRange.to : dataList.length);
+        if (from >= to) return false;
 
-          // Xác định Sessions (Phiên)
-          let sessions = [];
-          if (colorMode === 0 || colorMode === 2) {
-              sessions.push({ start: from, end: to });
-          } else {
-              let curDay = -1, startIdx = from;
-              for (let i = from; i < to; i++) {
-                  const dt = new Date(dataList[i].timestamp);
-                  const day = dt.getUTCDate();
-                  if (curDay === -1) curDay = day;
-                  else if (day !== curDay) {
-                      sessions.push({ start: startIdx, end: i });
-                      startIdx = i; curDay = day;
-                  }
-              }
-              sessions.push({ start: startIdx, end: to });
-              if (sessions.length > 5) sessions = sessions.slice(-5);
-          }
+        let sessions = [];
+        if (colorMode === 0 || colorMode === 2) {
+            sessions.push({ start: from, end: to });
+        } else {
+            let curDay = -1, startIdx = from;
+            for (let i = from; i < to; i++) {
+                const dt = new Date(dataList[i].timestamp);
+                const day = dt.getUTCDate();
+                if (curDay === -1) curDay = day;
+                else if (day !== curDay) {
+                    sessions.push({ start: startIdx, end: i });
+                    startIdx = i; curDay = day;
+                }
+            }
+            sessions.push({ start: startIdx, end: to });
+            if (sessions.length > 5) sessions = sessions.slice(-5);
+        }
 
-          // Cache Key (Chỉ cache logic tính toán, không cache màu)
-          const lastClose = dataList[to - 1] ? (dataList[to - 1].close || 0) : 0;
-          const cacheKey = `${from}_${to}_${rowCount}_${vaPercent}_${colorMode}_${lastClose}`;
+        const lastClose = dataList[to - 1] ? (dataList[to - 1].close || 0) : 0;
+        const cacheKey = `${from}_${to}_${rowCount}_${vaPercent}_${colorMode}_${lastClose}`;
 
-          let profilesToRender = [];
+        let profilesToRender = [];
 
-          if (window._waTpoCache.has(cacheKey)) {
-              profilesToRender = window._waTpoCache.get(cacheKey);
-          } else {
-              for (let s of sessions) {
-                  if (s.end - s.start <= 0) continue;
-                  
-                  let maxP = -Infinity, minP = Infinity, totalTPO = 0;
-                  for (let i = s.start; i < s.end; i++) {
-                      const d = dataList[i]; if (!d) continue;
-                      if (d.high > maxP) maxP = d.high;
-                      if (d.low < minP) minP = d.low;
-                  }
-                  if (maxP === -Infinity || maxP === minP) continue;
+        if (window._waTpoCache && window._waTpoCache.has(cacheKey)) {
+            profilesToRender = window._waTpoCache.get(cacheKey);
+        } else {
+            for (let s of sessions) {
+                if (s.end - s.start <= 0) continue;
+                
+                let maxP = -Infinity, minP = Infinity, totalTPO = 0;
+                for (let i = s.start; i < s.end; i++) {
+                    const d = dataList[i]; if (!d) continue;
+                    if (d.high > maxP) maxP = d.high;
+                    if (d.low < minP) minP = d.low;
+                }
+                if (maxP === -Infinity || maxP === minP) continue;
 
-                  const step = (maxP - minP) / rowCount;
-                  const bins = new Array(rowCount).fill(0).map((_, i) => ({
-                      idx: i, pLow: minP + i * step, pHigh: minP + (i + 1) * step,
-                      count: 0, letters: [], inVA: false
-                  }));
+                const step = (maxP - minP) / rowCount;
+                const bins = new Array(rowCount).fill(0).map((_, i) => ({
+                    idx: i, pLow: minP + i * step, pHigh: minP + (i + 1) * step,
+                    count: 0, letters: [], inVA: false
+                }));
 
-                  for (let i = s.start; i < s.end; i++) {
-                      const d = dataList[i]; if (!d) continue;
-                      const sIdx = Math.max(0, Math.floor((d.low - minP) / step));
-                      const eIdx = Math.min(rowCount - 1, Math.floor((d.high - minP) / step));
-                      const letterIdx = i - s.start; 
-                      for (let j = sIdx; j <= eIdx; j++) {
-                          bins[j].count += 1;
-                          bins[j].letters.push(letterIdx);
-                          totalTPO += 1;
-                      }
-                  }
+                for (let i = s.start; i < s.end; i++) {
+                    const d = dataList[i]; if (!d) continue;
+                    const sIdx = Math.max(0, Math.floor((d.low - minP) / step));
+                    const eIdx = Math.min(rowCount - 1, Math.floor((d.high - minP) / step));
+                    const letterIdx = i - s.start; 
+                    for (let j = sIdx; j <= eIdx; j++) {
+                        bins[j].count += 1;
+                        bins[j].letters.push(letterIdx);
+                        totalTPO += 1;
+                    }
+                }
 
-                  if (totalTPO === 0) continue;
+                if (totalTPO === 0) continue;
 
-                  let pocBin = bins[0], maxTPO = 0;
-                  bins.forEach(b => { if (b.count > maxTPO) { maxTPO = b.count; pocBin = b; } });
+                let pocBin = bins[0], maxTPO = 0;
+                bins.forEach(b => { if (b.count > maxTPO) { maxTPO = b.count; pocBin = b; } });
 
-                  pocBin.inVA = true;
-                  let cVA = pocBin.count, tVA = totalTPO * (vaPercent / 100);
-                  let uI = pocBin.idx + 1, dI = pocBin.idx - 1;
+                pocBin.inVA = true;
+                let cVA = pocBin.count, tVA = totalTPO * (vaPercent / 100);
+                let uI = pocBin.idx + 1, dI = pocBin.idx - 1;
 
-                  while (cVA < tVA && (uI < rowCount || dI >= 0)) {
-                      let vU = 0, vD = 0;
-                      if (uI < rowCount) vU += bins[uI].count; if (uI + 1 < rowCount) vU += bins[uI + 1].count;
-                      if (dI >= 0) vD += bins[dI].count; if (dI - 1 >= 0) vD += bins[dI - 1].count;
+                while (cVA < tVA && (uI < rowCount || dI >= 0)) {
+                    let vU = 0, vD = 0;
+                    if (uI < rowCount) vU += bins[uI].count; if (uI + 1 < rowCount) vU += bins[uI + 1].count;
+                    if (dI >= 0) vD += bins[dI].count; if (dI - 1 >= 0) vD += bins[dI - 1].count;
 
-                      if (vU >= vD && uI < rowCount) { bins[uI].inVA = true; cVA += bins[uI].count; uI++; }
-                      else if (dI >= 0) { bins[dI].inVA = true; cVA += bins[dI].count; dI--; }
-                      else if (uI < rowCount) { bins[uI].inVA = true; cVA += bins[uI].count; uI++; }
-                      else break;
-                  }
+                    if (vU >= vD && uI < rowCount) { bins[uI].inVA = true; cVA += bins[uI].count; uI++; }
+                    else if (dI >= 0) { bins[dI].inVA = true; cVA += bins[dI].count; dI--; }
+                    else if (uI < rowCount) { bins[uI].inVA = true; cVA += bins[uI].count; uI++; }
+                    else break;
+                }
 
-                  let vah = null, val = null;
-                  for (let i = rowCount - 1; i >= 0; i--) { if (bins[i].inVA && !vah) vah = bins[i]; }
-                  for (let i = 0; i < rowCount; i++) { if (bins[i].inVA && !val) val = bins[i]; }
+                let vah = null, val = null;
+                for (let i = rowCount - 1; i >= 0; i--) { if (bins[i].inVA && !vah) vah = bins[i]; }
+                for (let i = 0; i < rowCount; i++) { if (bins[i].inVA && !val) val = bins[i]; }
 
-                  let ibHigh = null, ibLow = null;
-                  if (s.end - s.start >= 2) {
-                      ibHigh = Math.max(dataList[s.start].high, dataList[s.start + 1].high);
-                      ibLow = Math.min(dataList[s.start].low, dataList[s.start + 1].low);
-                  }
+                let ibHigh = null, ibLow = null;
+                if (s.end - s.start >= 2) {
+                    ibHigh = Math.max(dataList[s.start].high, dataList[s.start + 1].high);
+                    ibLow = Math.min(dataList[s.start].low, dataList[s.start + 1].low);
+                }
 
-                  let topCount = 0, botCount = 0;
-                  for (let b of bins) {
-                      if (b.inVA) {
-                          if (b.idx > pocBin.idx) topCount += b.count;
-                          else if (b.idx < pocBin.idx) botCount += b.count;
-                      }
-                  }
-                  let imbalance = 'BALANCE';
-                  const diff = Math.abs(topCount - botCount) / (topCount + botCount || 1);
-                  if (diff > 0.3) imbalance = topCount > botCount ? 'BUYING IMBALANCE' : 'SELLING IMBALANCE';
+                let topCount = 0, botCount = 0;
+                for (let b of bins) {
+                    if (b.inVA) {
+                        if (b.idx > pocBin.idx) topCount += b.count;
+                        else if (b.idx < pocBin.idx) botCount += b.count;
+                    }
+                }
+                let imbalance = 'BALANCE';
+                const diff = Math.abs(topCount - botCount) / (topCount + botCount || 1);
+                if (diff > 0.3) imbalance = topCount > botCount ? 'BUYING IMBALANCE' : 'SELLING IMBALANCE';
 
-                  let isNaked = true;
-                  const pocMid = (pocBin.pLow + pocBin.pHigh) / 2;
-                  for (let i = s.end; i < dataList.length; i++) {
-                      const d = dataList[i];
-                      if (d && d.low <= pocMid && d.high >= pocMid) { isNaked = false; break; }
-                  }
+                let isNaked = true;
+                const pocMid = (pocBin.pLow + pocBin.pHigh) / 2;
+                for (let i = s.end; i < dataList.length; i++) {
+                    const d = dataList[i];
+                    if (d && d.low <= pocMid && d.high >= pocMid) { isNaked = false; break; }
+                }
 
-                  let isSuperPoc = false;
-                  if (window._waVpvrCache) {
-                      for (const vCache of window._waVpvrCache.values()) {
-                          if (vCache.mainProfile && vCache.mainProfile.poc) {
-                              const vMid = (vCache.mainProfile.poc.pLow + vCache.mainProfile.poc.pHigh) / 2;
-                              if (Math.abs(vMid - pocMid) <= step * 2) { isSuperPoc = true; break; }
-                          }
-                      }
-                  }
+                let isSuperPoc = false;
+                if (window._waVpvrCache) {
+                    for (const vCache of window._waVpvrCache.values()) {
+                        if (vCache.mainProfile && vCache.mainProfile.poc) {
+                            const vMid = (vCache.mainProfile.poc.pLow + vCache.mainProfile.poc.pHigh) / 2;
+                            if (Math.abs(vMid - pocMid) <= step * 2) { isSuperPoc = true; break; }
+                        }
+                    }
+                }
 
-                  profilesToRender.push({ bins, maxTPO, pocMid, vah, val, ibHigh, ibLow, imbalance, isNaked, isSuperPoc, startIdx: s.start });
-              }
-              _waTpoCacheSet(cacheKey, profilesToRender);
-          }
+                profilesToRender.push({ bins, maxTPO, pocMid, vah, val, ibHigh, ibLow, imbalance, isNaked, isSuperPoc, startIdx: s.start });
+            }
+            if (window._waTpoCacheSet) _waTpoCacheSet(cacheKey, profilesToRender);
+        }
 
-          // ─────────────────────────────────────────────────────────────
-          // RENDER ENGINE 
-          // ─────────────────────────────────────────────────────────────
-          try {
-              ctx.save();
-              ctx.globalCompositeOperation = 'source-over';
-              ctx.textBaseline = 'middle';
+        // ─────────────────────────────────────────────────────────────
+        // RENDER ENGINE (ĐÃ FIX LỖI HIỂN THỊ CHỮ)
+        // ─────────────────────────────────────────────────────────────
+        try {
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.textBaseline = 'middle';
 
-              const getLetter = (n) => {
-                  if (n < 26) return String.fromCharCode(65 + n);
-                  if (n < 52) return String.fromCharCode(97 + n - 26);
-                  return String.fromCharCode(65 + Math.floor(n / 26) - 2) + String.fromCharCode(65 + (n % 26));
-              };
+            const getLetter = (n) => {
+                if (n < 26) return String.fromCharCode(65 + n);
+                if (n < 52) return String.fromCharCode(97 + n - 26);
+                return String.fromCharCode(65 + Math.floor(n / 26) - 2) + String.fromCharCode(65 + (n % 26));
+            };
 
-              const PALETTE = ['#00BCD4', '#2196F3', '#3F51B5', '#673AB7', '#9C27B0'];
+            const PALETTE = ['#00BCD4', '#2196F3', '#3F51B5', '#673AB7', '#9C27B0']; 
 
-              profilesToRender.forEach((prof, pIndex) => {
-                  let anchorX = 0, dir = 1;
-                  let maxScreenPx = bounding.width * (widthPct / 100);
+            profilesToRender.forEach((prof, pIndex) => {
+                let anchorX = 0, dir = 1;
+                let maxScreenPx = bounding.width * (widthPct / 100);
 
-                  if (colorMode === 1) { // Đa phiên
-                      anchorX = xAxis.convertToPixel(prof.startIdx) || xAxis.convertToPixel({ index: prof.startIdx });
-                      dir = 1;
-                      maxScreenPx = maxScreenPx * 0.7; 
-                  } else { // Đơn phiên
-                      anchorX = isLeft ? 0 : bounding.width;
-                      dir = isLeft ? 1 : -1;
-                  }
+                if (colorMode === 1) { 
+                    anchorX = xAxis.convertToPixel(prof.startIdx) || xAxis.convertToPixel({ index: prof.startIdx });
+                    dir = 1;
+                    maxScreenPx = maxScreenPx * 0.7; 
+                } else { 
+                    anchorX = isLeft ? 0 : bounding.width;
+                    dir = isLeft ? 1 : -1;
+                }
 
-                  // [6] VAH / VAL BACKGROUND LAYER
-                  if (C.opBg > 0 && prof.vah && prof.val) {
-                      const yVAH = yAxis.convertToPixel(prof.vah.pHigh);
-                      const yVAL = yAxis.convertToPixel(prof.val.pLow);
-                      if (yVAH !== null && yVAL !== null) {
-                          ctx.fillStyle = _waHex2Rgba(C.clrBg, C.opBg);
-                          ctx.fillRect(colorMode === 1 ? anchorX : 0, Math.min(yVAH, yVAL), 
-                                       colorMode === 1 ? maxScreenPx * 1.5 : bounding.width, Math.abs(yVAH - yVAL));
-                      }
-                  }
+                if (C.opBg > 0 && prof.vah && prof.val) {
+                    const yVAH = yAxis.convertToPixel(prof.vah.pHigh);
+                    const yVAL = yAxis.convertToPixel(prof.val.pLow);
+                    if (yVAH !== null && yVAL !== null) {
+                        ctx.fillStyle = _waHex2Rgba(C.clrBg, C.opBg);
+                        ctx.fillRect(colorMode === 1 ? anchorX : 0, Math.min(yVAH, yVAL), 
+                                     colorMode === 1 ? maxScreenPx * 1.5 : bounding.width, Math.abs(yVAH - yVAL));
+                    }
+                }
 
-                  prof.bins.forEach(bin => {
-                      if (bin.count <= 0) return;
-                      let yB = yAxis.convertToPixel(bin.pLow), yT = yAxis.convertToPixel(bin.pHigh);
-                      if (yB === null || yT === null) return;
+                prof.bins.forEach(bin => {
+                    if (bin.count <= 0) return;
+                    let yB = yAxis.convertToPixel(bin.pLow), yT = yAxis.convertToPixel(bin.pHigh);
+                    if (yB === null || yT === null) return;
 
-                      const rY = Math.min(yT, yB), rH = Math.max(1, Math.abs(yB - yT));
-                      let blockW = Math.min(rH, maxScreenPx / prof.maxTPO);
-                      const canDrawLetter = useLetter && rH >= 12 && blockW >= 8;
+                    const rY = Math.min(yT, yB), rH = Math.max(1, Math.abs(yB - yT));
+                    let blockW = Math.min(rH, maxScreenPx / prof.maxTPO);
+                    
+                    // 🚀 FIX: Gỡ bỏ giới hạn khắt khe. Miễn rH > 4px là ép vẽ chữ!
+                    const canDrawLetter = useLetter && rH >= 4;
 
-                      let fillClr = bin.inVA ? _waHex2Rgba(C.clrVa, C.opVa) : _waHex2Rgba(C.clrOut, C.opOut);
-                      
-                      if (colorMode === 1) { 
-                          const palHex = PALETTE[pIndex % 5];
-                          fillClr = bin.inVA ? _waHex2Rgba(palHex, C.opVa) : _waHex2Rgba(palHex, C.opOut);
-                      } else if (colorMode === 2) { 
-                          const heatOp = 0.15 + 0.85 * (bin.count / prof.maxTPO);
-                          fillClr = _waHex2Rgba(C.clrVa, heatOp);
-                      }
+                    // Tính màu nền (Fill Color) và Màu chữ (Text Color)
+                    let fillClr = bin.inVA ? _waHex2Rgba(C.clrVa, C.opVa) : _waHex2Rgba(C.clrOut, C.opOut);
+                    let textClr = bin.inVA ? _waHex2Rgba(C.clrVa, 1) : _waHex2Rgba(C.clrOut, 0.6); // Chữ thì opacity phải cao mới thấy được
+                    
+                    if (colorMode === 1) { 
+                        const palHex = PALETTE[pIndex % 5];
+                        fillClr = bin.inVA ? _waHex2Rgba(palHex, C.opVa) : _waHex2Rgba(palHex, C.opOut);
+                        textClr = bin.inVA ? _waHex2Rgba(palHex, 1) : _waHex2Rgba(palHex, 0.6);
+                    } else if (colorMode === 2) { 
+                        const heatOp = 0.15 + 0.85 * (bin.count / prof.maxTPO);
+                        fillClr = _waHex2Rgba(C.clrVa, heatOp);
+                        textClr = _waHex2Rgba(C.clrVa, Math.min(1, heatOp + 0.4));
+                    }
 
-                      ctx.fillStyle = fillClr;
-                      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-                      ctx.lineWidth = 1;
+                    bin.letters.forEach((lIdx, pos) => {
+                        const x = anchorX + dir * (pos * blockW);
+                        
+                        if (canDrawLetter) {
+                            // 🚀 FIX: Font size co giãn động theo chiều cao thực tế của nấc giá
+                            const dynamicFontSize = Math.max(6, Math.min(C.fontSize, rH * 1.2));
+                            ctx.fillStyle = textClr; 
+                            ctx.font = `bold ${dynamicFontSize}px monospace`;
+                            ctx.textAlign = 'center';
+                            ctx.fillText(getLetter(lIdx), x + blockW/2, rY + rH/2 + 1); // +1 để căn giữa chữ đẹp hơn
+                        } else {
+                            ctx.fillStyle = fillClr;
+                            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            ctx.rect(x, rY, Math.max(1, blockW - 1), Math.max(1, rH - 1));
+                            ctx.fill();
+                            if (blockW > 3 && rH > 3) ctx.stroke();
+                        }
+                    });
+                });
 
-                      bin.letters.forEach((lIdx, pos) => {
-                          const x = anchorX + dir * (pos * blockW);
-                          
-                          if (canDrawLetter) {
-                              ctx.font = `bold ${Math.max(8, C.fontSize - 1)}px monospace`;
-                              ctx.textAlign = 'center';
-                              ctx.fillText(getLetter(lIdx), x + blockW/2, rY + rH/2);
-                          } else {
-                              ctx.beginPath();
-                              ctx.rect(x, rY, Math.max(1, blockW - 1), Math.max(1, rH - 1));
-                              ctx.fill();
-                              if (blockW > 3 && rH > 3) ctx.stroke();
-                          }
-                      });
-                  });
+                // Vẽ Line và Labels
+                const drawLineLabel = (pLevel, text) => {
+                    const y = yAxis.convertToPixel(pLevel);
+                    if (y === null) return;
+                    ctx.setLineDash(_waGetDash(C.vaStyle, 'va'));
+                    ctx.strokeStyle = _waHex2Rgba(C.clrVahVal, 0.88);
+                    ctx.lineWidth = C.vaLineWidth;
+                    ctx.beginPath(); ctx.moveTo(anchorX, y); 
+                    ctx.lineTo(colorMode === 1 ? anchorX + maxScreenPx : bounding.width, y); 
+                    ctx.stroke(); ctx.setLineDash([]);
+                    
+                    if (C.showLabels) {
+                        ctx.fillStyle = _waHex2Rgba(C.clrVahVal, 0.95);
+                        ctx.font = `bold ${Math.max(8, C.fontSize - 1)}px sans-serif`;
+                        ctx.textAlign = dir === 1 ? 'right' : 'left';
+                        const tx = dir === 1 ? anchorX + maxScreenPx : anchorX - maxScreenPx;
+                        ctx.fillText(`${text} ${pLevel.toFixed(2)}`, tx, y - 4);
+                    }
+                };
+                if (prof.vah) drawLineLabel(prof.vah.pHigh, 'VAH');
+                if (prof.val) drawLineLabel(prof.val.pLow, 'VAL');
 
-                  // [10] VAH / VAL LINES & LABELS
-                  const drawLineLabel = (pLevel, text) => {
-                      const y = yAxis.convertToPixel(pLevel);
-                      if (y === null) return;
-                      ctx.setLineDash(_waGetDash(C.vaStyle, 'va'));
-                      ctx.strokeStyle = _waHex2Rgba(C.clrVahVal, 0.88);
-                      ctx.lineWidth = C.vaLineWidth;
-                      ctx.beginPath(); ctx.moveTo(anchorX, y); 
-                      ctx.lineTo(colorMode === 1 ? anchorX + maxScreenPx : bounding.width, y); 
-                      ctx.stroke(); ctx.setLineDash([]);
-                      
-                      if (C.showLabels) {
-                          ctx.fillStyle = _waHex2Rgba(C.clrVahVal, 0.95);
-                          ctx.font = `bold ${Math.max(8, C.fontSize - 1)}px sans-serif`;
-                          ctx.textAlign = dir === 1 ? 'right' : 'left';
-                          const tx = dir === 1 ? anchorX + maxScreenPx : anchorX - maxScreenPx;
-                          ctx.fillText(`${text} ${pLevel.toFixed(2)}`, tx, y - 4);
-                      }
-                  };
-                  if (prof.vah) drawLineLabel(prof.vah.pHigh, 'VAH');
-                  if (prof.val) drawLineLabel(prof.val.pLow, 'VAL');
+                const drawIbLine = (pLevel, text) => {
+                    const y = yAxis.convertToPixel(pLevel);
+                    if (y === null) return;
+                    ctx.setLineDash([2, 4]);
+                    ctx.strokeStyle = _waHex2Rgba(C.clrIb, 0.6);
+                    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(bounding.width, y); ctx.stroke(); ctx.setLineDash([]);
+                    if (C.showLabels) {
+                        ctx.fillStyle = _waHex2Rgba(C.clrIb, 0.9); ctx.font = `bold ${Math.max(8, C.fontSize - 2)}px sans-serif`; 
+                        ctx.textAlign = 'left'; ctx.fillText(text, 10, y - 4);
+                    }
+                };
+                if (prof.ibHigh !== null) drawIbLine(prof.ibHigh, 'IB High');
+                if (prof.ibLow !== null) drawIbLine(prof.ibLow, 'IB Low');
 
-                  // [11] INITIAL BALANCE (IB)
-                  const drawIbLine = (pLevel, text) => {
-                      const y = yAxis.convertToPixel(pLevel);
-                      if (y === null) return;
-                      ctx.setLineDash([2, 4]);
-                      ctx.strokeStyle = _waHex2Rgba(C.clrIb, 0.6);
-                      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(bounding.width, y); ctx.stroke(); ctx.setLineDash([]);
-                      if (C.showLabels) {
-                          ctx.fillStyle = _waHex2Rgba(C.clrIb, 0.9); ctx.font = `bold ${Math.max(8, C.fontSize - 2)}px sans-serif`; 
-                          ctx.textAlign = 'left'; ctx.fillText(text, 10, y - 4);
-                      }
-                  };
-                  if (prof.ibHigh !== null) drawIbLine(prof.ibHigh, 'IB High');
-                  if (prof.ibLow !== null) drawIbLine(prof.ibLow, 'IB Low');
+                const pocY = yAxis.convertToPixel(prof.pocMid);
+                if (pocY !== null) {
+                    ctx.beginPath();
+                    if (prof.isSuperPoc) {
+                        ctx.shadowColor = _waHex2Rgba(C.clrPoc, 0.6); ctx.shadowBlur = 8;
+                        ctx.strokeStyle = _waHex2Rgba(C.clrPoc, 1); ctx.lineWidth = C.pocLineWidth + 1;
+                    } else {
+                        ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+                        ctx.strokeStyle = prof.isNaked ? _waHex2Rgba(C.clrNpoc, 0.8) : _waHex2Rgba(C.clrPoc, 0.9);
+                        ctx.lineWidth = prof.isNaked ? Math.max(1, C.pocLineWidth - 1) : C.pocLineWidth;
+                        if (prof.isNaked) ctx.setLineDash(_waGetDash(C.npocStyle, 'npoc'));
+                    }
+                    
+                    const pEndX = prof.isNaked ? bounding.width : (anchorX + dir * maxScreenPx);
+                    ctx.moveTo(anchorX, pocY); ctx.lineTo(pEndX, pocY); ctx.stroke();
+                    ctx.setLineDash([]); ctx.shadowBlur = 0;
+                    
+                    if (C.showLabels) {
+                        let lblText = prof.isSuperPoc ? '⚡ SUPER POC' : (prof.isNaked ? 'nTPO' : 'TPO POC');
+                        lblText += ' ' + prof.pocMid.toLocaleString('en-US', { maximumFractionDigits: 2 });
+                        ctx.font = `bold ${C.fontSize}px system-ui,sans-serif`;
+                        const tw = ctx.measureText(lblText).width, bW = tw + 10, bH = C.fontSize + 8;
+                        const bX = dir === 1 ? pEndX - bW - 10 : pEndX + 10;
+                        
+                        _waRoundRect(ctx, bX, pocY - bH / 2, bW, bH, 3);
+                        ctx.fillStyle = prof.isSuperPoc ? _waHex2Rgba(C.clrPoc, 1) : (prof.isNaked ? _waHex2Rgba(C.clrNpoc, 1) : _waHex2Rgba(C.clrPoc, 1));
+                        ctx.fill();
+                        ctx.fillStyle = '#000000'; ctx.textAlign = 'left'; ctx.fillText(lblText, bX + 5, pocY);
+                    }
+                }
 
-                  // [9/12] POC & NAKED POC
-                  const pocY = yAxis.convertToPixel(prof.pocMid);
-                  if (pocY !== null) {
-                      ctx.beginPath();
-                      if (prof.isSuperPoc) {
-                          ctx.shadowColor = _waHex2Rgba(C.clrPoc, 0.6); ctx.shadowBlur = 8;
-                          ctx.strokeStyle = _waHex2Rgba(C.clrPoc, 1); ctx.lineWidth = C.pocLineWidth + 1;
-                      } else {
-                          ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
-                          ctx.strokeStyle = prof.isNaked ? _waHex2Rgba(C.clrNpoc, 0.8) : _waHex2Rgba(C.clrPoc, 0.9);
-                          ctx.lineWidth = prof.isNaked ? Math.max(1, C.pocLineWidth - 1) : C.pocLineWidth;
-                          if (prof.isNaked) ctx.setLineDash(_waGetDash(C.npocStyle, 'npoc'));
-                      }
-                      
-                      const pEndX = prof.isNaked ? bounding.width : (anchorX + dir * maxScreenPx);
-                      ctx.moveTo(anchorX, pocY); ctx.lineTo(pEndX, pocY); ctx.stroke();
-                      ctx.setLineDash([]); ctx.shadowBlur = 0;
-                      
-                      if (C.showLabels) {
-                          let lblText = prof.isSuperPoc ? '⚡ SUPER POC' : (prof.isNaked ? 'nTPO' : 'TPO POC');
-                          lblText += ' ' + prof.pocMid.toLocaleString('en-US', { maximumFractionDigits: 2 });
-                          ctx.font = `bold ${C.fontSize}px system-ui,sans-serif`;
-                          const tw = ctx.measureText(lblText).width, bW = tw + 10, bH = C.fontSize + 8;
-                          const bX = dir === 1 ? pEndX - bW - 10 : pEndX + 10;
-                          
-                          _waRoundRect(ctx, bX, pocY - bH / 2, bW, bH, 3);
-                          ctx.fillStyle = prof.isSuperPoc ? _waHex2Rgba(C.clrPoc, 1) : (prof.isNaked ? _waHex2Rgba(C.clrNpoc, 1) : _waHex2Rgba(C.clrPoc, 1));
-                          ctx.fill();
-                          ctx.fillStyle = '#000000'; ctx.textAlign = 'left'; ctx.fillText(lblText, bX + 5, pocY);
-                      }
-                  }
+                if (C.showLabels && prof.vah) {
+                    ctx.font = `bold ${C.fontSize}px sans-serif`;
+                    ctx.textAlign = dir === 1 ? 'left' : 'right';
+                    const imbClr = prof.imbalance === 'BALANCE' ? _waHex2Rgba(C.clrImb, 0.7) : (prof.imbalance.includes('BUYING') ? '#0ECB81' : '#F6465D');
+                    ctx.fillStyle = imbClr;
+                    const topY = yAxis.convertToPixel(prof.vah.pHigh) - 15;
+                    ctx.fillText(prof.imbalance, anchorX + dir * 10, topY);
+                }
+            });
 
-                  // [13] BALANCE / IMBALANCE DETECTOR
-                  if (C.showLabels && prof.vah) {
-                      ctx.font = `bold ${C.fontSize}px sans-serif`;
-                      ctx.textAlign = dir === 1 ? 'left' : 'right';
-                      const imbClr = prof.imbalance === 'BALANCE' ? _waHex2Rgba(C.clrImb, 0.7) : (prof.imbalance.includes('BUYING') ? '#0ECB81' : '#F6465D');
-                      ctx.fillStyle = imbClr;
-                      const topY = yAxis.convertToPixel(prof.vah.pHigh) - 15;
-                      ctx.fillText(prof.imbalance, anchorX + dir * 10, topY);
-                  }
-              });
+        } catch (e) {
+            console.error('[WAVE_TPO]', e);
+        } finally {
+            ctx.restore();
+        }
 
-          } catch (e) {
-              console.error('[WAVE_TPO]', e);
-          } finally {
-              ctx.restore();
-          }
+        return false;
+    }
+});
 
-          return false;
-      }
-  });
-})();
+})(); // <--- ĐÓNG IIFE AN TOÀN
     
 // ── 1. VWAP_BANDS ─────────────────────────────────
     // Fix: uses utcDayIndex() instead of getUTCDate()
