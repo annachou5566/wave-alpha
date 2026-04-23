@@ -313,19 +313,42 @@
     {
       name: 'WAVE_TPO',
       shortName: 'TPO',
-      description: 'Hồ Sơ Thời Gian (Market Profile)',
+      description: 'Hồ Sơ Thời Gian ULTIMATE v3.0 (Tuỳ Chỉnh Màu)',
       category: 'wave_alpha',
       isStack: true,
-      // [Bins, VA%, Vị trí, Chế độ Ký tự, Chế độ Phiên]
-      defaultParams: [60, 70, 0, 0, 0], 
-      paramLabels: [
-        'Số Lượng Thanh Ngang (Bins)', 
-        'Vùng Giá Trị VA (%)', 
-        'Vị Trí (0=Bên Trái, 1=Bên Phải)',
-        'Hiển Thị (0=Khối vuông, 1=Ký tự Chữ)',
-        'Màu Phiên (0=Đơn sắc, 1=Đa Phiên, 2=Bản đồ nhiệt)'
-      ],
       builtIn: false,
+      // Core [0-5] | Colors [6-13] | Styles [14-22]
+      defaultParams: [
+        60, 70, 35, 0, 0, 0,
+        "#9C27B0", "#9C27B0", "#9C27B0", "#F0B90B",
+        "#BA68C8", "#FFD600", "#FF9800", "#2196F3",
+        75, 15, 5, 2, 1, 0, 0, 9, 1
+      ], 
+      paramLabels: [
+        'Số Bins (10-200)', 
+        'Vùng Giá Trị VA (%)', 
+        'Độ Rộng Tối Đa (%)',
+        'Vị Trí (0=Trái, 1=Phải)',
+        'Hiển Thị (0=Khối, 1=Chữ)',
+        'Màu Phiên (0=Đơn, 1=Đa, 2=Nhiệt)',
+        'Màu TPO Trong VA',
+        'Màu TPO Ngoài VA',
+        'Màu Nền Vùng VA',
+        'Màu Đường POC',
+        'Màu Đường VAH/VAL',
+        'Màu Đường IB',
+        'Màu Đường nPOC',
+        'Màu Chữ Imbalance',
+        'Độ Mờ TPO Trong VA (%)',
+        'Độ Mờ TPO Ngoài VA (%)',
+        'Độ Mờ Nền VA (%)',
+        'Độ Dày POC (1-5)',
+        'Độ Dày VAH/VAL (1-4)',
+        'Nét VA (0=Đứt, 1=Chấm, 2=Liền)',
+        'Nét nPOC (0=Đứt, 1=Chấm, 2=Dài)',
+        'Cỡ Chữ Nhãn (8-16)',
+        'Hiện Nhãn Giá (0=Tắt, 1=Bật)'
+      ],
     },
     {
       name: 'SUPERTREND',
@@ -1920,390 +1943,408 @@ function roundRect(ctx, x, y, w, h, r) {
   });
 })();
 
-/**
- * ╔══════════════════════════════════════════════════════════════════════════════════╗
- * ║  WAVE_TPO ULTIMATE — Time Price Opportunity (Market Profile) v2.0                ║
- * ║  Wave Alpha Trading Analytics Platform — chart-indicators.js                     ║
- * ║                                                                                  ║
- * ║  [1] TPO Letter Mode: Ký tự A-Z chuẩn Sierra Chart, auto fallback sang Block.    ║
- * ║  [2] Session Coloring: Tách phiên ngày UTC, Palette 5 màu / Gradient Heatmap.    ║
- * ║  [3] Initial Balance (IB): Line nét đứt cảnh báo Breakout 2 nến đầu phiên.       ║
- * ║  [4] Naked TPO POC: Kéo dài nPOC chưa bị test, điểm vào lệnh Reversal cực mạnh.  ║
- * ║  [5] SUPER POC Detection: Hội tụ Value TPO & VPVR -> Diamond Support (Glow).     ║
- * ║  [6] VAH / VAL Labels: Phủ nền mờ Value Area, đánh dấu ranh giới chuẩn.          ║
- * ║  [7] Imbalance Detection: Phát hiện mất cân bằng Mua/Bán trong lòng TPO.         ║
- * ║  [8] Multi-Layer LRU Cache: Hash Map 10 entries đảm bảo FPS luôn 60.             ║
- * ╚══════════════════════════════════════════════════════════════════════════════════╝
- */
+// ════════════════════════════════════════════════════════════════════════════════
+//  WAVE_TPO ULTIMATE v3.0 — CORE ENGINE (Full Color Customization & Clean UI)
+// ════════════════════════════════════════════════════════════════════════════════
+(function initWaveTpoCore() {
+  'use strict';
 
-// ─────────────────────────────────────────────────────────────────
-// [8] CACHE ENGINE ĐA LỚP — Tối đa 10 entries chống tràn RAM
-// ─────────────────────────────────────────────────────────────────
-if (!window._waTpoCache) window._waTpoCache = new Map();
+  if (!window._waTpoCache) window._waTpoCache = new Map();
 
-function _waTpoCacheSet(key, value) {
-    if (window._waTpoCache.has(key)) window._waTpoCache.delete(key);
-    window._waTpoCache.set(key, value);
-    if (window._waTpoCache.size > 10) {
-        const oldestKey = window._waTpoCache.keys().next().value;
-        window._waTpoCache.delete(oldestKey);
-    }
-}
+  function _waTpoCacheSet(key, value) {
+      if (window._waTpoCache.has(key)) window._waTpoCache.delete(key);
+      window._waTpoCache.set(key, value);
+      if (window._waTpoCache.size > 10) {
+          window._waTpoCache.delete(window._waTpoCache.keys().next().value);
+      }
+  }
 
-// ─────────────────────────────────────────────────────────────────
-// TPO RENDER ENGINE
-// ─────────────────────────────────────────────────────────────────
-kc.registerIndicator({
-    name: 'WAVE_TPO',
-    shortName: 'TPO',
-    description: 'Time Price Opportunity (Market Profile)',
-    category: 'wave_alpha',
-    series: 'price',
-    isStack: true,
+  function _waHex2Rgba(val, alpha) {
+      if (val === 'transparent') return 'rgba(0,0,0,0)';
+      if (typeof val === 'number') {
+          const h = Math.round(val) >>> 0;
+          const r = (h >> 16) & 0xFF, g = (h >> 8) & 0xFF, b = h & 0xFF;
+          return `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
+      }
+      let hex = String(val).replace('#', '');
+      if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+      const r = parseInt(hex.substring(0, 2), 16) || 0;
+      const g = parseInt(hex.substring(2, 4), 16) || 0;
+      const b = parseInt(hex.substring(4, 6), 16) || 0;
+      return `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
+  }
 
-    calcParams: [60, 70, 0, 0, 0],
-    figures: [],
+  function _waGetDash(styleIdx, type) {
+      if (styleIdx === 1) return [2, 3];             
+      if (styleIdx === 2) return type === 'va' ? [] : [12, 4];
+      return [6, 4];                                 
+  }
 
-    calc: function (dataList) { return dataList.map(() => ({})); },
+  function _waRoundRect(ctx, x, y, w, h, r) {
+      r = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+  }
 
-    draw: function (args) {
-        const { ctx, bounding, xAxis, yAxis, indicator } = args;
-        const dataList = args.kLineDataList || args.dataList || [];
-        const visibleRange = args.visibleRange || { from: 0, to: dataList.length };
+  kc.registerIndicator({
+      name: 'WAVE_TPO',
+      shortName: 'TPO',
+      description: 'Time Price Opportunity (Market Profile) ULTIMATE v3.0',
+      category: 'wave_alpha',
+      series: 'price',
+      isStack: true,
 
-        if (!dataList || dataList.length === 0 || !bounding) return false;
+      // 🚀 Chặn hiển thị thông số lằng nhằng trên góc Chart
+      createTooltipDataSource: function(args) {
+          return { name: 'TPO', calcParamsText: ' ', values: [] };
+      },
 
-        const p = indicator.calcParams;
-        const rowCount = Math.max(10, Math.min(200, +(p[0] || 60)));
-        const vaPercent = Math.max(10, Math.min(100, +(p[1] || 70)));
-        const isLeft = +(p[2] || 0) === 0;
-        const useLetter = +(p[3] || 0) === 1;
-        const colorMode = +(p[4] || 0); // 0: Đơn, 1: Đa Phiên, 2: Heatmap
+      calcParams: [
+          60, 70, 35, 0, 0, 0,
+          "#9C27B0", "#9C27B0", "#141822", "#F0B90B",
+          "#BA68C8", "#FFD600", "#FF9800", "#2196F3",
+          75, 15, 0, 2, 1, 0, 0, 9, 1
+      ],
+      figures: [],
 
-        let from = Math.max(0, visibleRange.from !== undefined ? visibleRange.from : 0);
-        let to = Math.min(dataList.length, visibleRange.to !== undefined ? visibleRange.to : dataList.length);
-        if (from >= to) return false;
+      calc: function (dataList) { return dataList.map(() => ({})); },
 
-        // Xác định Sessions (Phiên)
-        let sessions = [];
-        if (colorMode === 0) {
-            sessions.push({ start: from, end: to });
-        } else {
-            let curDay = -1, startIdx = from;
-            for (let i = from; i < to; i++) {
-                const dt = new Date(dataList[i].timestamp);
-                const day = dt.getUTCDate();
-                if (curDay === -1) curDay = day;
-                else if (day !== curDay) {
-                    sessions.push({ start: startIdx, end: i });
-                    startIdx = i; curDay = day;
-                }
-            }
-            sessions.push({ start: startIdx, end: to });
-            if (sessions.length > 5) sessions = sessions.slice(-5); // Tối đa 5 phiên
-        }
+      draw: function (args) {
+          const { ctx, bounding, xAxis, yAxis, indicator } = args;
+          const dataList = args.kLineDataList || args.dataList || [];
+          const visibleRange = args.visibleRange || { from: 0, to: dataList.length };
 
-        // Tạo Cache Key siêu nhạy
-        const lastClose = dataList[to - 1] ? (dataList[to - 1].close || 0) : 0;
-        const cacheKey = `${from}_${to}_${rowCount}_${vaPercent}_${colorMode}_${lastClose}_${bounding.width}`;
+          if (!dataList || dataList.length === 0 || !bounding) return false;
 
-        let profilesToRender = [];
+          const p = indicator.calcParams;
+          
+          // Đọc Cấu Hình Lõi
+          const rowCount = Math.max(10, Math.min(200, +(p[0] ?? 60)));
+          const vaPercent = Math.max(10, Math.min(100, +(p[1] ?? 70)));
+          const widthPct = Math.max(10, Math.min(100, +(p[2] ?? 35)));
+          const isLeft = +(p[3] ?? 0) === 0;
+          const useLetter = +(p[4] ?? 0) === 1;
+          const colorMode = +(p[5] ?? 0); // 0: Đơn, 1: Đa Phiên, 2: Heatmap
 
-        // ─────────────────────────────────────────────────────────────
-        // LÕI TÍNH TOÁN (Chỉ chạy khi Cache Miss)
-        // ─────────────────────────────────────────────────────────────
-        if (window._waTpoCache.has(cacheKey)) {
-            profilesToRender = window._waTpoCache.get(cacheKey);
-        } else {
-            for (let s of sessions) {
-                if (s.end - s.start <= 0) continue;
-                
-                let maxP = -Infinity, minP = Infinity, totalTPO = 0;
-                for (let i = s.start; i < s.end; i++) {
-                    const d = dataList[i]; if (!d) continue;
-                    if (d.high > maxP) maxP = d.high;
-                    if (d.low < minP) minP = d.low;
-                }
-                if (maxP === -Infinity || maxP === minP) continue;
+          // Đọc Bảng Màu và Styles (Config C)
+          const C = {
+              clrVa: p[6] || "#9C27B0",
+              clrOut: p[7] || "#9C27B0",
+              clrBg: p[8] || "#141822",
+              clrPoc: p[9] || "#F0B90B",
+              clrVahVal: p[10] || "#BA68C8",
+              clrIb: p[11] || "#FFD600",
+              clrNpoc: p[12] || "#FF9800",
+              clrImb: p[13] || "#2196F3",
+              opVa: Math.max(0, Math.min(100, +(p[14] ?? 75))) / 100,
+              opOut: Math.max(0, Math.min(100, +(p[15] ?? 15))) / 100,
+              opBg: Math.max(0, Math.min(100, +(p[16] ?? 0))) / 100, // Mặc định nền mờ = 0 (Tắt)
+              pocWidth: Math.max(1, Math.min(5, +(p[17] ?? 2))),
+              vaWidth: Math.max(1, Math.min(4, +(p[18] ?? 1))),
+              vaStyle: Math.round(+(p[19] ?? 0)),
+              npocStyle: Math.round(+(p[20] ?? 0)),
+              fontSize: Math.max(8, Math.min(16, +(p[21] ?? 9))),
+              showLabels: +(p[22] ?? 1) === 1
+          };
 
-                const step = (maxP - minP) / rowCount;
-                const bins = new Array(rowCount).fill(0).map((_, i) => ({
-                    idx: i, pLow: minP + i * step, pHigh: minP + (i + 1) * step,
-                    count: 0, letters: [], inVA: false
-                }));
+          let from = Math.max(0, visibleRange.from !== undefined ? visibleRange.from : 0);
+          let to = Math.min(dataList.length, visibleRange.to !== undefined ? visibleRange.to : dataList.length);
+          if (from >= to) return false;
 
-                // Đổ TPO vào Bins + Tracking Letter Index
-                for (let i = s.start; i < s.end; i++) {
-                    const d = dataList[i]; if (!d) continue;
-                    const sIdx = Math.max(0, Math.floor((d.low - minP) / step));
-                    const eIdx = Math.min(rowCount - 1, Math.floor((d.high - minP) / step));
-                    
-                    const letterIdx = i - s.start; // [1] TPO Letter Mode Logic
-                    for (let j = sIdx; j <= eIdx; j++) {
-                        bins[j].count += 1;
-                        bins[j].letters.push(letterIdx);
-                        totalTPO += 1;
-                    }
-                }
+          // Xác định Sessions (Phiên)
+          let sessions = [];
+          if (colorMode === 0 || colorMode === 2) {
+              sessions.push({ start: from, end: to });
+          } else {
+              let curDay = -1, startIdx = from;
+              for (let i = from; i < to; i++) {
+                  const dt = new Date(dataList[i].timestamp);
+                  const day = dt.getUTCDate();
+                  if (curDay === -1) curDay = day;
+                  else if (day !== curDay) {
+                      sessions.push({ start: startIdx, end: i });
+                      startIdx = i; curDay = day;
+                  }
+              }
+              sessions.push({ start: startIdx, end: to });
+              if (sessions.length > 5) sessions = sessions.slice(-5);
+          }
 
-                if (totalTPO === 0) continue;
+          // Cache Key (Chỉ cache logic tính toán, không cache màu)
+          const lastClose = dataList[to - 1] ? (dataList[to - 1].close || 0) : 0;
+          const cacheKey = `${from}_${to}_${rowCount}_${vaPercent}_${colorMode}_${lastClose}`;
 
-                // Tìm POC
-                let pocBin = bins[0], maxTPO = 0;
-                bins.forEach(b => { if (b.count > maxTPO) { maxTPO = b.count; pocBin = b; } });
+          let profilesToRender = [];
 
-                // Tính Value Area (Loang vết dầu)
-                pocBin.inVA = true;
-                let cVA = pocBin.count, tVA = totalTPO * (vaPercent / 100);
-                let uI = pocBin.idx + 1, dI = pocBin.idx - 1;
+          if (window._waTpoCache.has(cacheKey)) {
+              profilesToRender = window._waTpoCache.get(cacheKey);
+          } else {
+              for (let s of sessions) {
+                  if (s.end - s.start <= 0) continue;
+                  
+                  let maxP = -Infinity, minP = Infinity, totalTPO = 0;
+                  for (let i = s.start; i < s.end; i++) {
+                      const d = dataList[i]; if (!d) continue;
+                      if (d.high > maxP) maxP = d.high;
+                      if (d.low < minP) minP = d.low;
+                  }
+                  if (maxP === -Infinity || maxP === minP) continue;
 
-                while (cVA < tVA && (uI < rowCount || dI >= 0)) {
-                    let vU = 0, vD = 0;
-                    if (uI < rowCount) vU += bins[uI].count; if (uI + 1 < rowCount) vU += bins[uI + 1].count;
-                    if (dI >= 0) vD += bins[dI].count; if (dI - 1 >= 0) vD += bins[dI - 1].count;
+                  const step = (maxP - minP) / rowCount;
+                  const bins = new Array(rowCount).fill(0).map((_, i) => ({
+                      idx: i, pLow: minP + i * step, pHigh: minP + (i + 1) * step,
+                      count: 0, letters: [], inVA: false
+                  }));
 
-                    if (vU >= vD && uI < rowCount) { bins[uI].inVA = true; cVA += bins[uI].count; uI++; }
-                    else if (dI >= 0) { bins[dI].inVA = true; cVA += bins[dI].count; dI--; }
-                    else if (uI < rowCount) { bins[uI].inVA = true; cVA += bins[uI].count; uI++; }
-                    else break;
-                }
+                  for (let i = s.start; i < s.end; i++) {
+                      const d = dataList[i]; if (!d) continue;
+                      const sIdx = Math.max(0, Math.floor((d.low - minP) / step));
+                      const eIdx = Math.min(rowCount - 1, Math.floor((d.high - minP) / step));
+                      const letterIdx = i - s.start; 
+                      for (let j = sIdx; j <= eIdx; j++) {
+                          bins[j].count += 1;
+                          bins[j].letters.push(letterIdx);
+                          totalTPO += 1;
+                      }
+                  }
 
-                // Tính VAH, VAL
-                let vah = null, val = null;
-                for (let i = rowCount - 1; i >= 0; i--) { if (bins[i].inVA && !vah) vah = bins[i]; }
-                for (let i = 0; i < rowCount; i++) { if (bins[i].inVA && !val) val = bins[i]; }
+                  if (totalTPO === 0) continue;
 
-                // [3] INITIAL BALANCE (IB) - 2 Time Brackets đầu tiên
-                let ibHigh = null, ibLow = null;
-                if (s.end - s.start >= 2) {
-                    ibHigh = Math.max(dataList[s.start].high, dataList[s.start + 1].high);
-                    ibLow = Math.min(dataList[s.start].low, dataList[s.start + 1].low);
-                }
+                  let pocBin = bins[0], maxTPO = 0;
+                  bins.forEach(b => { if (b.count > maxTPO) { maxTPO = b.count; pocBin = b; } });
 
-                // [7] TPO IMBALANCE DETECTION
-                let topCount = 0, botCount = 0;
-                for (let b of bins) {
-                    if (b.inVA) {
-                        if (b.idx > pocBin.idx) topCount += b.count;
-                        else if (b.idx < pocBin.idx) botCount += b.count;
-                    }
-                }
-                let imbalance = 'BALANCE';
-                const diff = Math.abs(topCount - botCount) / (topCount + botCount || 1);
-                if (diff > 0.3) {
-                    imbalance = topCount > botCount ? 'BUYING IMBALANCE' : 'SELLING IMBALANCE';
-                }
+                  pocBin.inVA = true;
+                  let cVA = pocBin.count, tVA = totalTPO * (vaPercent / 100);
+                  let uI = pocBin.idx + 1, dI = pocBin.idx - 1;
 
-                // [4] NAKED POC DETECTION
-                let isNaked = true;
-                const pocMid = (pocBin.pLow + pocBin.pHigh) / 2;
-                for (let i = s.end; i < dataList.length; i++) {
-                    const d = dataList[i];
-                    if (d && d.low <= pocMid && d.high >= pocMid) { isNaked = false; break; }
-                }
+                  while (cVA < tVA && (uI < rowCount || dI >= 0)) {
+                      let vU = 0, vD = 0;
+                      if (uI < rowCount) vU += bins[uI].count; if (uI + 1 < rowCount) vU += bins[uI + 1].count;
+                      if (dI >= 0) vD += bins[dI].count; if (dI - 1 >= 0) vD += bins[dI - 1].count;
 
-                // [5] SUPER POC DETECTION (Convergence TPO + VPVR)
-                let isSuperPoc = false;
-                if (window._waVpvrCache) {
-                    for (const vCache of window._waVpvrCache.values()) {
-                        if (vCache.profilesToRender) {
-                            for (const vProf of vCache.profilesToRender) {
-                                if (vProf.poc) {
-                                    const vMid = (vProf.poc.pLow + vProf.poc.pHigh) / 2;
-                                    if (Math.abs(vMid - pocMid) <= step * 2) { isSuperPoc = true; break; }
-                                }
-                            }
-                        }
-                        if (isSuperPoc) break;
-                    }
-                }
+                      if (vU >= vD && uI < rowCount) { bins[uI].inVA = true; cVA += bins[uI].count; uI++; }
+                      else if (dI >= 0) { bins[dI].inVA = true; cVA += bins[dI].count; dI--; }
+                      else if (uI < rowCount) { bins[uI].inVA = true; cVA += bins[uI].count; uI++; }
+                      else break;
+                  }
 
-                profilesToRender.push({
-                    bins, maxTPO, pocMid, vah, val, ibHigh, ibLow,
-                    imbalance, isNaked, isSuperPoc, startIdx: s.start
-                });
-            }
-            _waTpoCacheSet(cacheKey, profilesToRender);
-        }
+                  let vah = null, val = null;
+                  for (let i = rowCount - 1; i >= 0; i--) { if (bins[i].inVA && !vah) vah = bins[i]; }
+                  for (let i = 0; i < rowCount; i++) { if (bins[i].inVA && !val) val = bins[i]; }
 
-        // ─────────────────────────────────────────────────────────────
-        // ĐỒ HỌA RENDERING
-        // ─────────────────────────────────────────────────────────────
-        try {
-            ctx.save();
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.textBaseline = 'middle';
+                  let ibHigh = null, ibLow = null;
+                  if (s.end - s.start >= 2) {
+                      ibHigh = Math.max(dataList[s.start].high, dataList[s.start + 1].high);
+                      ibLow = Math.min(dataList[s.start].low, dataList[s.start + 1].low);
+                  }
 
-            // Function Helper mapping Letter A-Z, a-z, AA...
-            const getLetter = (n) => {
-                if (n < 26) return String.fromCharCode(65 + n);
-                if (n < 52) return String.fromCharCode(97 + n - 26);
-                return String.fromCharCode(65 + Math.floor(n / 26) - 2) + String.fromCharCode(65 + (n % 26));
-            };
+                  let topCount = 0, botCount = 0;
+                  for (let b of bins) {
+                      if (b.inVA) {
+                          if (b.idx > pocBin.idx) topCount += b.count;
+                          else if (b.idx < pocBin.idx) botCount += b.count;
+                      }
+                  }
+                  let imbalance = 'BALANCE';
+                  const diff = Math.abs(topCount - botCount) / (topCount + botCount || 1);
+                  if (diff > 0.3) imbalance = topCount > botCount ? 'BUYING IMBALANCE' : 'SELLING IMBALANCE';
 
-            const PALETTE = ['#00BCD4', '#2196F3', '#3F51B5', '#673AB7', '#9C27B0']; // Tím -> Xanh
+                  let isNaked = true;
+                  const pocMid = (pocBin.pLow + pocBin.pHigh) / 2;
+                  for (let i = s.end; i < dataList.length; i++) {
+                      const d = dataList[i];
+                      if (d && d.low <= pocMid && d.high >= pocMid) { isNaked = false; break; }
+                  }
 
-            profilesToRender.forEach((prof, pIndex) => {
-                // Xác định Tọa độ Neo (Anchor X) và Hướng mọc (Direction)
-                let anchorX = 0;
-                let dir = 1; // 1 = Grow Right, -1 = Grow Left
-                let maxScreenPx = bounding.width * 0.35;
+                  let isSuperPoc = false;
+                  if (window._waVpvrCache) {
+                      for (const vCache of window._waVpvrCache.values()) {
+                          if (vCache.mainProfile && vCache.mainProfile.poc) {
+                              const vMid = (vCache.mainProfile.poc.pLow + vCache.mainProfile.poc.pHigh) / 2;
+                              if (Math.abs(vMid - pocMid) <= step * 2) { isSuperPoc = true; break; }
+                          }
+                      }
+                  }
 
-                if (colorMode > 0) {
-                    // Đa phiên -> Neo vào gốc nến đầu tiên của phiên, mọc sang phải
-                    anchorX = xAxis.convertToPixel(prof.startIdx) || xAxis.convertToPixel({ index: prof.startIdx });
-                    dir = 1;
-                    maxScreenPx = bounding.width * 0.20; // Tránh đè nhau
-                } else {
-                    // Đơn phiên -> Neo vào lề màn hình
-                    anchorX = isLeft ? 0 : bounding.width;
-                    dir = isLeft ? 1 : -1;
-                }
+                  profilesToRender.push({ bins, maxTPO, pocMid, vah, val, ibHigh, ibLow, imbalance, isNaked, isSuperPoc, startIdx: s.start });
+              }
+              _waTpoCacheSet(cacheKey, profilesToRender);
+          }
 
-                // Setup Màu Sắc [2] Session Coloring
-                let colorVA = '#9C27B0', colorOut = 'rgba(156, 39, 176, 0.15)';
-                if (colorMode === 1) {
-                    colorVA = PALETTE[pIndex % 5];
-                    // Chuyển HEX sang RGBA(0.2)
-                    ctx.fillStyle = colorVA; const temp = ctx.fillStyle;
-                    colorOut = temp.replace(')', ', 0.2)').replace('rgb', 'rgba');
-                }
+          // ─────────────────────────────────────────────────────────────
+          // RENDER ENGINE 
+          // ─────────────────────────────────────────────────────────────
+          try {
+              ctx.save();
+              ctx.globalCompositeOperation = 'source-over';
+              ctx.textBaseline = 'middle';
 
-                // [6] VAH / VAL BACKGROUND LAYER
-                if (prof.vah && prof.val) {
-                    const yVAH = yAxis.convertToPixel(prof.vah.pHigh);
-                    const yVAL = yAxis.convertToPixel(prof.val.pLow);
-                    if (yVAH !== null && yVAL !== null) {
-                        ctx.fillStyle = 'rgba(156, 39, 176, 0.05)';
-                        ctx.fillRect(colorMode > 0 ? anchorX : 0, Math.min(yVAH, yVAL), 
-                                     colorMode > 0 ? maxScreenPx * 1.5 : bounding.width, Math.abs(yVAH - yVAL));
-                    }
-                }
+              const getLetter = (n) => {
+                  if (n < 26) return String.fromCharCode(65 + n);
+                  if (n < 52) return String.fromCharCode(97 + n - 26);
+                  return String.fromCharCode(65 + Math.floor(n / 26) - 2) + String.fromCharCode(65 + (n % 26));
+              };
 
-                // Render Bins (Blocks / Letters)
-                prof.bins.forEach(bin => {
-                    if (bin.count <= 0) return;
-                    let yB = yAxis.convertToPixel(bin.pLow), yT = yAxis.convertToPixel(bin.pHigh);
-                    if (yB === null || yT === null) return;
+              const PALETTE = ['#00BCD4', '#2196F3', '#3F51B5', '#673AB7', '#9C27B0'];
 
-                    const rY = Math.min(yT, yB), rH = Math.max(1, Math.abs(yB - yT));
-                    
-                    // [9] AUTO BLOCK SIZE
-                    let blockW = Math.min(rH, maxScreenPx / prof.maxTPO);
-                    
-                    // Fallback Letter Mode
-                    const canDrawLetter = useLetter && rH >= 12 && blockW >= 8;
+              profilesToRender.forEach((prof, pIndex) => {
+                  let anchorX = 0, dir = 1;
+                  let maxScreenPx = bounding.width * (widthPct / 100);
 
-                    // Màu Heatmap Mode
-                    if (colorMode === 2) {
-                        const opacity = 0.15 + 0.75 * (bin.count / prof.maxTPO);
-                        colorVA = colorOut = `rgba(156, 39, 176, ${opacity})`;
-                    }
+                  if (colorMode === 1) { // Đa phiên
+                      anchorX = xAxis.convertToPixel(prof.startIdx) || xAxis.convertToPixel({ index: prof.startIdx });
+                      dir = 1;
+                      maxScreenPx = maxScreenPx * 0.7; 
+                  } else { // Đơn phiên
+                      anchorX = isLeft ? 0 : bounding.width;
+                      dir = isLeft ? 1 : -1;
+                  }
 
-                    ctx.fillStyle = bin.inVA ? colorVA : colorOut;
-                    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-                    ctx.lineWidth = 1;
+                  // [6] VAH / VAL BACKGROUND LAYER
+                  if (C.opBg > 0 && prof.vah && prof.val) {
+                      const yVAH = yAxis.convertToPixel(prof.vah.pHigh);
+                      const yVAL = yAxis.convertToPixel(prof.val.pLow);
+                      if (yVAH !== null && yVAL !== null) {
+                          ctx.fillStyle = _waHex2Rgba(C.clrBg, C.opBg);
+                          ctx.fillRect(colorMode === 1 ? anchorX : 0, Math.min(yVAH, yVAL), 
+                                       colorMode === 1 ? maxScreenPx * 1.5 : bounding.width, Math.abs(yVAH - yVAL));
+                      }
+                  }
 
-                    bin.letters.forEach((lIdx, pos) => {
-                        const x = anchorX + dir * (pos * blockW);
-                        
-                        if (canDrawLetter) {
-                            // [1] TPO LETTER MODE
-                            ctx.fillStyle = bin.inVA ? '#FFFFFF' : 'rgba(255,255,255,0.35)';
-                            ctx.font = 'bold 9px monospace';
-                            ctx.textAlign = 'center';
-                            ctx.fillText(getLetter(lIdx), x + blockW/2, rY + rH/2);
-                        } else {
-                            // BLOCK MODE
-                            ctx.fillStyle = bin.inVA ? colorVA : colorOut;
-                            ctx.beginPath();
-                            ctx.rect(x, rY, Math.max(1, blockW - 1), Math.max(1, rH - 1));
-                            ctx.fill();
-                            if (blockW > 3 && rH > 3) ctx.stroke();
-                        }
-                    });
-                });
+                  prof.bins.forEach(bin => {
+                      if (bin.count <= 0) return;
+                      let yB = yAxis.convertToPixel(bin.pLow), yT = yAxis.convertToPixel(bin.pHigh);
+                      if (yB === null || yT === null) return;
 
-                // [6] VAH / VAL LINES & LABELS
-                const drawLineLabel = (pLevel, text) => {
-                    const y = yAxis.convertToPixel(pLevel);
-                    if (y === null) return;
-                    ctx.setLineDash([4, 4]);
-                    ctx.strokeStyle = 'rgba(186, 104, 200, 0.8)';
-                    ctx.beginPath(); ctx.moveTo(anchorX, y); 
-                    ctx.lineTo(colorMode > 0 ? anchorX + maxScreenPx : bounding.width, y); 
-                    ctx.stroke(); ctx.setLineDash([]);
-                    
-                    ctx.fillStyle = '#BA68C8';
-                    ctx.font = '9px sans-serif';
-                    ctx.textAlign = dir === 1 ? 'right' : 'left';
-                    const tx = dir === 1 ? anchorX + maxScreenPx : anchorX - maxScreenPx;
-                    ctx.fillText(`${text} ${pLevel.toFixed(2)}`, tx, y - 6);
-                };
-                if (prof.vah) drawLineLabel(prof.vah.pHigh, 'VAH');
-                if (prof.val) drawLineLabel(prof.val.pLow, 'VAL');
+                      const rY = Math.min(yT, yB), rH = Math.max(1, Math.abs(yB - yT));
+                      let blockW = Math.min(rH, maxScreenPx / prof.maxTPO);
+                      const canDrawLetter = useLetter && rH >= 12 && blockW >= 8;
 
-                // [3] INITIAL BALANCE (IB)
-                const drawIbLine = (pLevel, text) => {
-                    const y = yAxis.convertToPixel(pLevel);
-                    if (y === null) return;
-                    ctx.setLineDash([2, 4]);
-                    ctx.strokeStyle = 'rgba(255, 214, 0, 0.5)';
-                    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(bounding.width, y); ctx.stroke(); ctx.setLineDash([]);
-                    ctx.fillStyle = 'rgba(255, 214, 0, 0.8)';
-                    ctx.font = '8px sans-serif'; ctx.textAlign = 'left';
-                    ctx.fillText(text, 10, y - 6);
-                };
-                if (prof.ibHigh !== null) drawIbLine(prof.ibHigh, 'IB High');
-                if (prof.ibLow !== null) drawIbLine(prof.ibLow, 'IB Low');
+                      let fillClr = bin.inVA ? _waHex2Rgba(C.clrVa, C.opVa) : _waHex2Rgba(C.clrOut, C.opOut);
+                      
+                      if (colorMode === 1) { 
+                          const palHex = PALETTE[pIndex % 5];
+                          fillClr = bin.inVA ? _waHex2Rgba(palHex, C.opVa) : _waHex2Rgba(palHex, C.opOut);
+                      } else if (colorMode === 2) { 
+                          const heatOp = 0.15 + 0.85 * (bin.count / prof.maxTPO);
+                          fillClr = _waHex2Rgba(C.clrVa, heatOp);
+                      }
 
-                // [4] NAKED POC & [5] SUPER POC
-                const pocY = yAxis.convertToPixel(prof.pocMid);
-                if (pocY !== null) {
-                    ctx.beginPath();
-                    // Nếu là Super POC -> Glow Vàng rực. Nếu Naked -> Cam. Bình thường -> Gold
-                    if (prof.isSuperPoc) {
-                        ctx.shadowColor = 'rgba(240, 185, 11, 0.6)'; ctx.shadowBlur = 8;
-                        ctx.strokeStyle = '#F0B90B'; ctx.lineWidth = 3;
-                    } else {
-                        ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 2;
-                        ctx.strokeStyle = prof.isNaked ? '#FF9800' : '#F0B90B';
-                        ctx.lineWidth = 2;
-                        if (prof.isNaked) ctx.setLineDash([5, 5]);
-                    }
-                    
-                    const pEndX = prof.isNaked ? bounding.width : (anchorX + dir * maxScreenPx);
-                    ctx.moveTo(anchorX, pocY); ctx.lineTo(pEndX, pocY); ctx.stroke();
-                    
-                    ctx.setLineDash([]); ctx.shadowBlur = 0;
-                    
-                    // Nhãn POC
-                    ctx.fillStyle = prof.isSuperPoc ? '#F0B90B' : (prof.isNaked ? '#FF9800' : '#FFF');
-                    ctx.font = prof.isSuperPoc ? 'bold 11px sans-serif' : 'bold 9px sans-serif';
-                    ctx.textAlign = 'center';
-                    let lblText = prof.isSuperPoc ? '⚡ SUPER POC' : (prof.isNaked ? 'nTPO' : 'TPO POC');
-                    ctx.fillText(lblText, pEndX - dir * 30, pocY - 8);
-                }
+                      ctx.fillStyle = fillClr;
+                      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                      ctx.lineWidth = 1;
 
-                // [7] BALANCE / IMBALANCE DETECTOR
-                ctx.font = 'bold 10px sans-serif';
-                ctx.textAlign = dir === 1 ? 'left' : 'right';
-                ctx.fillStyle = prof.imbalance === 'BUYING IMBALANCE' ? '#4CAF50' : (prof.imbalance === 'SELLING IMBALANCE' ? '#F44336' : '#2196F3');
-                if (prof.vah) {
-                    const topY = yAxis.convertToPixel(prof.vah.pHigh) - 15;
-                    ctx.fillText(prof.imbalance, anchorX + dir * 10, topY);
-                }
-            });
+                      bin.letters.forEach((lIdx, pos) => {
+                          const x = anchorX + dir * (pos * blockW);
+                          
+                          if (canDrawLetter) {
+                              ctx.font = `bold ${Math.max(8, C.fontSize - 1)}px monospace`;
+                              ctx.textAlign = 'center';
+                              ctx.fillText(getLetter(lIdx), x + blockW/2, rY + rH/2);
+                          } else {
+                              ctx.beginPath();
+                              ctx.rect(x, rY, Math.max(1, blockW - 1), Math.max(1, rH - 1));
+                              ctx.fill();
+                              if (blockW > 3 && rH > 3) ctx.stroke();
+                          }
+                      });
+                  });
 
-        } catch (e) {
-            console.error('[WAVE_TPO]', e);
-        } finally {
-            ctx.restore();
-        }
+                  // [10] VAH / VAL LINES & LABELS
+                  const drawLineLabel = (pLevel, text) => {
+                      const y = yAxis.convertToPixel(pLevel);
+                      if (y === null) return;
+                      ctx.setLineDash(_waGetDash(C.vaStyle, 'va'));
+                      ctx.strokeStyle = _waHex2Rgba(C.clrVahVal, 0.88);
+                      ctx.lineWidth = C.vaLineWidth;
+                      ctx.beginPath(); ctx.moveTo(anchorX, y); 
+                      ctx.lineTo(colorMode === 1 ? anchorX + maxScreenPx : bounding.width, y); 
+                      ctx.stroke(); ctx.setLineDash([]);
+                      
+                      if (C.showLabels) {
+                          ctx.fillStyle = _waHex2Rgba(C.clrVahVal, 0.95);
+                          ctx.font = `bold ${Math.max(8, C.fontSize - 1)}px sans-serif`;
+                          ctx.textAlign = dir === 1 ? 'right' : 'left';
+                          const tx = dir === 1 ? anchorX + maxScreenPx : anchorX - maxScreenPx;
+                          ctx.fillText(`${text} ${pLevel.toFixed(2)}`, tx, y - 4);
+                      }
+                  };
+                  if (prof.vah) drawLineLabel(prof.vah.pHigh, 'VAH');
+                  if (prof.val) drawLineLabel(prof.val.pLow, 'VAL');
 
-        return false;
-    }
-});
+                  // [11] INITIAL BALANCE (IB)
+                  const drawIbLine = (pLevel, text) => {
+                      const y = yAxis.convertToPixel(pLevel);
+                      if (y === null) return;
+                      ctx.setLineDash([2, 4]);
+                      ctx.strokeStyle = _waHex2Rgba(C.clrIb, 0.6);
+                      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(bounding.width, y); ctx.stroke(); ctx.setLineDash([]);
+                      if (C.showLabels) {
+                          ctx.fillStyle = _waHex2Rgba(C.clrIb, 0.9); ctx.font = `bold ${Math.max(8, C.fontSize - 2)}px sans-serif`; 
+                          ctx.textAlign = 'left'; ctx.fillText(text, 10, y - 4);
+                      }
+                  };
+                  if (prof.ibHigh !== null) drawIbLine(prof.ibHigh, 'IB High');
+                  if (prof.ibLow !== null) drawIbLine(prof.ibLow, 'IB Low');
+
+                  // [9/12] POC & NAKED POC
+                  const pocY = yAxis.convertToPixel(prof.pocMid);
+                  if (pocY !== null) {
+                      ctx.beginPath();
+                      if (prof.isSuperPoc) {
+                          ctx.shadowColor = _waHex2Rgba(C.clrPoc, 0.6); ctx.shadowBlur = 8;
+                          ctx.strokeStyle = _waHex2Rgba(C.clrPoc, 1); ctx.lineWidth = C.pocLineWidth + 1;
+                      } else {
+                          ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+                          ctx.strokeStyle = prof.isNaked ? _waHex2Rgba(C.clrNpoc, 0.8) : _waHex2Rgba(C.clrPoc, 0.9);
+                          ctx.lineWidth = prof.isNaked ? Math.max(1, C.pocLineWidth - 1) : C.pocLineWidth;
+                          if (prof.isNaked) ctx.setLineDash(_waGetDash(C.npocStyle, 'npoc'));
+                      }
+                      
+                      const pEndX = prof.isNaked ? bounding.width : (anchorX + dir * maxScreenPx);
+                      ctx.moveTo(anchorX, pocY); ctx.lineTo(pEndX, pocY); ctx.stroke();
+                      ctx.setLineDash([]); ctx.shadowBlur = 0;
+                      
+                      if (C.showLabels) {
+                          let lblText = prof.isSuperPoc ? '⚡ SUPER POC' : (prof.isNaked ? 'nTPO' : 'TPO POC');
+                          lblText += ' ' + prof.pocMid.toLocaleString('en-US', { maximumFractionDigits: 2 });
+                          ctx.font = `bold ${C.fontSize}px system-ui,sans-serif`;
+                          const tw = ctx.measureText(lblText).width, bW = tw + 10, bH = C.fontSize + 8;
+                          const bX = dir === 1 ? pEndX - bW - 10 : pEndX + 10;
+                          
+                          _waRoundRect(ctx, bX, pocY - bH / 2, bW, bH, 3);
+                          ctx.fillStyle = prof.isSuperPoc ? _waHex2Rgba(C.clrPoc, 1) : (prof.isNaked ? _waHex2Rgba(C.clrNpoc, 1) : _waHex2Rgba(C.clrPoc, 1));
+                          ctx.fill();
+                          ctx.fillStyle = '#000000'; ctx.textAlign = 'left'; ctx.fillText(lblText, bX + 5, pocY);
+                      }
+                  }
+
+                  // [13] BALANCE / IMBALANCE DETECTOR
+                  if (C.showLabels && prof.vah) {
+                      ctx.font = `bold ${C.fontSize}px sans-serif`;
+                      ctx.textAlign = dir === 1 ? 'left' : 'right';
+                      const imbClr = prof.imbalance === 'BALANCE' ? _waHex2Rgba(C.clrImb, 0.7) : (prof.imbalance.includes('BUYING') ? '#0ECB81' : '#F6465D');
+                      ctx.fillStyle = imbClr;
+                      const topY = yAxis.convertToPixel(prof.vah.pHigh) - 15;
+                      ctx.fillText(prof.imbalance, anchorX + dir * 10, topY);
+                  }
+              });
+
+          } catch (e) {
+              console.error('[WAVE_TPO]', e);
+          } finally {
+              ctx.restore();
+          }
+
+          return false;
+      }
+  });
+})();
     
 // ── 1. VWAP_BANDS ─────────────────────────────────
     // Fix: uses utcDayIndex() instead of getUTCDate()
