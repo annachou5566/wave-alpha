@@ -1822,7 +1822,7 @@ function roundRect(ctx, x, y, w, h, r) {
     createTooltipDataSource: function(args) {
       return {
           name: 'VPVR', 
-          calcParamsText: '', 
+          calcParamsText: ' ', 
           values: []
       };
   },
