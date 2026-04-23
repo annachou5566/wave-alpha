@@ -1552,7 +1552,7 @@ function roundRect(ctx, x, y, w, h, r) {
 })();
 
 // ════════════════════════════════════════════════════════════════════════════════
-//  WAVE_TPO ULTIMATE v4.6 — SMART ENGINE (FIXED SILENT DATA DROP BUG)
+//  WAVE_TPO ULTIMATE v4.7 — SMART ENGINE (FIXED LINE ALIGNMENT & TPO LIMIT)
 // ════════════════════════════════════════════════════════════════════════════════
 (function initWaveTpoSmart() {
   'use strict';
@@ -1676,7 +1676,11 @@ function roundRect(ctx, x, y, w, h, r) {
           if (!groups.has(key)) groups.set(key, { start: i, end: i + 1 });
           else groups.get(key).end = i + 1;
       }
-      return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-10);
+      
+      // 🚀 SỬA LỖI SỐ 2 TẠI ĐÂY:
+      // Đã đổi từ -10 lên -30 để hiển thị 30 phiên. 
+      // Bạn có thể đổi thành -50 hoặc xóa hẳn ".slice(-30)" để nó chạy vô hạn.
+      return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-30);
   }
 
   // ─── BỌC THÉP API LẤY TỌA ĐỘ PIXEL ─────────────────
@@ -1720,7 +1724,7 @@ function roundRect(ctx, x, y, w, h, r) {
 
   // ─── ĐĂNG KÝ VÀ VẼ ───────────────────────────────────────────────────────
   kc.registerIndicator({
-      name: 'WAVE_TPO', shortName: 'TPO', description: 'Time Price Opportunity SMART v4.6',
+      name: 'WAVE_TPO', shortName: 'TPO', description: 'Time Price Opportunity SMART v4.7',
       category: 'wave_alpha', series: 'price', isStack: true,
       createTooltipDataSource: function() { return { name: 'TPO', calcParamsText: ' ', values: [] }; },
       
@@ -1733,20 +1737,14 @@ function roundRect(ctx, x, y, w, h, r) {
       ],
       figures: [],
       calc: function(dataList) { return dataList.map(() => ({})); },
-      
-      // 🚀 BẢN FIX: KHÔNG DÙNG DESTRUCTURING { dataList } Ở ĐÂY NỮA
       draw: function(args) {
-          // Rút trích an toàn các tham số API
           const { ctx, bounding, xAxis, yAxis, indicator } = args;
-          
-          // 🚀 BẢN FIX: Phải gọi đúng tên kLineDataList mà API v9 nhả ra
           const dataList = args.kLineDataList || args.dataList || [];
           const visibleRange = args.visibleRange || { from: 0, to: dataList.length };
 
           if (!dataList || dataList.length === 0 || !bounding) return false;
 
           const p = indicator.calcParams;
-          
           if (p && p.length < 30) {
               const defaults = [
                   60, 70, 1, 0, 1, 0, 1, 1, 
@@ -1756,9 +1754,7 @@ function roundRect(ctx, x, y, w, h, r) {
                   85, 20, 2, 1, 0, 10, 1, 70, 8, 1
               ];
               for (let i = 0; i < 30; i++) {
-                  if (p[i] === undefined || (i >= 8 && i <= 19 && typeof p[i] !== 'string')) {
-                      p[i] = defaults[i];
-                  }
+                  if (p[i] === undefined || (i >= 8 && i <= 19 && typeof p[i] !== 'string')) p[i] = defaults[i];
               }
           }
 
@@ -1771,11 +1767,9 @@ function roundRect(ctx, x, y, w, h, r) {
               colorMode:   +(p[5] ?? 0),
               densityMode: +(p[6] ?? 1),
               smartLabels: +(p[7] ?? 1) === 1,
-              
               clrVA: p[8], clrOut: p[9], clrPoc: p[10], clrNpoc: p[11], clrSuperPoc: p[12],
               clrVaLine: p[13], clrIbHigh: p[14], clrIbLow: p[15], clrImbalBuy: p[16], 
               clrImbalSell: p[17], clrAccept: p[18], clrReject: p[19],
-              
               opVA:        Math.max(0, Math.min(100, +(p[20] ?? 85))) / 100,
               opOut:       Math.max(0, Math.min(100, +(p[21] ?? 20))) / 100,
               pocW:        Math.max(1, +(p[22] ?? 2)),
@@ -1897,16 +1891,14 @@ function roundRect(ctx, x, y, w, h, r) {
               const compactMode= C.densityMode === 0 || pxPerBar < 3;
 
               profiles.forEach((prof) => {
-                  let anchorX, dir, maxBlocksPx;
+                  let anchorX, dir;
                   
                   if (C.groupMode === 0) {
-                      anchorX     = C.isLeft ? 0 : bounding.width;
-                      dir         = C.isLeft ? 1 : -1;
-                      maxBlocksPx = bounding.width * (compactMode ? 0.28 : 0.35);
+                      anchorX = C.isLeft ? 0 : bounding.width;
+                      dir     = C.isLeft ? 1 : -1;
                   } else {
-                      anchorX     = _getXPixel(xAxis, prof.startIdx);
-                      dir         = 1;
-                      maxBlocksPx = bounding.width * (compactMode ? 0.16 : 0.22);
+                      anchorX = _getXPixel(xAxis, prof.startIdx);
+                      dir     = 1;
                   }
 
                   let baseClr = C.clrVA, outClr = C.clrOut, alphaMul = 1;
@@ -1918,6 +1910,7 @@ function roundRect(ctx, x, y, w, h, r) {
                       alphaMul = prof.sessionTotal <= 1 ? 1 : (1 - C.fade) + (prof.sessionIdx / (prof.sessionTotal - 1)) * C.fade;
                   }
 
+                  const maxBlocksPx = C.groupMode === 0 ? bounding.width * (compactMode ? 0.28 : 0.35) : bounding.width * (compactMode ? 0.16 : 0.22);
                   const unitW    = maxBlocksPx / Math.max(1, prof.maxTPO);
                   const stepDraw = (compactMode && !C.useLetter) ? 2 : 1;
 
@@ -1958,13 +1951,19 @@ function roundRect(ctx, x, y, w, h, r) {
                       }
                   });
 
-                  // VẼ CÁC ĐƯỜNG MỨC & POC
+                  // 🚀 SỬA LỖI SỐ 1 TẠI ĐÂY: KHÓA CHẶT ĐIỂM CUỐI CỦA LINE
+                  // Lấy chính xác tọa độ X của nến cuối cùng trong phiên
+                  const endSessionX = _getXPixel(xAxis, prof.endIdx);
+                  
                   const drawLvl = (price, clr, w, dash, txt, isIB = false) => {
                       const y = _getYPixel(yAxis, price); if (y === 0) return;
                       ctx.strokeStyle = _waTpoHex2Rgba(clr, isIB ? 0.6 : 0.85); ctx.lineWidth   = w; ctx.setLineDash(dash);
                       ctx.beginPath();
+                      
                       const lineStart = C.groupMode === 0 ? 0 : anchorX;
-                      const lineEnd   = C.groupMode === 0 ? bounding.width : anchorX + maxBlocksPx * 1.5;
+                      // Chặn lineEnd ngay tại nến cuối cùng của ngày/tuần
+                      const lineEnd   = C.groupMode === 0 ? bounding.width : endSessionX;
+                      
                       ctx.moveTo(lineStart, y); ctx.lineTo(lineEnd, y); ctx.stroke(); ctx.setLineDash([]);
 
                       if (C.showLabels && !compactMode) {
@@ -1990,9 +1989,15 @@ function roundRect(ctx, x, y, w, h, r) {
 
                       ctx.beginPath();
                       const pocStart = C.groupMode === 0 ? 0 : anchorX;
-                      const pocEnd   = C.groupMode === 0 ? bounding.width : anchorX + maxBlocksPx * 1.5;
+                      // Chặn điểm kết thúc đường POC
+                      const pocEnd   = C.groupMode === 0 ? bounding.width : endSessionX;
+                      
                       ctx.moveTo(pocStart, pocY); ctx.lineTo(pocEnd, pocY);
+                      
+                      // Chú ý: Đường Naked POC (nPOC) vốn được thiết kế để đè sang các ngày tương lai 
+                      // cho đến khi bị "cán" trúng. Nếu bạn không muốn nó đè, có thể xóa dòng bên dưới.
                       if (prof.isNaked && C.groupMode !== 0) ctx.lineTo(bounding.width, pocY);
+                      
                       ctx.stroke(); ctx.setLineDash([]);
 
                       if (C.showLabels && !compactMode) {
@@ -2023,7 +2028,7 @@ function roundRect(ctx, x, y, w, h, r) {
                   }
               });
           } catch (e) {
-              console.error('[WAVE_TPO v4.6]', e);
+              console.error('[WAVE_TPO v4.7]', e);
           } finally {
               ctx.restore();
           }
