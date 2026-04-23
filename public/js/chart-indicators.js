@@ -4092,6 +4092,9 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
    * @param {Object} indicator  — indicator instance from KLineCharts
    * @param {string} paneId
    */
+  // =========================================================================
+  // HỆ THỐNG FLOATING SETTINGS V5.0 (CUSTOM PALETTE & HEX INPUT)
+  // =========================================================================
   global.openIndicatorSettings = function (indicator, paneId) {
     const meta = INDICATOR_REGISTRY.find(function (x) { return x.name === indicator.name; });
     const rawParams = indicator.calcParams;
@@ -4101,28 +4104,29 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     const labels = meta && meta.paramLabels ? meta.paramLabels : [];
     const isVPVR = indicator.name === 'WAVE_VPVR';
 
-    // [FIX] VOL và built-in không có params -> hiện thông báo alert thay vì crash
     if (currentParams.length === 0) {
         alert('Chỉ báo này không có thông số để cài đặt.');
         return; 
     }
 
-    // 1. Xóa Panel cũ nếu đang mở để tránh trùng lặp
+    // 1. XÓA PANEL & POPOVER CŨ TRÁNH TRÙNG LẶP
     const oldPanel = document.getElementById('wa-floating-settings');
     if (oldPanel) oldPanel.remove();
+    const oldPopover = document.getElementById('wa-color-popover');
+    if (oldPopover) oldPopover.remove();
 
-    // 2. Tạo Container (Bảng nổi, có thể kéo thả, KHÔNG làm đen màn hình)
+    // 2. TẠO KHUNG PANEL CHÍNH
     const panel = document.createElement('div');
     panel.id = 'wa-floating-settings';
     panel.style.cssText = `
-        position: fixed; top: 80px; right: 50px; width: 340px;
+        position: fixed; top: 80px; right: 50px; width: 350px;
         background: rgba(18, 19, 23, 0.95); border: 1px solid rgba(255,255,255,0.1);
         border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.8);
-        z-index: 99999; color: #EAECEF; display: flex; flex-direction: column;
-        backdrop-filter: blur(8px); cursor: default; user-select: none; font-family: sans-serif;
+        z-index: 99998; color: #EAECEF; display: flex; flex-direction: column;
+        backdrop-filter: blur(8px); font-family: sans-serif; user-select: none;
     `;
 
-    // 3. HEADER (Thanh nắm để kéo thả bảng)
+    // 3. HEADER (Nắm kéo)
     const header = document.createElement('div');
     header.style.cssText = `
         padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); 
@@ -4131,11 +4135,11 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     `;
     header.innerHTML = `
         <span style="font-size:13px; font-weight:bold; color:#F0B90B;">⚙️ ${indicator.shortName || indicator.name}</span>
-        <span id="wa-close-btn" style="cursor:pointer; font-size:16px; line-height:1; opacity:0.6; padding:0 4px;">&times;</span>
+        <span id="wa-close-btn" style="cursor:pointer; font-size:16px; opacity:0.6;">&times;</span>
     `;
     panel.appendChild(header);
 
-    // 4. BODY (Chứa danh sách cài đặt, có thanh cuộn mượt)
+    // 4. BODY (Nội dung settings)
     const body = document.createElement('div');
     body.style.cssText = `
         padding: 16px; max-height: calc(100vh - 200px); overflow-y: auto;
@@ -4143,51 +4147,92 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     `;
     panel.appendChild(body);
 
-    // Nhúng Style CSS thẳng vào Panel (Để UI đẹp và gọn)
+    // ── CSS CHUYÊN BIỆT CHO UI KHÔNG DÙNG THẺ <input type="color"> ──
     const style = document.createElement('style');
     style.innerHTML = `
         #wa-floating-settings ::-webkit-scrollbar { width: 4px; }
         #wa-floating-settings ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
-        .wa-inp-row { display: flex; justify-content: space-between; align-items: center; gap:10px; margin-bottom:8px; }
-        .wa-inp-num { width: 70px; height: 26px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: #FFF; text-align: center; font-size: 12px; outline: none; }
+        .wa-group-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 12px; }
+        .wa-group-title { color:#848E9C; font-size:11px; font-weight:bold; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px; }
+        .wa-inp-row { display: flex; justify-content: space-between; align-items: center; gap:10px; margin-bottom:10px; }
+        
+        /* Ô nhập số bình thường */
+        .wa-inp-num { width: 60px; height: 26px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: #FFF; text-align: center; font-size: 12px; outline: none; transition: border 0.2s;}
         .wa-inp-num:focus { border-color: #F0B90B; }
-        .wa-inp-color { -webkit-appearance: none; border: none; width: 28px; height: 28px; border-radius: 4px; cursor: pointer; padding: 0; background: transparent; }
-        .wa-inp-color::-webkit-color-swatch-wrapper { padding: 0; }
-        .wa-inp-color::-webkit-color-swatch { border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; }
-        .wa-group-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 12px; }
-        .wa-group-title { color:#848E9C; font-size:11px; font-weight:bold; margin-bottom:10px; text-transform:uppercase; }
+        
+        /* Ô nhập mã HEX */
+        .wa-inp-hex { width: 70px; height: 26px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: #FFF; text-align: center; font-size: 11px; font-family: monospace; outline: none; text-transform: uppercase;}
+        .wa-inp-hex:focus { border-color: #F0B90B; }
+        
+        /* Cục vuông hiển thị màu */
+        .wa-color-swatch-btn { width: 26px; height: 26px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); cursor: pointer; transition: transform 0.1s; }
+        .wa-color-swatch-btn:hover { border-color: #FFF; transform: scale(1.05); }
+
+        /* Bảng Màu Mini (Pop-over) */
+        #wa-color-popover {
+            position: fixed; background: #1E222D; border: 1px solid #434651; border-radius: 6px;
+            padding: 8px; display: none; grid-template-columns: repeat(6, 20px); gap: 4px;
+            z-index: 999999; box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+        }
+        .wa-mini-color { width: 20px; height: 20px; border-radius: 3px; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); }
+        .wa-mini-color:hover { border-color: #FFF; transform: scale(1.1); box-shadow: 0 0 4px rgba(255,255,255,0.5); }
     `;
     panel.appendChild(style);
 
-    // Danh sách chú thích chuyên sâu cho VPVR
-    const vpvrDescriptions = [
-        "Số lượng thanh ngang (10-200)", "Tỷ lệ khối lượng lõi (70%)", "Biểu đồ chiếm % chiều ngang",
-        "0 = Cạnh Phải, 1 = Cạnh Trái", "0: Toàn bộ, 1: Ngày, 2: Tuần", "0 = Tắt, 1 = Lớp nền mờ",
-        "Màu lực Mua", "Màu lực Bán", "Point of Control", "Viền Vùng Giá Trị",
-        "HVN (Dày)", "LVN (Mỏng)", "nPOC (Chưa test)", "Icon phe áp đảo",
-        "Độ mờ trong VA (0-100)", "Độ mờ ngoài VA", "Độ dày nét (1-5px)", "Độ dày nét (1-4px)",
-        "0: Đứt, 1: Chấm, 2: Liền", "0: Đứt, 1: Chấm, 2: Gạch dài", "Kích thước chữ (8-16px)", "0 = Ẩn, 1 = Hiện"
+    // ── MA TRẬN 30 MÀU CHUẨN TRADINGVIEW (6 Cột x 5 Hàng) ──
+    const TRADING_PALETTE = [
+        '#FFFFFF', '#D1D4DC', '#B2B5BE', '#787B86', '#434651', '#000000', // Grayscale
+        '#F44336', '#EF5350', '#E53935', '#D32F2F', '#C62828', '#B71C1C', // Reds
+        '#FF9800', '#FFB74D', '#FFA726', '#F57C00', '#E65100', '#F0B90B', // Oranges & Gold
+        '#4CAF50', '#66BB6A', '#26A69A', '#00897B', '#009688', '#0ECB81', // Greens
+        '#2196F3', '#2962FF', '#00BCD4', '#9C27B0', '#673AB7', '#9575CD'  // Blues & Purples
     ];
 
-    // Gộp nhóm tham số
-    const groups = isVPVR ? [
-        { title: 'Cấu Hình Lõi', keys: [0, 1, 2, 3, 4, 5, 21] },
-        { title: 'Bảng Màu Hiển Thị', keys: [6, 7, 8, 9, 10, 11, 12, 13] },
-        { title: 'Kiểu Dáng & Nét Vẽ', keys: [14, 15, 16, 17, 18, 19, 20] }
-    ] : [ { title: 'Cài Đặt', keys: currentParams.map((_, i) => i) } ];
+    // Tạo Popover chứa Bảng màu Mini
+    const colorPopover = document.createElement('div');
+    colorPopover.id = 'wa-color-popover';
+    TRADING_PALETTE.forEach(hex => {
+        const cDiv = document.createElement('div');
+        cDiv.className = 'wa-mini-color';
+        cDiv.style.background = hex;
+        cDiv.dataset.hex = hex;
+        colorPopover.appendChild(cDiv);
+    });
+    document.body.appendChild(colorPopover);
 
-    // ── LOGIC LIVE PREVIEW (Tự cập nhật chart khi sửa thông số) ──
+    // Hàm Update Live (Cập nhật Chart)
     const liveUpdateChart = () => {
         const newParams = currentParams.map((_, idx) => {
-            const inp = document.getElementById('wa-param-' + idx);
-            if (!inp) return currentParams[idx];
-            return inp.type === 'color' ? inp.value : (parseFloat(inp.value) || 0);
+            const inpNum = document.getElementById('wa-param-num-' + idx);
+            const inpHex = document.getElementById('wa-param-hex-' + idx);
+            if (inpHex) return inpHex.value; // Nếu là màu, lấy value chuỗi #HEX
+            if (inpNum) return parseFloat(inpNum.value) || 0; // Nếu là số, parse
+            return currentParams[idx];
         });
         try { global.tvChart.overrideIndicator({ name: indicator.name, calcParams: newParams }, paneId); } catch (e) {}
         return newParams;
     };
 
-    // Đổ danh sách vào Body
+    // Chú thích chuyên biệt
+    const vpvrDescriptions = [
+        "Thanh ngang (10-200)", "Lõi Volume (70%)", "Chiều ngang (%)",
+        "0: Phải, 1: Trái", "0: Toàn, 1: Ngày, 2: Tuần", "0: Tắt, 1: Nền mờ",
+        "Lực Mua", "Lực Bán", "Point of Control", "Viền Giá Trị",
+        "HVN Dày", "LVN Mỏng", "nPOC Chưa Test", "Icon Phe Áp Đảo",
+        "Mờ trong VA (0-100)", "Mờ ngoài VA", "Dày nét (1-5px)", "Dày nét (1-4px)",
+        "0:Đứt 1:Chấm 2:Liền", "0:Đứt 1:Chấm 2:Dài", "Cỡ chữ (8-16)", "0:Ẩn 1:Hiện"
+    ];
+
+    const groups = isVPVR ? [
+        { title: '⚙️ Thông Số Kỹ Thuật', keys: [0, 1, 2, 3, 4, 5, 21] },
+        { title: '🎨 Bảng Màu Giao Diện', keys: [6, 7, 8, 9, 10, 11, 12, 13] },
+        { title: '📏 Kiểu Dáng & Độ Mờ', keys: [14, 15, 16, 17, 18, 19, 20] }
+    ] : [ { title: '⚙️ Cài Đặt Chỉ Báo', keys: currentParams.map((_, i) => i) } ];
+
+    let activeHexInputId = null;
+    let activeBtnId = null;
+
+    // Render danh sách Input
     groups.forEach(g => {
         const box = document.createElement('div');
         box.className = 'wa-group-box';
@@ -4202,32 +4247,97 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
             
             const row = document.createElement('div');
             row.className = 'wa-inp-row';
+            
+            let controlHTML = '';
+            if (isColor) {
+                // UI dành riêng cho Màu: Ô nhập HEX + Nút Vuông Mở Bảng Màu
+                controlHTML = `
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <input type="text" id="wa-param-hex-${idx}" class="wa-inp-hex" value="${val}" autocomplete="off" maxlength="7">
+                        <div id="wa-color-btn-${idx}" class="wa-color-swatch-btn" style="background:${val};"></div>
+                    </div>
+                `;
+            } else {
+                // UI dành cho Số bình thường
+                controlHTML = `<input type="number" id="wa-param-num-${idx}" class="wa-inp-num" value="${val}" step="any">`;
+            }
+
             row.innerHTML = `
                 <div style="display:flex; flex-direction:column; flex:1;">
                     <span style="color:#EAECEF; font-size:12px; font-weight:600;">${labels[idx] || 'Param ' + (idx + 1)}</span>
                     ${desc ? `<span style="color:#848E9C; font-size:10px; margin-top:2px;">${desc}</span>` : ''}
                 </div>
-                <input type="${isColor ? 'color' : 'number'}" id="wa-param-${idx}" 
-                       class="${isColor ? 'wa-inp-color' : 'wa-inp-num'}" value="${val}" step="any">
+                ${controlHTML}
             `;
             box.appendChild(row);
 
-            // Gắn sự kiện để chart tự đổi màu ngay khi vừa click chọn màu
-            row.querySelector('input').addEventListener('input', liveUpdateChart);
+            // Gắn Event Listeners
+            if (isColor) {
+                const hexInp = row.querySelector(`#wa-param-hex-${idx}`);
+                const colorBtn = row.querySelector(`#wa-color-btn-${idx}`);
+                
+                // 1. Type tay vào ô HEX -> Đổi màu cục vuông & Chart
+                hexInp.addEventListener('input', (e) => {
+                    const v = e.target.value;
+                    if (/^#[0-9A-F]{6}$/i.test(v) || /^#[0-9A-F]{3}$/i.test(v)) {
+                        colorBtn.style.background = v;
+                        liveUpdateChart();
+                    }
+                });
+
+                // 2. Click cục vuông -> Hiện Popover Bảng màu mini
+                colorBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    activeHexInputId = `wa-param-hex-${idx}`;
+                    activeBtnId = `wa-color-btn-${idx}`;
+                    
+                    const rect = colorBtn.getBoundingClientRect();
+                    colorPopover.style.display = 'grid';
+                    
+                    // Tính tọa độ sao cho popover không tràn màn hình
+                    let popX = rect.left - 140; // Đẩy sang trái nút
+                    let popY = rect.bottom + 5;
+                    if (popX < 10) popX = 10;
+                    colorPopover.style.left = popX + 'px';
+                    colorPopover.style.top = popY + 'px';
+                });
+            } else {
+                // Đổi số -> Cập nhật chart
+                row.querySelector('input').addEventListener('input', liveUpdateChart);
+            }
         });
         body.appendChild(box);
+    });
+
+    // Lắng nghe sự kiện click vào 1 ô màu trong Popover
+    colorPopover.addEventListener('click', (e) => {
+        if (e.target.classList.contains('wa-mini-color')) {
+            const chosenHex = e.target.dataset.hex;
+            if (activeHexInputId && activeBtnId) {
+                document.getElementById(activeHexInputId).value = chosenHex;
+                document.getElementById(activeBtnId).style.background = chosenHex;
+                liveUpdateChart(); // Cập nhật Chart tức thì
+            }
+            colorPopover.style.display = 'none'; // Ẩn popover
+        }
+    });
+
+    // Bấm ra ngoài thì ẩn Popover bảng màu
+    document.addEventListener('click', (e) => {
+        if (!colorPopover.contains(e.target)) {
+            colorPopover.style.display = 'none';
+        }
     });
 
     // 5. FOOTER (Nút Lưu)
     const footer = document.createElement('div');
     footer.style.cssText = 'padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.1); display:flex;';
-    footer.innerHTML = `<button id="wa-save-btn" style="flex:1; padding:8px; background:#F0B90B; border:none; border-radius:4px; color:#000; font-weight:bold; cursor:pointer;">Xong & Lưu</button>`;
+    footer.innerHTML = `<button id="wa-save-btn" style="flex:1; padding:8px; background:#F0B90B; border:none; border-radius:6px; color:#000; font-weight:bold; cursor:pointer; letter-spacing:0.5px;">✓ XONG & LƯU</button>`;
     panel.appendChild(footer);
 
-    // Gắn panel lên trình duyệt
     document.body.appendChild(panel);
 
-    // ── CHỨC NĂNG KÉO THẢ PANEL ──
+    // ── KÉO THẢ PANEL ──
     let isDragging = false, offset = { x: 0, y: 0 };
     header.onmousedown = (e) => {
         isDragging = true;
@@ -4238,12 +4348,16 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         if (!isDragging) return;
         panel.style.left = (e.clientX - offset.x) + 'px';
         panel.style.top = (e.clientY - offset.y) + 'px';
-        panel.style.right = 'auto'; // Hủy neo bên phải để di chuyển tự do
+        panel.style.right = 'auto'; 
     };
     window.onmouseup = () => isDragging = false;
 
-    // ── NÚT ĐÓNG & LƯU CHÍNH THỨC ──
-    const closePanel = () => panel.remove();
+    // ── ĐÓNG & LƯU ──
+    const closePanel = () => {
+        panel.remove();
+        colorPopover.remove();
+    };
+    
     document.getElementById('wa-close-btn').onclick = closePanel;
     document.getElementById('wa-save-btn').onclick = () => {
         const finalParams = liveUpdateChart();
