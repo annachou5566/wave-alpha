@@ -44,15 +44,16 @@ function renderMultiplierPath(c) {
     });
 
     return `
-        <div class="eb-capsule-container" title="Early Bird Boost: ${currentMul}x">
+        <div class="eb-capsule-container" title="Boost hiện tại: ${currentMul}x">
             <div class="eb-capsule-track">
                 <div class="eb-capsule-fill" style="width: ${fillPct}%"></div>
-                
                 <div class="eb-capsule-dots">${dotsHtml}</div>
                 
                 <div class="eb-dynamic-pill" style="left: ${fillPct}%">
                     <i class="fas ${runnerIcon} eb-capsule-icon"></i>
                     ${countdownStr ? `<span class="eb-capsule-timer">${countdownStr}</span>` : ''}
+                    
+                    <div class="eb-connector"></div>
                 </div>
             </div>
 
