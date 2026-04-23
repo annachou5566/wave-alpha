@@ -3512,33 +3512,34 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 }
 
 /* ===================================================
-   EARLY BIRD - UNIFIED BLOCK (ĐỒNG BỘ MÀU TỐI ĐA)
+   EARLY BIRD - UNIFIED CAPSULE (CON NGƯỜI TRONG BLOCK)
 =================================================== */
-.eb-sync-container {
-    width: 150px; /* Độ rộng của thanh, có thể tùy chỉnh */
-    margin-top: 14px; /* Chừa không gian cho khối động trồi lên */
+.eb-capsule-container {
+    width: 150px; /* Điều chỉnh chiều dài thanh ở đây */
+    margin-top: 28px; /* Tăng margin để chừa chỗ cho viên nang bay cao */
     margin-bottom: 2px;
     font-family: var(--font-num);
     position: relative;
 }
 
-/* Thanh ray & Vệt lấp đầy */
-.eb-sync-track {
+/* Thanh ray tiến trình */
+.eb-capsule-track {
     position: relative;
     width: 100%;
-    height: 4px; 
+    height: 4px;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
 }
-.eb-sync-fill {
+
+.eb-capsule-fill {
     height: 100%;
-    background: var(--brand); /* Màu đồng bộ */
+    background: var(--brand);
     border-radius: 4px;
-    transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* 7 Chấm mốc lộ trình */
-.eb-sync-dots {
+/* 7 Chấm mốc */
+.eb-capsule-dots {
     position: absolute;
     inset: 0;
     display: flex;
@@ -3546,70 +3547,62 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     align-items: center;
     pointer-events: none;
 }
-.eb-sync-dot {
-    width: 4px; height: 4px; 
+.eb-capsule-dot {
+    width: 4px; height: 4px;
     border-radius: 50%;
     background: rgba(255,255,255,0.3);
 }
-.eb-sync-dot.passed { background: var(--brand); } /* Đổi màu khi đi qua */
+.eb-capsule-dot.passed { background: var(--brand); }
 
-/* Nhãn hệ số bên dưới */
-.eb-sync-labels {
+/* ===================================================
+   VIÊN NANG ĐỘNG (CHỨA ICON + ĐẾM NGƯỢC)
+=================================================== */
+.eb-dynamic-pill {
+    position: absolute;
+    /* CHỈNH ĐỘ CAO Ở ĐÂY: 
+       -22px: Bay vừa phải
+       -30px: Bay cao hẳn lên trên
+    */
+    top: -22px; 
+    
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 6px; /* Khoảng cách giữa người chạy và chữ */
+    background: #000; /* Nền đen */
+    border: 1px solid var(--brand); /* Viền màu xanh */
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+    z-index: 10;
+    transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.eb-capsule-icon {
+    color: var(--brand);
+    font-size: 11px;
+}
+
+.eb-capsule-timer {
+    color: var(--brand);
+    font-size: 0.6rem;
+    font-weight: 800;
+}
+
+/* Nhãn hệ số 1.4, 1.3... dưới chân */
+.eb-capsule-labels {
     display: flex;
     justify-content: space-between;
     margin-top: 6px;
-    margin-left: -6px; /* Căn bù trừ cho chữ ngay giữa chấm */
+    margin-left: -6px;
     margin-right: -6px;
 }
-.eb-sync-label {
+.eb-capsule-label {
     font-size: 0.55rem;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.2);
     text-align: center;
-    width: 16px; 
+    width: 16px;
 }
-.eb-sync-label.active { color: var(--brand); font-size: 0.6rem; }
-.eb-sync-label.passed { color: rgba(0, 240, 255, 0.6); }
-
-/* ===================================================
-   KHỐI ĐỘNG (GỘP CHUNG ICON VÀ ĐỒNG HỒ - CHỐNG ĐÈ 100%)
-=================================================== */
-/* Biến khối cha thành một điểm neo (Anchor point 0x0) */
-.eb-sync-dynamic-block {
-    position: absolute;
-    top: 0;
-    width: 0; 
-    height: 0;
-    z-index: 10;
-    transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* Icon người chạy: Canh tâm chính xác vào giữa điểm neo */
-.eb-sync-icon {
-    position: absolute;
-    top: -4px; /* Hạ chân chạm ngay trên thanh tiến trình */
-    left: 0;
-    transform: translate(-50%, -50%);
-    color: var(--brand);
-    font-size: 14px; 
-}
-
-/* Đồng hồ đếm ngược: Đứng cùng trục ngang với icon */
-.eb-sync-timer {
-    position: absolute;
-    top: -4px; /* Cùng thông số top với icon để thẳng hàng */
-    transform: translateY(-50%);
-    background: rgba(0, 0, 0, 0.85); /* Nền tối đậm để chữ luôn nét */
-    border: 1px solid var(--brand); 
-    color: var(--brand); 
-    font-size: 0.55rem;
-    font-weight: 800;
-    padding: 1px 6px;
-    border-radius: 10px;
-    white-space: nowrap;
-    pointer-events: none;
-}
-
-/* Đẩy đồng hồ ra xa tâm icon đúng 14px (Chừa khe hở 7px rất đẹp) */
-.eb-sync-timer.align-right { left: 14px; } 
-.eb-sync-timer.align-left { right: 14px; }
+.eb-capsule-label.active { color: var(--brand); font-size: 0.6rem; }
+.eb-capsule-label.passed { color: rgba(0, 240, 255, 0.6); }
