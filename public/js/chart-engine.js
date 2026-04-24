@@ -22,6 +22,8 @@ window.bookmapHistory = [];
 window.isHeatmapOn = true; 
 
 
+
+
 // ==========================================
 // 🌊 ĐỘNG CƠ WATERFALL (NỘI SUY TUYẾN TÍNH HFT KLINECHART)
 // ==========================================
