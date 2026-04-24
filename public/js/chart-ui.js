@@ -1491,7 +1491,7 @@ window.closeProChart = function() {
 })();
 
 // =========================================================================
-// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (ĐÃ VÁ LỖI KÉO THẢ, UI ĐỘNG & NỀN GRADIENT)
+// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (FIX LỖI CẤM CLICK RÂU/VIỀN NẾN)
 // =========================================================================
 (function initChartSettingsModal() {
     'use strict';
@@ -1563,12 +1563,22 @@ window.closeProChart = function() {
                                 
                                 <div class="wa-csm-row">
                                     <div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="showBorder"><span class="wa-slider"></span></label> Viền (Borders)</div>
-                                    <div class="wa-csm-control" id="csm-border-colors" style="opacity:0.5; pointer-events:none;"><label class="wa-switch" title="Độc lập"><input type="checkbox" data-bind="borderIndependent"><span class="wa-slider"></span></label><div class="wa-color-swatch" data-color-bind="borderUpColor"></div><div class="wa-color-swatch" data-color-bind="borderDownColor"></div></div>
+                                    <div class="wa-csm-control">
+                                        <label class="wa-switch" title="Màu độc lập"><input type="checkbox" data-bind="borderIndependent"><span class="wa-slider"></span></label>
+                                        <div id="csm-border-swatches" style="display:flex; gap:10px; opacity:0.5; pointer-events:none;">
+                                            <div class="wa-color-swatch" data-color-bind="borderUpColor"></div><div class="wa-color-swatch" data-color-bind="borderDownColor"></div>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="wa-csm-row">
                                     <div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="showWick"><span class="wa-slider"></span></label> Bóng nến (Wicks)</div>
-                                    <div class="wa-csm-control" id="csm-wick-colors" style="opacity:0.5; pointer-events:none;"><label class="wa-switch" title="Độc lập"><input type="checkbox" data-bind="wickIndependent"><span class="wa-slider"></span></label><div class="wa-color-swatch" data-color-bind="wickUpColor"></div><div class="wa-color-swatch" data-color-bind="wickDownColor"></div></div>
+                                    <div class="wa-csm-control">
+                                        <label class="wa-switch" title="Màu độc lập"><input type="checkbox" data-bind="wickIndependent"><span class="wa-slider"></span></label>
+                                        <div id="csm-wick-swatches" style="display:flex; gap:10px; opacity:0.5; pointer-events:none;">
+                                            <div class="wa-color-swatch" data-color-bind="wickUpColor"></div><div class="wa-color-swatch" data-color-bind="wickDownColor"></div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1590,14 +1600,7 @@ window.closeProChart = function() {
                         </div>
 
                         <div id="csm-appearance" class="wa-csm-panel">
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">Kiểu nền</div>
-                                <div class="wa-csm-control">
-                                    <select class="wa-csm-select" data-bind="bgType" id="csm-bg-type" style="width:100px;"><option value="solid">Đơn sắc</option><option value="gradient">Gradient</option></select>
-                                    <div class="wa-color-swatch" data-color-bind="bgColor"></div>
-                                    <div class="wa-color-swatch" data-color-bind="bgColor2" id="csm-bg2-swatch" style="display:none;"></div>
-                                </div>
-                            </div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Kiểu nền</div><div class="wa-csm-control"><select class="wa-csm-select" data-bind="bgType" id="csm-bg-type" style="width:100px;"><option value="solid">Đơn sắc</option><option value="gradient">Gradient</option></select><div class="wa-color-swatch" data-color-bind="bgColor"></div><div class="wa-color-swatch" data-color-bind="bgColor2" id="csm-bg2-swatch" style="display:none;"></div></div></div>
                             <div class="wa-csm-row"><div class="wa-csm-label">Lưới dọc</div><label class="wa-switch"><input type="checkbox" data-bind="gridVertical"><span class="wa-slider"></span></label></div>
                             <div class="wa-csm-row"><div class="wa-csm-label">Lưới ngang</div><label class="wa-switch"><input type="checkbox" data-bind="gridHorizontal"><span class="wa-slider"></span></label></div>
                             <div class="wa-csm-row"><div class="wa-csm-label">Màu Lưới</div><div class="wa-color-swatch" data-color-bind="gridColor"></div></div>
@@ -1630,28 +1633,17 @@ window.closeProChart = function() {
     const header = modal.querySelector('.wa-csm-header');
     const colorPicker = document.getElementById('wa-color-picker');
 
-    // 🚀 FIX LỖI KÉO THẢ: Gỡ transform và chốt tọa độ cố định ngay khi mousedown
     let isDragging = false, startX, startY, initLeft, initTop;
     header.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        startX = e.clientX; startY = e.clientY;
+        isDragging = true; startX = e.clientX; startY = e.clientY;
         const rect = modalBox.getBoundingClientRect();
         initLeft = rect.left; initTop = rect.top;
-
-        modalBox.style.transform = 'none'; 
-        modalBox.style.left = initLeft + 'px';
-        modalBox.style.top = initTop + 'px';
-
+        modalBox.style.transform = 'none'; modalBox.style.left = initLeft + 'px'; modalBox.style.top = initTop + 'px';
         document.body.style.userSelect = 'none'; 
     });
-    window.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        modalBox.style.left = (initLeft + e.clientX - startX) + 'px';
-        modalBox.style.top = (initTop + e.clientY - startY) + 'px';
-    });
+    window.addEventListener('mousemove', (e) => { if (!isDragging) return; modalBox.style.left = (initLeft + e.clientX - startX) + 'px'; modalBox.style.top = (initTop + e.clientY - startY) + 'px'; });
     window.addEventListener('mouseup', () => { isDragging = false; document.body.style.userSelect = ''; });
 
-    // Tabs
     const tabs = modal.querySelectorAll('.wa-csm-tab');
     const panels = modal.querySelectorAll('.wa-csm-panel');
     tabs.forEach(tab => {
@@ -1661,7 +1653,6 @@ window.closeProChart = function() {
         };
     });
 
-    // Color Picker
     const tvColors = ['#ffffff','#d1d4dc','#b2b5be','#848e9c','#5d606b','#363a45','#1e222d','#000000','#f23645','#ff9800','#f0b90b','#089981','#00bcd4','#2962ff','#673ab7','#9c27b0','#f7525f','#ffb74d','#ffe066','#2af592','#4dd0e1','#448aff','#9575cd','#ba68c8','#f98080','#ffcc80','#fff59d','#66bb6a','#80deea','#82b1ff','#b39ddb','#ce93d8'];
     const palette = document.getElementById('wcp-palette'), hexInp = document.getElementById('wcp-hex'), opSlider = document.getElementById('wcp-opacity');
     let activeSwatchBtn = null, activeBindKey = null;
@@ -1698,41 +1689,29 @@ window.closeProChart = function() {
     document.addEventListener('click', (e) => { if (!colorPicker.contains(e.target) && !e.target.classList.contains('wa-color-swatch')) colorPicker.style.display = 'none'; });
     function rgb2hex(rgb) { if (rgb.search("rgb") === -1) return rgb; rgb = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/); return "#" + ("0" + parseInt(rgb[1]).toString(16)).slice(-2) + ("0" + parseInt(rgb[2]).toString(16)).slice(-2) + ("0" + parseInt(rgb[3]).toString(16)).slice(-2); }
 
-    // 🚀 HÀM QUẢN LÝ UI ĐỘNG (Dynamic UI Updater)
     function updateDynamicUI(config) {
-        // UI Kiểu nến
-        const t = parseInt(config.chartType);
-        const isLineOrArea = (t === 6 || t === 9);
+        const t = parseInt(config.chartType); const isLineOrArea = (t === 6 || t === 9);
         document.getElementById('csm-ui-candles').style.display = isLineOrArea ? 'none' : 'flex';
         document.getElementById('csm-ui-lines').style.display = isLineOrArea ? 'flex' : 'none';
-
-        // UI Nền Gradient
         document.getElementById('csm-bg2-swatch').style.display = config.bgType === 'gradient' ? 'block' : 'none';
         
-        // UI Màu Râu
-        document.getElementById('csm-wick-colors').style.opacity = config.wickIndependent ? '1' : '0.5';
-        document.getElementById('csm-wick-colors').style.pointerEvents = config.wickIndependent ? 'auto' : 'none';
-
-        // UI Màu Viền (Mới)
-        document.getElementById('csm-border-colors').style.opacity = config.borderIndependent ? '1' : '0.5';
-        document.getElementById('csm-border-colors').style.pointerEvents = config.borderIndependent ? 'auto' : 'none';
+        // 🚀 BẬT TẮT SỰ KIỆN CLICK CHUẨN XÁC CHO BOX MÀU
+        document.getElementById('csm-wick-swatches').style.opacity = config.wickIndependent ? '1' : '0.5';
+        document.getElementById('csm-wick-swatches').style.pointerEvents = config.wickIndependent ? 'auto' : 'none';
+        document.getElementById('csm-border-swatches').style.opacity = config.borderIndependent ? '1' : '0.5';
+        document.getElementById('csm-border-swatches').style.pointerEvents = config.borderIndependent ? 'auto' : 'none';
     }
 
-    // --- MỞ MODAL & BINDING ---
     window.openChartSettings = function() {
         if (!window.WaveChartEngine) return;
         const config = window.WaveChartEngine.getConfig();
-        
         modal.querySelectorAll('[data-bind]').forEach(el => {
             const key = el.dataset.bind;
             if (config[key] !== undefined) { if (el.type === 'checkbox') el.checked = config[key]; else el.value = config[key]; }
         });
-
         modal.querySelectorAll('.wa-color-swatch').forEach(swatch => {
             const key = swatch.dataset.colorBind; if (config[key]) swatch.style.background = config[key];
         });
-        
-        // Trả Form UI về lại trạng thái chuẩn giữa màn hình
         modalBox.style.transform = 'translate(-50%, -50%)'; modalBox.style.left = '50%'; modalBox.style.top = '50%';
         updateDynamicUI(config);
         modal.classList.add('show');
@@ -1740,35 +1719,21 @@ window.closeProChart = function() {
 
     document.getElementById('btn-wa-csm-close').onclick = () => modal.classList.remove('show');
     
-    // Binding input changes
     modal.querySelectorAll('[data-bind]').forEach(el => {
         const eventType = el.type === 'range' ? 'input' : 'change';
         el.addEventListener(eventType, (e) => {
             const key = el.dataset.bind;
             let value = el.type === 'checkbox' ? el.checked : el.value;
             if (el.dataset.type === 'number') value = parseFloat(value);
-            
             if (window.WaveChartEngine) window.WaveChartEngine.update({ [key]: value });
-            // Cập nhật lại UI sau khi change
             updateDynamicUI(window.WaveChartEngine.getConfig());
         });
     });
 
-    // AUTO-INJECT & TIÊU DIỆT NÚT CŨ
     const checkToolbar = setInterval(() => {
         const toolbar = document.querySelector('.sc-tools-left') || document.querySelector('.sc-toolbar') || document.querySelector('.wa-topbar-container');
         if (toolbar) {
             clearInterval(checkToolbar);
-            // Tiêu diệt nút Cài đặt thủ công cũ trong HTML của bạn
-            const oldButtons = document.querySelectorAll('button[id*="settings"], i.fa-cog, .sc-settings-btn');
-            oldButtons.forEach(btn => {
-                if (btn.id !== 'btn-wa-chart-settings' && (btn.className.includes('cog') || btn.className.includes('setting') || (btn.title && btn.title.toLowerCase().includes('setting')))) {
-                    btn.style.display = 'none'; 
-                }
-            });
-
-            // Nếu bạn có nút Setting ghi tay rành rành trong HTML, bạn có thể xóa nó thẳng tay trong file index.html!
-            
             const btnWrap = document.createElement('div');
             btnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; margin-left: 8px;';
             btnWrap.innerHTML = `
@@ -1784,20 +1749,20 @@ window.closeProChart = function() {
 })();
 
 // =========================================================================
-// ⏱️ BƯỚC 5: CHART OVERLAYS (WATERMARK, COUNTDOWN TIMER)
+// ⏱️ BƯỚC 5: CHART OVERLAYS (NATIVE COUNTDOWN & WATERMARK)
 // =========================================================================
 (function initChartOverlays() {
     'use strict';
 
     let countdownInterval = null;
+    let countdownRafId = null;
 
-    // Lắng nghe sự kiện đổi Cài Đặt từ WaveChartEngine
     window.addEventListener('wa_chart_config_updated', (e) => {
         const config = e.detail;
         const container = document.getElementById('sc-chart-container');
         if (!container) return;
 
-        // ─── 1. XỬ LÝ WATERMARK (Dấu chìm biểu đồ) ───
+        // 1. WATERMARK
         let wm = document.getElementById('wa-overlay-watermark');
         if (config.showWatermark) {
             if (!wm) {
@@ -1806,7 +1771,6 @@ window.closeProChart = function() {
                 wm.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: "Inter", sans-serif; font-weight: 800; font-size: clamp(40px, 8vw, 120px); letter-spacing: 2px; pointer-events: none; z-index: 1; white-space: nowrap; transition: opacity 0.2s;';
                 container.appendChild(wm);
             }
-            // Lấy thông tin Symbol & Timeframe hiện tại
             const sym = window.currentChartToken ? window.currentChartToken.symbol : 'WAVE ALPHA';
             const tf = (window.currentChartInterval || '1D').toUpperCase();
             wm.innerText = `${sym} • ${tf}`;
@@ -1815,27 +1779,28 @@ window.closeProChart = function() {
             wm.remove();
         }
 
-        // ─── 2. XỬ LÝ ĐẾM NGƯỢC (COUNTDOWN TIMER) ───
+        // 2. COUNTDOWN (ĐẾM NGƯỢC HÒA VÀO TRỤC Y)
         let cd = document.getElementById('wa-overlay-countdown');
         if (config.showCountdown) {
             if (!cd) {
                 cd = document.createElement('div');
                 cd.id = 'wa-overlay-countdown';
-                cd.style.cssText = 'position: absolute; right: 65px; bottom: 20px; font-family: monospace; font-size: 14px; font-weight: bold; padding: 4px 8px; background: rgba(38,166,154,0.15); color: #26a69a; border: 1px solid rgba(38,166,154,0.3); border-radius: 4px; pointer-events: none; z-index: 99; backdrop-filter: blur(2px); transition: all 0.2s;';
+                // 🚀 STYLE MỚI: Xóa viền/nền bự, biến nó thành Text chìm hòa vào cột Y-Axis bên phải
+                cd.style.cssText = 'position: absolute; right: 0; width: 64px; text-align: center; font-family: "Trebuchet MS", sans-serif; font-size: 11px; font-weight: 600; padding: 2px 0; color: #b7bdc6; pointer-events: none; z-index: 100;';
                 container.appendChild(cd);
                 
-                // Khởi động đồng hồ đếm ngược
                 if (countdownInterval) clearInterval(countdownInterval);
-                countdownInterval = setInterval(updateCountdown, 1000);
+                countdownInterval = setInterval(updateCountdownText, 1000);
+                syncPosition60FPS(); // Kích hoạt bám đuôi
             }
         } else {
             if (cd) cd.remove();
             if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
+            if (countdownRafId) { cancelAnimationFrame(countdownRafId); countdownRafId = null; }
         }
     });
 
-    // Hàm tính toán và cập nhật thời gian
-    function updateCountdown() {
+    function updateCountdownText() {
         const cd = document.getElementById('wa-overlay-countdown');
         if (!cd) return;
 
@@ -1845,15 +1810,12 @@ window.closeProChart = function() {
 
         if (interval.includes('m')) {
             const m = parseInt(interval);
-            nextTime.setMinutes(Math.ceil(now.getMinutes() / m) * m);
-            nextTime.setSeconds(0);
+            nextTime.setMinutes(Math.ceil(now.getMinutes() / m) * m); nextTime.setSeconds(0);
         } else if (interval.includes('h')) {
             const h = parseInt(interval);
-            nextTime.setHours(Math.ceil(now.getHours() / h) * h);
-            nextTime.setMinutes(0); nextTime.setSeconds(0);
+            nextTime.setHours(Math.ceil(now.getHours() / h) * h); nextTime.setMinutes(0); nextTime.setSeconds(0);
         } else if (interval === '1d') {
-            nextTime.setUTCDate(now.getUTCDate() + 1);
-            nextTime.setUTCHours(0, 0, 0, 0); 
+            nextTime.setUTCDate(now.getUTCDate() + 1); nextTime.setUTCHours(0, 0, 0, 0); 
         } else {
             cd.style.display = 'none'; return; 
         }
@@ -1872,30 +1834,30 @@ window.closeProChart = function() {
         cd.innerText = timeStr;
         cd.style.display = 'block';
 
-        if (diff <= 10000) {
-            cd.style.color = '#F6465D'; cd.style.borderColor = 'rgba(246,70,93,0.5)'; cd.style.background = 'rgba(246,70,93,0.15)';
-        } else {
-            cd.style.color = '#26a69a'; cd.style.borderColor = 'rgba(38,166,154,0.3)'; cd.style.background = 'rgba(38,166,154,0.15)';
-        }
+        // Đổi màu Đỏ khi sắp đóng nến (< 10s)
+        cd.style.color = (diff <= 10000) ? '#F6465D' : '#b7bdc6';
+    }
 
-        // 🚀 PHÉP MÀU: ĐỊNH VỊ TỌA ĐỘ ĐỘNG BÁM THEO GIÁ (KLineChart API)
-        try {
-            if (window.tvChart) {
+    // 🚀 PHÉP MÀU 60 FPS: Luôn neo Countdown ngay dưới nhãn giá cuối cùng
+    function syncPosition60FPS() {
+        const cd = document.getElementById('wa-overlay-countdown');
+        if (cd && window.tvChart) {
+            try {
                 const dataList = window.tvChart.getDataList();
                 if (dataList && dataList.length > 0) {
                     const lastPrice = dataList[dataList.length - 1].close;
-                    
-                    // Chuyển đổi Giá (Value) thành Pixel trên màn hình
                     const pixel = window.tvChart.convertToPixel({ value: lastPrice }, { paneId: 'candle_pane' });
                     const y = typeof pixel === 'number' ? pixel : (pixel ? pixel.y : null);
                     
                     if (y !== null && !isNaN(y)) {
-                        cd.style.top = (y + 16) + 'px'; // Treo lơ lửng ngay dưới đường giá 16 pixel
-                        cd.style.bottom = 'auto';
-                        cd.style.right = '65px'; // Lùi vào 1 chút để không lẹm vào trục Y
+                        // Y là tâm của đường Last Price Line.
+                        // Ta đẩy hộp đếm ngược tụt xuống 12px để nó nằm ngoan ngoãn ngay dưới nhãn giá
+                        cd.style.top = (y + 12) + 'px'; 
                     }
                 }
-            }
-        } catch(e) {}
+            } catch(e) {}
+        }
+        // Gọi lại liên tục để bám dính siêu mượt khi cuộn/zoom biểu đồ
+        countdownRafId = requestAnimationFrame(syncPosition60FPS);
     }
 })();
