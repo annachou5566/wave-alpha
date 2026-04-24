@@ -3875,7 +3875,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
   
 
   // =========================================================================
-  // HỆ THỐNG UNIFIED SETTINGS MANAGER v3.1 (TÍCH HỢP DRAG TO RESIZE)
+  // HỆ THỐNG UNIFIED SETTINGS MANAGER v3.2 (FLUID RESIZE & NO OVERFLOW)
   // =========================================================================
   global.openIndicatorSettings = function (indicatorObj, paneId) {
     let targetName = null;
@@ -3913,7 +3913,6 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         resize: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#848e9c" stroke-width="1.5"><line x1="12" y1="0" x2="0" y2="12"></line><line x1="12" y1="6" x2="6" y2="12"></line></svg>'
     };
 
-    // 🚀 FIX TỌA ĐỘ GỐC: Dùng calc() thay vì transform để Resizer hoạt động mượt mà
     const panel = document.createElement('div');
     panel.id = 'wa-global-settings';
     panel.style.cssText = 'position: fixed; top: calc(50% - 300px); left: calc(50% - 380px); width: 760px; max-width: 98vw; height: 600px; max-height: 98vh; background: #1e2329; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; box-shadow: 0 24px 60px rgba(0,0,0,0.8); z-index: 99998; display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #EAECEF; user-select: none; overflow: hidden;';
@@ -3926,16 +3925,17 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     const bodyWrapper = document.createElement('div');
     bodyWrapper.style.cssText = 'display: flex; flex: 1; overflow: hidden; background: #191c20; position: relative;';
     
+    // 🚀 TỐI ƯU FLUID LAYOUT CHO CỘT TRÁI (SIDEBAR) TỶ LỆ 30%
     const sidebar = document.createElement('div');
-    sidebar.style.cssText = 'width: 250px; border-right: 1px solid rgba(255,255,255,0.06); overflow-y: auto; background: #161a1e; display: flex; flex-direction: column; flex-shrink: 0;';
+    sidebar.style.cssText = 'width: 30%; min-width: 160px; max-width: 280px; border-right: 1px solid rgba(255,255,255,0.06); overflow-y: auto; background: #161a1e; display: flex; flex-direction: column; flex-shrink: 0;';
     
+    // 🚀 TỐI ƯU MIN-WIDTH CHO CỘT PHẢI
     const content = document.createElement('div');
-    content.style.cssText = 'flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; position: relative;';
+    content.style.cssText = 'flex: 1; min-width: 0; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; position: relative;';
 
     bodyWrapper.appendChild(sidebar);
     bodyWrapper.appendChild(content);
     
-    // 🚀 TẠO NÚT RESIZER Ở GÓC DƯỚI CÙNG BÊN PHẢI
     const resizer = document.createElement('div');
     resizer.id = 'wa-gs-resizer';
     resizer.style.cssText = 'position: absolute; bottom: 0; right: 0; width: 24px; height: 24px; cursor: nwse-resize; display: flex; align-items: flex-end; justify-content: flex-end; padding: 4px; z-index: 10; opacity: 0.5; transition: 0.2s;';
@@ -3951,25 +3951,32 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         #wa-global-settings ::-webkit-scrollbar { width: 4px; }
         #wa-global-settings ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
         .wa-gs-section { font-size: 11px; font-weight: 800; color: #474d57; text-transform: uppercase; padding: 20px 20px 8px; letter-spacing: 1px; }
-        .wa-gs-item { padding: 14px 20px; min-height: 52px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; color: #b7bdc6; font-size: 14px; font-weight: 500; transition: 0.2s; border-left: 3px solid transparent; }
+        
+        /* Chống tràn text cho Sidebar */
+        .wa-gs-item { padding: 14px 20px; min-height: 52px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; color: #b7bdc6; font-size: 14px; font-weight: 500; transition: 0.2s; border-left: 3px solid transparent; min-width: 0; }
+        .wa-gs-item span { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 10px; }
         .wa-gs-item:hover { background: rgba(255,255,255,0.03); color: #fff; }
         .wa-gs-item.active { background: rgba(240, 185, 11, 0.05); border-left-color: #f0b90b; color: #f0b90b; }
         
-        .wa-gs-actions { display: none; gap: 8px; align-items: center; }
+        .wa-gs-actions { display: none; gap: 8px; align-items: center; flex-shrink: 0; }
         .wa-gs-item:hover .wa-gs-actions { display: flex; }
         .wa-gs-btn { background: transparent; border: none; color: #848e9c; cursor: pointer; padding: 6px; border-radius: 4px; display: flex; transition: 0.2s; }
         .wa-gs-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
         .wa-gs-btn.delete:hover { color: #f6465d; background: rgba(246,70,93,0.1); }
 
-        .wa-group-box { background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.04); border-radius: 10px; padding: 20px; }
+        /* Chống tràn cho cột phải */
+        .wa-group-box { background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.04); border-radius: 10px; padding: 20px; min-width: 0; }
         .wa-group-title { color:#848e9c; font-size:12px; font-weight:700; margin-bottom:18px; text-transform:uppercase; letter-spacing:0.8px; border-left: 2px solid #f0b90b; padding-left: 10px; }
-        .wa-inp-row { display: flex; justify-content: space-between; align-items: center; gap:16px; margin-bottom:14px; }
         
-        .wa-inp-num { width: 80px; height: 36px; background: #0b0e11; border: 1px solid #474d57; border-radius: 6px; color: #fff; text-align: center; font-size: 14px; transition: 0.2s; }
+        /* 🚀 FLEX-WRAP CHO HÀNG NỘI DUNG: Khi hẹp quá tự rớt dòng */
+        .wa-inp-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+        .wa-inp-row > div:first-child { flex: 1 1 120px; min-width: 0; } /* Khóa text label để tự rớt dòng */
+        
+        .wa-inp-num { width: 80px; height: 36px; background: #0b0e11; border: 1px solid #474d57; border-radius: 6px; color: #fff; text-align: center; font-size: 14px; transition: 0.2s; flex-shrink: 0; }
         .wa-inp-num:focus { border-color: #f0b90b; outline: none; }
-        .wa-inp-hex { width: 96px; height: 36px; background: #0b0e11; border: 1px solid #474d57; border-radius: 6px; color: #fff; text-align: center; font-size: 13px; font-family: "Roboto Mono", monospace; outline: none; text-transform: uppercase; }
+        .wa-inp-hex { width: 96px; height: 36px; background: #0b0e11; border: 1px solid #474d57; border-radius: 6px; color: #fff; text-align: center; font-size: 13px; font-family: "Roboto Mono", monospace; outline: none; text-transform: uppercase; flex-shrink: 0; }
         
-        .wa-color-swatch-btn { width: 36px; height: 36px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; flex-shrink:0; position: relative; }
+        .wa-color-swatch-btn { width: 36px; height: 36px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; flex-shrink: 0; position: relative; }
         .wa-is-transparent { background-image: conic-gradient(#333 0.25turn, #444 0.25turn 0.5turn, #333 0.5turn 0.75turn, #444 0.75turn); background-size: 8px 8px; }
 
         #wa-color-popover {
@@ -3982,10 +3989,10 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
 
         @media (max-width: 768px) {
             #wa-global-settings { width: 100vw !important; height: 100vh !important; max-width: 100vw; max-height: 100vh; border-radius: 0; top:0 !important; left:0 !important; }
-            .wa-gs-sidebar { width: 64px !important; }
-            .wa-gs-item span { display: none; }
-            .wa-gs-section { display: none; }
-            #wa-gs-resizer { display: none !important; } /* Tự ẩn resizer trên mobile */
+            .wa-gs-sidebar { width: 35% !important; min-width: 80px !important; }
+            .wa-gs-item span { font-size: 11px; }
+            .wa-gs-actions { display: none !important; } /* Tắt nút ẩn/hiện hover trên đt */
+            #wa-gs-resizer { display: none !important; } 
         }
     `;
     panel.appendChild(style);
@@ -4059,7 +4066,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 const isVisible = ind.visible !== false;
 
                 item.innerHTML = `
-                    <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; ${!isVisible ? 'opacity:0.3;' : ''}">${meta ? (meta.shortName || meta.name) : ind.name}</span>
+                    <span style="${!isVisible ? 'opacity:0.3;' : ''}">${meta ? (meta.shortName || meta.name) : ind.name}</span>
                     <div class="wa-gs-actions">
                         <button class="wa-gs-btn toggle-vis" title="Ẩn/Hiện">${isVisible ? ICONS.eye : ICONS.eyeOff}</button>
                         <button class="wa-gs-btn delete" title="Xóa">${ICONS.trash}</button>
@@ -4136,8 +4143,11 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                         while(hStr.length < 6) hStr = '0' + hStr;
                         dVal = '#' + hStr;
                     }
-                    row.innerHTML = `<span style="font-size:14px; color:#b7bdc6; font-weight:500;">${lbl}</span>
-                        <div style="display:flex; gap:12px; align-items:center;">
+                    row.innerHTML = `
+                        <div style="display:flex; flex-direction:column; flex:1; min-width:100px;">
+                            <span style="font-size:14px; color:#b7bdc6; font-weight:500; word-break:break-word;">${lbl}</span>
+                        </div>
+                        <div style="display:flex; gap:12px; align-items:center; flex-shrink:0;">
                             <input type="text" id="wa-param-hex-${idx}" class="wa-inp-hex" value="${dVal}">
                             <div id="wa-color-btn-${idx}" class="wa-color-swatch-btn ${dVal==='transparent'?'wa-is-transparent':''}" style="background:${dVal}"></div>
                         </div>`;
@@ -4156,7 +4166,10 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                     };
                 } else {
                     const desc = (isVPVR && vpvrDescriptions[idx]) ? `<div style="font-size:11px; color:#5e6673; margin-top:4px;">${vpvrDescriptions[idx]}</div>` : '';
-                    row.innerHTML = `<div style="display:flex; flex-direction:column;"><span style="font-size:14px; color:#b7bdc6; font-weight:500;">${lbl}</span>${desc}</div>
+                    row.innerHTML = `
+                        <div style="display:flex; flex-direction:column; flex:1; min-width:100px;">
+                            <span style="font-size:14px; color:#b7bdc6; font-weight:500; word-break:break-word;">${lbl}</span>${desc}
+                        </div>
                         <input type="number" id="wa-param-num-${idx}" class="wa-inp-num" value="${val}" step="any">`;
                     row.querySelector('input').oninput = liveUpdateChart;
                 }
@@ -4166,7 +4179,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         });
 
         const resetBtn = document.createElement('button');
-        resetBtn.style.cssText = 'display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:16px; background:transparent; border:1px dashed #474d57; border-radius:8px; color:#848e9c; cursor:pointer; font-weight:700; margin-top:10px; transition:0.2s; font-size: 13px;';
+        resetBtn.style.cssText = 'display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:16px; background:transparent; border:1px dashed #474d57; border-radius:8px; color:#848e9c; cursor:pointer; font-weight:700; margin-top:10px; transition:0.2s; font-size: 13px; flex-shrink: 0;';
         resetBtn.innerHTML = `${ICONS.reset} KHÔI PHỤC MẶC ĐỊNH`;
         resetBtn.onclick = () => { indState.params = [...meta.defaultParams]; renderContent(indName); liveUpdateChart(); };
         resetBtn.onmouseover = () => { resetBtn.style.background = 'rgba(255,255,255,0.05)'; resetBtn.style.color = '#fff'; };
@@ -4183,11 +4196,10 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         panel.remove(); colorPopover.remove(); 
     };
 
-    // 🚀 XỬ LÝ KÉO THẢ & CO GIÃN (DRAG & RESIZE) - BỌC THÉP CHO MOUSE & TOUCH
+    // Drag & Resize Logic (Mượt mà)
     let isDragging = false, isResizing = false;
     let oX = 0, oY = 0, startW = 0, startH = 0, startX = 0, startY = 0;
 
-    // 1. Logic kéo khung (Header)
     header.onmousedown = header.ontouchstart = (e) => { 
         if(e.target === document.getElementById('wa-gs-close') || e.target.closest('#wa-gs-close')) return;
         isDragging = true; 
@@ -4196,7 +4208,6 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         oX = clientX - panel.offsetLeft; oY = clientY - panel.offsetTop; 
     };
 
-    // 2. Logic kéo giãn kích thước (Resizer)
     resizer.onmousedown = resizer.ontouchstart = (e) => {
         e.preventDefault(); e.stopPropagation();
         isResizing = true;
@@ -4206,7 +4217,6 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         startX = clientX; startY = clientY;
     };
 
-    // 3. Sự kiện di chuyển chuột/ngón tay
     const onMove = (e) => {
         if (!isDragging && !isResizing) return;
         const clientX = e.clientX || (e.touches && e.touches[0].clientX);
@@ -4218,9 +4228,8 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         } else if (isResizing) {
             let newW = startW + (clientX - startX);
             let newH = startH + (clientY - startY);
-            // Khóa kích thước tối thiểu
-            newW = Math.max(500, Math.min(newW, window.innerWidth * 0.98));
-            newH = Math.max(400, Math.min(newH, window.innerHeight * 0.98));
+            newW = Math.max(480, Math.min(newW, window.innerWidth * 0.98));
+            newH = Math.max(300, Math.min(newH, window.innerHeight * 0.98));
             panel.style.width = newW + 'px';
             panel.style.height = newH + 'px';
         }
@@ -4233,7 +4242,6 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     window.addEventListener('mouseup', onUp);
     window.addEventListener('touchend', onUp);
 
-    // Xử lý đóng Popover màu sắc
     colorPopover.onclick = (e) => {
         const c = e.target.dataset.hex;
         if (c && activeHexInputId) {
