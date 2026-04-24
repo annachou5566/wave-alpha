@@ -1486,57 +1486,36 @@ window.closeProChart = function() {
 })();
 
 // =========================================================================
-// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (KÉO THẢ, KHÔNG NỀN ĐEN, BỘ CHỌN MÀU PRO)
+// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (ĐÃ VÁ LỖI KÉO THẢ, UI ĐỘNG & NỀN GRADIENT)
 // =========================================================================
 (function initChartSettingsModal() {
     'use strict';
 
     const style = document.createElement('style');
     style.textContent = `
-        /* Modal Container (Không nền đen, Kéo thả) */
-        #wa-chart-settings-modal {
-            display: none; position: fixed; top: 15%; left: 30%; z-index: 9999999;
-            opacity: 0; transition: opacity 0.15s ease;
-        }
+        #wa-chart-settings-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999999; pointer-events: none; opacity: 0; transition: opacity 0.15s ease; }
         #wa-chart-settings-modal.show { display: block; opacity: 1; }
-        
-        .wa-csm-box {
-            background: #1e222d; width: 680px; height: 500px; border-radius: 8px; 
-            border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-            display: flex; overflow: hidden; font-family: 'Inter', system-ui, sans-serif;
-        }
-
+        .wa-csm-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e222d; width: 680px; height: 500px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; pointer-events: auto; }
         .wa-csm-sidebar { width: 200px; background: #131722; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 20px 0; }
         .wa-csm-tab { padding: 12px 24px; color: #848e9c; font-size: 13px; font-weight: 600; cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s; display: flex; align-items: center; gap: 10px; }
         .wa-csm-tab:hover { background: rgba(255,255,255,0.03); color: #EAECEF; }
         .wa-csm-tab.active { background: rgba(38,166,154,0.1); color: #26a69a; border-left-color: #26a69a; }
-
         .wa-csm-content { flex: 1; display: flex; flex-direction: column; background: #1e222d; }
-        /* Header hỗ trợ Kéo thả */
         .wa-csm-header { padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; cursor: grab; user-select: none; }
         .wa-csm-header:active { cursor: grabbing; }
         .wa-csm-title { font-size: 16px; font-weight: 700; color: #EAECEF; pointer-events: none; }
         .wa-csm-close { color: #848e9c; cursor: pointer; font-size: 18px; transition: 0.2s; }
         .wa-csm-close:hover { color: #F6465D; }
-
         .wa-csm-panels { flex: 1; overflow-y: auto; padding: 20px 24px; }
         .wa-csm-panel { display: none; flex-direction: column; gap: 20px; }
         .wa-csm-panel.active { display: flex; }
-
         .wa-csm-row { display: flex; justify-content: space-between; align-items: center; }
         .wa-csm-label { font-size: 13px; color: #b7bdc6; display: flex; align-items: center; gap: 8px; }
         .wa-csm-control { display: flex; align-items: center; gap: 10px; }
-        
         .wa-csm-select { background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 4px; font-size: 12px; outline: none; cursor: pointer; width: 140px; }
         .wa-csm-slider { width: 100px; accent-color: #26a69a; }
-        
-        /* Thay thế input color bằng Swatch Button */
-        .wa-color-swatch {
-            width: 26px; height: 26px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); 
-            cursor: pointer; transition: 0.2s; background: transparent;
-        }
+        .wa-color-swatch { width: 26px; height: 26px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; transition: 0.2s; background: transparent; }
         .wa-color-swatch:hover { border-color: #00F0FF; box-shadow: 0 0 5px rgba(0,240,255,0.3); }
-
         .wa-switch { position: relative; display: inline-block; width: 36px; height: 20px; }
         .wa-switch input { opacity: 0; width: 0; height: 0; }
         .wa-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .2s; border-radius: 20px; }
@@ -1544,12 +1523,7 @@ window.closeProChart = function() {
         input:checked + .wa-slider { background-color: rgba(38,166,154,0.3); }
         input:checked + .wa-slider:before { transform: translateX(16px); background-color: #26a69a; }
         .wa-csm-divider { font-size: 11px; font-weight: 800; color: #527c82; text-transform: uppercase; margin-top: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; }
-
-        /* BỘ CHỌN MÀU PRO (COLOR PICKER POPOVER) */
-        #wa-color-picker {
-            display: none; position: fixed; background: #1e222d; border: 1px solid #363c4e; border-radius: 8px;
-            padding: 12px; z-index: 99999999; box-shadow: 0 10px 30px rgba(0,0,0,0.8); width: 220px;
-        }
+        #wa-color-picker { display: none; position: fixed; background: #1e222d; border: 1px solid #363c4e; border-radius: 8px; padding: 12px; z-index: 99999999; box-shadow: 0 10px 30px rgba(0,0,0,0.8); width: 220px; }
         .wcp-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-bottom: 12px; }
         .wcp-cell { width: 18px; height: 18px; border-radius: 3px; cursor: pointer; border: 1px solid transparent; transition: 0.1s; }
         .wcp-cell:hover { border-color: #fff; transform: scale(1.1); }
@@ -1560,10 +1534,9 @@ window.closeProChart = function() {
     `;
     document.head.appendChild(style);
 
-    // 3. HTML MODAL CHÍNH
     const modalHTML = `
         <div id="wa-chart-settings-modal">
-            <div class="wa-csm-box">
+            <div class="wa-csm-box" id="wa-csm-box">
                 <div class="wa-csm-sidebar">
                     <div class="wa-csm-tab active" data-tab="csm-symbol">Biểu Tượng</div>
                     <div class="wa-csm-tab" data-tab="csm-status">Trạng Thái</div>
@@ -1577,17 +1550,23 @@ window.closeProChart = function() {
                     </div>
                     <div class="wa-csm-panels">
                         <div id="csm-symbol" class="wa-csm-panel active">
-                            <div class="wa-csm-row"><div class="wa-csm-label">Loại biểu đồ</div><select class="wa-csm-select" data-bind="chartType" data-type="number"><option value="1">Nến Nhật</option><option value="2">Nến Rỗng</option><option value="3">Thanh (Bars)</option><option value="6">Đường (Line)</option><option value="9">Vùng (Area)</option></select></div>
-                            <div class="wa-csm-divider">Màu sắc Nến</div>
-                            <div class="wa-csm-row"><div class="wa-csm-label">Thân nến (Body)</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="upColor"></div><div class="wa-color-swatch" data-color-bind="downColor"></div></div></div>
-                            <div class="wa-csm-row"><div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="showBorder"><span class="wa-slider"></span></label> Viền (Borders)</div></div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="showWick"><span class="wa-slider"></span></label> Bóng nến (Wicks)</div>
-                                <div class="wa-csm-control" id="csm-wick-colors" style="opacity:0.5; pointer-events:none;"><label class="wa-switch" title="Độc lập"><input type="checkbox" data-bind="wickIndependent"><span class="wa-slider"></span></label><div class="wa-color-swatch" data-color-bind="wickUpColor"></div><div class="wa-color-swatch" data-color-bind="wickDownColor"></div></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Loại biểu đồ</div><select class="wa-csm-select" data-bind="chartType" id="csm-chart-type" data-type="number"><option value="1">Nến Nhật</option><option value="2">Nến Rỗng</option><option value="3">Thanh (Bars)</option><option value="6">Đường (Line)</option><option value="9">Vùng (Area)</option></select></div>
+                            <div class="wa-csm-divider">Màu sắc</div>
+                            
+                            <div id="csm-ui-candles" style="display:flex; flex-direction:column; gap:20px;">
+                                <div class="wa-csm-row"><div class="wa-csm-label">Thân nến (Body)</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="upColor"></div><div class="wa-color-swatch" data-color-bind="downColor"></div></div></div>
+                                <div class="wa-csm-row"><div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="showBorder"><span class="wa-slider"></span></label> Viền (Borders)</div></div>
+                                <div class="wa-csm-row"><div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="showWick"><span class="wa-slider"></span></label> Bóng nến (Wicks)</div><div class="wa-csm-control" id="csm-wick-colors" style="opacity:0.5; pointer-events:none;"><label class="wa-switch" title="Độc lập"><input type="checkbox" data-bind="wickIndependent"><span class="wa-slider"></span></label><div class="wa-color-swatch" data-color-bind="wickUpColor"></div><div class="wa-color-swatch" data-color-bind="wickDownColor"></div></div></div>
                             </div>
+
+                            <div id="csm-ui-lines" style="display:none; flex-direction:column; gap:20px;">
+                                <div class="wa-csm-row"><div class="wa-csm-label">Màu Đường / Vùng</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="upColor"></div></div></div>
+                            </div>
+
                             <div class="wa-csm-divider">Trục Y</div>
                             <div class="wa-csm-row"><div class="wa-csm-label">Thang đo giá</div><select class="wa-csm-select" data-bind="yAxisMode"><option value="normal">Bình thường</option><option value="percentage">Phần trăm (%)</option><option value="log">Logarit</option></select></div>
                         </div>
+                        
                         <div id="csm-status" class="wa-csm-panel">
                             <div class="wa-csm-row"><div class="wa-csm-label">OHLC Values</div><label class="wa-switch"><input type="checkbox" data-bind="showOHLC"><span class="wa-slider"></span></label></div>
                             <div class="wa-csm-row"><div class="wa-csm-label">Đếm ngược (Countdown)</div><label class="wa-switch"><input type="checkbox" data-bind="showCountdown"><span class="wa-slider"></span></label></div>
@@ -1596,19 +1575,26 @@ window.closeProChart = function() {
                             <div class="wa-csm-divider">Watermark</div>
                             <div class="wa-csm-row"><div class="wa-csm-label">Hiển thị Dấu chìm</div><div class="wa-csm-control"><input type="range" class="wa-csm-slider" min="0" max="0.3" step="0.01" data-bind="watermarkOpacity"><label class="wa-switch"><input type="checkbox" data-bind="showWatermark"><span class="wa-slider"></span></label></div></div>
                         </div>
+
                         <div id="csm-appearance" class="wa-csm-panel">
-                            <div class="wa-csm-row"><div class="wa-csm-label">Kiểu nền</div><div class="wa-csm-control"><select class="wa-csm-select" data-bind="bgType" style="width:100px;"><option value="solid">Đơn sắc</option><option value="gradient">Gradient</option></select><div class="wa-color-swatch" data-color-bind="bgColor"></div></div></div>
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">Kiểu nền</div>
+                                <div class="wa-csm-control">
+                                    <select class="wa-csm-select" data-bind="bgType" id="csm-bg-type" style="width:100px;"><option value="solid">Đơn sắc</option><option value="gradient">Gradient</option></select>
+                                    <div class="wa-color-swatch" data-color-bind="bgColor"></div>
+                                    <div class="wa-color-swatch" data-color-bind="bgColor2" id="csm-bg2-swatch" style="display:none;"></div>
+                                </div>
+                            </div>
                             <div class="wa-csm-row"><div class="wa-csm-label">Lưới dọc</div><label class="wa-switch"><input type="checkbox" data-bind="gridVertical"><span class="wa-slider"></span></label></div>
                             <div class="wa-csm-row"><div class="wa-csm-label">Lưới ngang</div><label class="wa-switch"><input type="checkbox" data-bind="gridHorizontal"><span class="wa-slider"></span></label></div>
-                            <div class="wa-csm-row"><div class="wa-csm-label">Màu Lưới (Grid Color)</div><div class="wa-color-swatch" data-color-bind="gridColor"></div></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Màu Lưới</div><div class="wa-color-swatch" data-color-bind="gridColor"></div></div>
                             <div class="wa-csm-divider">Trục & Không gian</div>
                             <div class="wa-csm-row"><div class="wa-csm-label">Tâm ngắm</div><select class="wa-csm-select" data-bind="crosshairMode"><option value="normal">Bình thường</option><option value="hidden">Ẩn</option></select></div>
-                            <div class="wa-csm-row"><div class="wa-csm-label">Căn lề phải (Right Margin)</div><input type="range" class="wa-csm-slider" min="0" max="50" step="1" data-bind="rightMargin" data-type="number"></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Lề phải (Nến)</div><input type="range" class="wa-csm-slider" min="0" max="50" step="1" data-bind="rightMargin" data-type="number"></div>
                         </div>
                         <div id="csm-pro" class="wa-csm-panel">
-                            <div style="background: rgba(240,185,11,0.1); border: 1px dashed rgba(240,185,11,0.3); padding: 10px; border-radius: 6px; font-size: 11px; color: #F0B90B; margin-bottom: 10px;">🚀 Các tính năng dưới đây được bảo lưu cho Phase 4.</div>
+                            <div style="background: rgba(240,185,11,0.1); border: 1px dashed rgba(240,185,11,0.3); padding: 10px; border-radius: 6px; font-size: 11px; color: #F0B90B; margin-bottom: 10px;">🚀 Dự phòng cho Phase 4.</div>
                             <div class="wa-csm-row"><div class="wa-csm-label">PAC Coloring</div><label class="wa-switch"><input type="checkbox" data-bind="pacColoring"><span class="wa-slider"></span></label></div>
-                            <div class="wa-csm-row"><div class="wa-csm-label">Wick Dimmer</div><label class="wa-switch"><input type="checkbox" data-bind="wickDimmer"><span class="wa-slider"></span></label></div>
                         </div>
                     </div>
                 </div>
@@ -1616,47 +1602,43 @@ window.closeProChart = function() {
         </div>
     `;
     
-    // 4. HTML COLOR PICKER (BẢNG MÀU)
     const pickerHTML = `
         <div id="wa-color-picker">
             <div class="wcp-grid" id="wcp-palette"></div>
-            <div class="wcp-hex-row">
-                <span style="font-size:11px; color:#848e9c; font-weight:bold;">HEX</span>
-                <input type="text" class="wcp-hex-input" id="wcp-hex" maxlength="9">
-            </div>
-            <div class="wcp-opacity-row">
-                <span>OPACITY</span>
-                <input type="range" class="wcp-opacity-slider" id="wcp-opacity" min="0" max="1" step="0.05" value="1">
-            </div>
+            <div class="wcp-hex-row"><span style="font-size:11px; color:#848e9c; font-weight:bold;">HEX</span><input type="text" class="wcp-hex-input" id="wcp-hex" maxlength="9"></div>
+            <div class="wcp-opacity-row"><span>OPACITY</span><input type="range" class="wcp-opacity-slider" id="wcp-opacity" min="0" max="1" step="0.05" value="1"></div>
         </div>
     `;
     
     document.body.insertAdjacentHTML('beforeend', modalHTML + pickerHTML);
 
     const modal = document.getElementById('wa-chart-settings-modal');
-    const modalBox = modal.querySelector('.wa-csm-box');
+    const modalBox = document.getElementById('wa-csm-box');
     const header = modal.querySelector('.wa-csm-header');
     const colorPicker = document.getElementById('wa-color-picker');
 
-    // --- LOGIC KÉO THẢ (DRAGGABLE) ---
+    // 🚀 FIX LỖI KÉO THẢ: Gỡ transform và chốt tọa độ cố định ngay khi mousedown
     let isDragging = false, startX, startY, initLeft, initTop;
     header.addEventListener('mousedown', (e) => {
         isDragging = true;
         startX = e.clientX; startY = e.clientY;
         const rect = modalBox.getBoundingClientRect();
         initLeft = rect.left; initTop = rect.top;
+
+        modalBox.style.transform = 'none'; 
+        modalBox.style.left = initLeft + 'px';
+        modalBox.style.top = initTop + 'px';
+
         document.body.style.userSelect = 'none'; 
     });
     window.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
-        modal.style.justifyContent = 'unset'; modal.style.alignItems = 'unset'; // Phá vỡ flex center
-        modalBox.style.position = 'absolute';
         modalBox.style.left = (initLeft + e.clientX - startX) + 'px';
         modalBox.style.top = (initTop + e.clientY - startY) + 'px';
     });
     window.addEventListener('mouseup', () => { isDragging = false; document.body.style.userSelect = ''; });
 
-    // --- LOGIC CHUYỂN TAB ---
+    // Tabs
     const tabs = modal.querySelectorAll('.wa-csm-tab');
     const panels = modal.querySelectorAll('.wa-csm-panel');
     tabs.forEach(tab => {
@@ -1666,75 +1648,57 @@ window.closeProChart = function() {
         };
     });
 
-    // --- LOGIC COLOR PICKER PRO ---
-    const tvColors = [
-        '#ffffff','#d1d4dc','#b2b5be','#848e9c','#5d606b','#363a45','#1e222d','#000000',
-        '#f23645','#ff9800','#f0b90b','#089981','#00bcd4','#2962ff','#673ab7','#9c27b0',
-        '#f7525f','#ffb74d','#ffe066','#2af592','#4dd0e1','#448aff','#9575cd','#ba68c8',
-        '#f98080','#ffcc80','#fff59d','#66bb6a','#80deea','#82b1ff','#b39ddb','#ce93d8'
-    ];
-    const palette = document.getElementById('wcp-palette');
-    const hexInp = document.getElementById('wcp-hex');
-    const opSlider = document.getElementById('wcp-opacity');
-    let activeSwatchBtn = null;
-    let activeBindKey = null;
+    // Color Picker
+    const tvColors = ['#ffffff','#d1d4dc','#b2b5be','#848e9c','#5d606b','#363a45','#1e222d','#000000','#f23645','#ff9800','#f0b90b','#089981','#00bcd4','#2962ff','#673ab7','#9c27b0','#f7525f','#ffb74d','#ffe066','#2af592','#4dd0e1','#448aff','#9575cd','#ba68c8','#f98080','#ffcc80','#fff59d','#66bb6a','#80deea','#82b1ff','#b39ddb','#ce93d8'];
+    const palette = document.getElementById('wcp-palette'), hexInp = document.getElementById('wcp-hex'), opSlider = document.getElementById('wcp-opacity');
+    let activeSwatchBtn = null, activeBindKey = null;
 
-    // Render lưới màu
     tvColors.forEach(col => {
-        const cell = document.createElement('div');
-        cell.className = 'wcp-cell'; cell.style.background = col;
+        const cell = document.createElement('div'); cell.className = 'wcp-cell'; cell.style.background = col;
         cell.onclick = () => applyColorToSwatch(col, opSlider.value);
         palette.appendChild(cell);
     });
 
     function applyColorToSwatch(hexCode, opacity) {
         if (!activeSwatchBtn) return;
-        // Chuyển đổi HEX sang RGBA nếu opacity < 1
         let finalColor = hexCode;
         if (opacity < 1 && hexCode.startsWith('#')) {
             let r = parseInt(hexCode.slice(1,3), 16), g = parseInt(hexCode.slice(3,5), 16), b = parseInt(hexCode.slice(5,7), 16);
             finalColor = `rgba(${r},${g},${b},${opacity})`;
         }
-        activeSwatchBtn.style.background = finalColor;
-        hexInp.value = finalColor;
+        activeSwatchBtn.style.background = finalColor; hexInp.value = finalColor;
         if (window.WaveChartEngine) window.WaveChartEngine.update({ [activeBindKey]: finalColor });
     }
 
-    // Lắng nghe Swatch Click
     modal.querySelectorAll('.wa-color-swatch').forEach(swatch => {
         swatch.onclick = (e) => {
-            e.stopPropagation();
-            activeSwatchBtn = swatch;
-            activeBindKey = swatch.dataset.colorBind;
-            
-            // Lấy màu hiện tại đẩy vào Hex
+            e.stopPropagation(); activeSwatchBtn = swatch; activeBindKey = swatch.dataset.colorBind;
             let curColor = swatch.style.background || '#ffffff';
             hexInp.value = curColor.startsWith('rgb') ? curColor : rgb2hex(curColor);
-            
             const rect = swatch.getBoundingClientRect();
-            colorPicker.style.display = 'block';
-            colorPicker.style.left = rect.left + 'px';
-            colorPicker.style.top = (rect.bottom + 10) + 'px';
+            colorPicker.style.display = 'block'; colorPicker.style.left = rect.left + 'px'; colorPicker.style.top = (rect.bottom + 10) + 'px';
         };
     });
 
-    // Hex & Opacity Events
     hexInp.oninput = (e) => applyColorToSwatch(e.target.value, opSlider.value);
     opSlider.oninput = (e) => applyColorToSwatch(hexInp.value.substring(0,7), e.target.value);
+    document.addEventListener('click', (e) => { if (!colorPicker.contains(e.target) && !e.target.classList.contains('wa-color-swatch')) colorPicker.style.display = 'none'; });
+    function rgb2hex(rgb) { if (rgb.search("rgb") === -1) return rgb; rgb = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/); return "#" + ("0" + parseInt(rgb[1]).toString(16)).slice(-2) + ("0" + parseInt(rgb[2]).toString(16)).slice(-2) + ("0" + parseInt(rgb[3]).toString(16)).slice(-2); }
 
-    // Đóng popup màu khi click ra ngoài
-    document.addEventListener('click', (e) => {
-        if (!colorPicker.contains(e.target) && !e.target.classList.contains('wa-color-swatch')) {
-            colorPicker.style.display = 'none';
-        }
-    });
+    // 🚀 HÀM QUẢN LÝ UI ĐỘNG (Dynamic UI Updater)
+    function updateDynamicUI(config) {
+        // UI Kiểu nến
+        const t = parseInt(config.chartType);
+        const isLineOrArea = (t === 6 || t === 9);
+        document.getElementById('csm-ui-candles').style.display = isLineOrArea ? 'none' : 'flex';
+        document.getElementById('csm-ui-lines').style.display = isLineOrArea ? 'flex' : 'none';
 
-    // Helper RGB to Hex (cho DOM color)
-    function rgb2hex(rgb) {
-        if (rgb.search("rgb") === -1) return rgb;
-        rgb = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/);
-        function hex(x) { return ("0" + parseInt(x).toString(16)).slice(-2); }
-        return "#" + hex(rgb[1]) + hex(rgb[2]) + hex(rgb[3]);
+        // UI Nền Gradient
+        document.getElementById('csm-bg2-swatch').style.display = config.bgType === 'gradient' ? 'block' : 'none';
+        
+        // UI Màu Râu
+        document.getElementById('csm-wick-colors').style.opacity = config.wickIndependent ? '1' : '0.5';
+        document.getElementById('csm-wick-colors').style.pointerEvents = config.wickIndependent ? 'auto' : 'none';
     }
 
     // --- MỞ MODAL & BINDING ---
@@ -1744,21 +1708,16 @@ window.closeProChart = function() {
         
         modal.querySelectorAll('[data-bind]').forEach(el => {
             const key = el.dataset.bind;
-            if (config[key] !== undefined) {
-                if (el.type === 'checkbox') el.checked = config[key];
-                else el.value = config[key];
-            }
+            if (config[key] !== undefined) { if (el.type === 'checkbox') el.checked = config[key]; else el.value = config[key]; }
         });
 
-        // Bơm màu cho các ô Swatch
         modal.querySelectorAll('.wa-color-swatch').forEach(swatch => {
-            const key = swatch.dataset.colorBind;
-            if (config[key]) swatch.style.background = config[key];
+            const key = swatch.dataset.colorBind; if (config[key]) swatch.style.background = config[key];
         });
         
-        document.getElementById('csm-wick-colors').style.opacity = config.wickIndependent ? '1' : '0.5';
-        document.getElementById('csm-wick-colors').style.pointerEvents = config.wickIndependent ? 'auto' : 'none';
-
+        // Trả Form UI về lại trạng thái chuẩn giữa màn hình
+        modalBox.style.transform = 'translate(-50%, -50%)'; modalBox.style.left = '50%'; modalBox.style.top = '50%';
+        updateDynamicUI(config);
         modal.classList.add('show');
     };
 
@@ -1771,29 +1730,28 @@ window.closeProChart = function() {
             const key = el.dataset.bind;
             let value = el.type === 'checkbox' ? el.checked : el.value;
             if (el.dataset.type === 'number') value = parseFloat(value);
-
-            if (key === 'wickIndependent') {
-                document.getElementById('csm-wick-colors').style.opacity = value ? '1' : '0.5';
-                document.getElementById('csm-wick-colors').style.pointerEvents = value ? 'auto' : 'none';
-            }
+            
             if (window.WaveChartEngine) window.WaveChartEngine.update({ [key]: value });
+            // Cập nhật lại UI sau khi change
+            updateDynamicUI(window.WaveChartEngine.getConfig());
         });
     });
 
-    // 5. AUTO-INJECT NÚT VÀO TOOLBAR & TIÊU DIỆT NÚT CŨ
+    // AUTO-INJECT & TIÊU DIỆT NÚT CŨ
     const checkToolbar = setInterval(() => {
         const toolbar = document.querySelector('.sc-tools-left') || document.querySelector('.sc-toolbar') || document.querySelector('.wa-topbar-container');
         if (toolbar) {
             clearInterval(checkToolbar);
-
-            // Tự động tìm và tiêu diệt/ẩn các nút Cài đặt Chart cũ rác rưởi
+            // Tiêu diệt nút Cài đặt thủ công cũ trong HTML của bạn
             const oldButtons = document.querySelectorAll('button[id*="settings"], i.fa-cog, .sc-settings-btn');
             oldButtons.forEach(btn => {
-                if (btn.id !== 'btn-wa-chart-settings' && btn.onclick && btn.onclick.toString().includes('chart')) {
-                    btn.style.display = 'none';
+                if (btn.id !== 'btn-wa-chart-settings' && (btn.className.includes('cog') || btn.className.includes('setting') || (btn.title && btn.title.toLowerCase().includes('setting')))) {
+                    btn.style.display = 'none'; 
                 }
             });
 
+            // Nếu bạn có nút Setting ghi tay rành rành trong HTML, bạn có thể xóa nó thẳng tay trong file index.html!
+            
             const btnWrap = document.createElement('div');
             btnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; margin-left: 8px;';
             btnWrap.innerHTML = `
@@ -1802,11 +1760,7 @@ window.closeProChart = function() {
                 </button>
             `;
             toolbar.appendChild(btnWrap);
-            
-            document.getElementById('btn-wa-chart-settings').onclick = (e) => {
-                e.stopPropagation();
-                window.openChartSettings();
-            };
+            document.getElementById('btn-wa-chart-settings').onclick = (e) => { e.stopPropagation(); window.openChartSettings(); };
         }
     }, 200);
 
