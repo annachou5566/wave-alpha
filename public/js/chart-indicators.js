@@ -4507,43 +4507,103 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 
                 const row = document.createElement('div');
                 row.className = 'wa-inp-row';
-                if (isColor) {
-                    let dVal = val;
-                    if (typeof val === 'number') {
-                        let hStr = Math.round(val).toString(16).toUpperCase();
-                        while(hStr.length < 6) hStr = '0' + hStr;
-                        dVal = '#' + hStr;
-                    }
-                    row.innerHTML = `
-                        <div style="display:flex; flex-direction:column; flex:1; min-width:100px;">
-                            <span style="font-size:14px; color:#b7bdc6; font-weight:500; word-break:break-word;">${lbl}</span>
-                        </div>
-                        <div style="display:flex; gap:12px; align-items:center; flex-shrink:0;">
-                            <input type="text" id="wa-param-hex-${idx}" class="wa-inp-hex" value="${dVal}">
-                            <div id="wa-color-btn-${idx}" class="wa-color-swatch-btn ${dVal==='transparent'?'wa-is-transparent':''}" style="background:${dVal}"></div>
-                        </div>`;
-                    const hexInp = row.querySelector('.wa-inp-hex'), colorBtn = row.querySelector('.wa-color-swatch-btn');
-                    hexInp.oninput = (e) => { 
-                        colorBtn.style.background = e.target.value; 
-                        colorBtn.classList.toggle('wa-is-transparent', e.target.value==='transparent');
-                        liveUpdateChart(); 
-                    };
-                    colorBtn.onclick = (e) => {
-                        e.stopPropagation(); activeHexInputId = `wa-param-hex-${idx}`; activeBtnId = `wa-color-btn-${idx}`;
-                        const r = colorBtn.getBoundingClientRect();
-                        colorPopover.style.display = 'grid'; 
-                        colorPopover.style.left = Math.max(10, r.left - 200) + 'px'; 
-                        colorPopover.style.top = (r.bottom + 8) + 'px';
-                    };
-                } else {
-                    const desc = (isVPVR && vpvrDescriptions[idx]) ? `<div style="font-size:11px; color:#5e6673; margin-top:4px;">${vpvrDescriptions[idx]}</div>` : '';
-                    row.innerHTML = `
-                        <div style="display:flex; flex-direction:column; flex:1; min-width:100px;">
-                            <span style="font-size:14px; color:#b7bdc6; font-weight:500; word-break:break-word;">${lbl}</span>${desc}
-                        </div>
-                        <input type="number" id="wa-param-num-${idx}" class="wa-inp-num" value="${val}" step="any">`;
-                    row.querySelector('input').oninput = liveUpdateChart;
-                }
+                // ✅ ĐOẠN CODE MỚI (DÁN VÀO ĐÂY)
+if (isColor) {
+  let dVal = val;
+  if (typeof val === 'number') {
+      let hStr = Math.round(val).toString(16).toUpperCase();
+      while(hStr.length < 6) hStr = '0' + hStr;
+      dVal = '#' + hStr;
+  }
+  row.innerHTML = `
+      <div style="display:flex; flex-direction:column; flex:1; min-width:100px;">
+          <span style="font-size:14px; color:#b7bdc6; font-weight:500; word-break:break-word;">${lbl}</span>
+      </div>
+      <div style="display:flex; gap:12px; align-items:center; flex-shrink:0;">
+          <input type="text" id="wa-param-hex-${idx}" class="wa-inp-hex" value="${dVal}">
+          <div id="wa-color-btn-${idx}" class="wa-color-swatch-btn ${dVal==='transparent'?'wa-is-transparent':''}" style="background:${dVal}"></div>
+      </div>`;
+  const hexInp = row.querySelector('.wa-inp-hex'), colorBtn = row.querySelector('.wa-color-swatch-btn');
+  hexInp.oninput = (e) => { 
+      colorBtn.style.background = e.target.value; 
+      colorBtn.classList.toggle('wa-is-transparent', e.target.value==='transparent');
+      liveUpdateChart(); 
+  };
+  colorBtn.onclick = (e) => {
+      e.stopPropagation(); activeHexInputId = `wa-param-hex-${idx}`; activeBtnId = `wa-color-btn-${idx}`;
+      const r = colorBtn.getBoundingClientRect();
+      colorPopover.style.display = 'grid'; 
+      colorPopover.style.left = Math.max(10, r.left - 200) + 'px'; 
+      colorPopover.style.top = (r.bottom + 8) + 'px';
+  };
+} else {
+  // Tự động nhận diện Options (0=Tắt, 1=Bật) để render nút bấm
+  let options = [];
+  let cleanLbl = lbl;
+  const match = lbl.match(/\((.*?=\s*.*?)\)/); 
+
+  if (match) {
+      const parts = match[1].split(',');
+      parts.forEach(p => {
+          const kv = p.split('=');
+          if (kv.length === 2 && !isNaN(parseInt(kv[0]))) {
+              options.push({ val: parseInt(kv[0].trim()), text: kv[1].trim() });
+          }
+      });
+      if (options.length > 0) {
+          cleanLbl = lbl.replace(match[0], '').trim(); 
+      }
+  }
+
+  const desc = (isVPVR && vpvrDescriptions[idx]) ? `<div style="font-size:11px; color:#5e6673; margin-top:4px;">${vpvrDescriptions[idx]}</div>` : '';
+
+  if (options.length > 0) {
+      let btnHTML = `<div style="display:flex; background:rgba(0,0,0,0.4); border-radius:6px; padding:2px; border:1px solid rgba(255,255,255,0.05); width:100%;">`;
+      
+      options.forEach(opt => {
+          const isActive = (val === opt.val);
+          const bg = isActive ? '#374151' : 'transparent';
+          const col = isActive ? '#00F0FF' : '#848e9c';
+          const fw = isActive ? '700' : '500';
+          btnHTML += `<button class="wa-enum-btn" data-val="${opt.val}" style="flex:1; border:none; background:${bg}; color:${col}; padding:6px 4px; font-size:12px; border-radius:4px; cursor:pointer; font-weight:${fw}; transition:all 0.2s; white-space:nowrap;">${opt.text}</button>`;
+      });
+      btnHTML += `</div><input type="hidden" id="wa-param-num-${idx}" value="${val}">`;
+
+      row.innerHTML = `
+          <div style="display:flex; flex-direction:column; flex:1; min-width:100px;">
+              <span style="font-size:14px; color:#b7bdc6; font-weight:500; word-break:break-word;">${cleanLbl}</span>${desc}
+          </div>
+          <div style="flex-shrink:0; min-width:140px; display:flex; justify-content:flex-end;">
+              ${btnHTML}
+          </div>`;
+
+      const btns = row.querySelectorAll('.wa-enum-btn');
+      const hiddenInp = row.querySelector(`#wa-param-num-${idx}`);
+      
+      btns.forEach(btn => {
+          btn.onclick = () => {
+              hiddenInp.value = btn.dataset.val;
+              btns.forEach(b => {
+                  b.style.background = 'transparent';
+                  b.style.color = '#848e9c';
+                  b.style.fontWeight = '500';
+              });
+              btn.style.background = '#374151';
+              btn.style.color = '#00F0FF';
+              btn.style.fontWeight = '700';
+              liveUpdateChart(); 
+          };
+      });
+
+  } else {
+      row.innerHTML = `
+          <div style="display:flex; flex-direction:column; flex:1; min-width:100px;">
+              <span style="font-size:14px; color:#b7bdc6; font-weight:500; word-break:break-word;">${lbl}</span>${desc}
+          </div>
+          <input type="number" id="wa-param-num-${idx}" class="wa-inp-num" value="${val}" step="any">`;
+      row.querySelector('input').oninput = liveUpdateChart;
+  }
+}
                 box.appendChild(row);
             });
             content.appendChild(box);
