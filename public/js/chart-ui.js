@@ -1560,8 +1560,16 @@ window.closeProChart = function() {
                             
                             <div id="csm-ui-candles" style="display:flex; flex-direction:column; gap:20px;">
                                 <div class="wa-csm-row"><div class="wa-csm-label">Thân nến (Body)</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="upColor"></div><div class="wa-color-swatch" data-color-bind="downColor"></div></div></div>
-                                <div class="wa-csm-row"><div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="showBorder"><span class="wa-slider"></span></label> Viền (Borders)</div></div>
-                                <div class="wa-csm-row"><div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="showWick"><span class="wa-slider"></span></label> Bóng nến (Wicks)</div><div class="wa-csm-control" id="csm-wick-colors" style="opacity:0.5; pointer-events:none;"><label class="wa-switch" title="Độc lập"><input type="checkbox" data-bind="wickIndependent"><span class="wa-slider"></span></label><div class="wa-color-swatch" data-color-bind="wickUpColor"></div><div class="wa-color-swatch" data-color-bind="wickDownColor"></div></div></div>
+                                
+                                <div class="wa-csm-row">
+                                    <div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="showBorder"><span class="wa-slider"></span></label> Viền (Borders)</div>
+                                    <div class="wa-csm-control" id="csm-border-colors" style="opacity:0.5; pointer-events:none;"><label class="wa-switch" title="Độc lập"><input type="checkbox" data-bind="borderIndependent"><span class="wa-slider"></span></label><div class="wa-color-swatch" data-color-bind="borderUpColor"></div><div class="wa-color-swatch" data-color-bind="borderDownColor"></div></div>
+                                </div>
+
+                                <div class="wa-csm-row">
+                                    <div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="showWick"><span class="wa-slider"></span></label> Bóng nến (Wicks)</div>
+                                    <div class="wa-csm-control" id="csm-wick-colors" style="opacity:0.5; pointer-events:none;"><label class="wa-switch" title="Độc lập"><input type="checkbox" data-bind="wickIndependent"><span class="wa-slider"></span></label><div class="wa-color-swatch" data-color-bind="wickUpColor"></div><div class="wa-color-swatch" data-color-bind="wickDownColor"></div></div>
+                                </div>
                             </div>
 
                             <div id="csm-ui-lines" style="display:none; flex-direction:column; gap:20px;">
@@ -1704,6 +1712,10 @@ window.closeProChart = function() {
         // UI Màu Râu
         document.getElementById('csm-wick-colors').style.opacity = config.wickIndependent ? '1' : '0.5';
         document.getElementById('csm-wick-colors').style.pointerEvents = config.wickIndependent ? 'auto' : 'none';
+
+        // UI Màu Viền (Mới)
+        document.getElementById('csm-border-colors').style.opacity = config.borderIndependent ? '1' : '0.5';
+        document.getElementById('csm-border-colors').style.pointerEvents = config.borderIndependent ? 'auto' : 'none';
     }
 
     // --- MỞ MODAL & BINDING ---
@@ -1831,7 +1843,6 @@ window.closeProChart = function() {
         const now = new Date();
         let nextTime = new Date(now.getTime());
 
-        // Thuật toán tìm mốc thời gian đóng nến tiếp theo
         if (interval.includes('m')) {
             const m = parseInt(interval);
             nextTime.setMinutes(Math.ceil(now.getMinutes() / m) * m);
@@ -1842,9 +1853,9 @@ window.closeProChart = function() {
             nextTime.setMinutes(0); nextTime.setSeconds(0);
         } else if (interval === '1d') {
             nextTime.setUTCDate(now.getUTCDate() + 1);
-            nextTime.setUTCHours(0, 0, 0, 0); // Đóng nến ngày lúc 0h UTC
+            nextTime.setUTCHours(0, 0, 0, 0); 
         } else {
-            cd.style.display = 'none'; return; // Tick chart hoặc 1W không đếm ngược
+            cd.style.display = 'none'; return; 
         }
 
         let diff = nextTime.getTime() - now.getTime();
@@ -1861,15 +1872,30 @@ window.closeProChart = function() {
         cd.innerText = timeStr;
         cd.style.display = 'block';
 
-        // Cảnh báo đỏ khi còn dưới 10 giây
         if (diff <= 10000) {
-            cd.style.color = '#F6465D';
-            cd.style.borderColor = 'rgba(246,70,93,0.5)';
-            cd.style.background = 'rgba(246,70,93,0.15)';
+            cd.style.color = '#F6465D'; cd.style.borderColor = 'rgba(246,70,93,0.5)'; cd.style.background = 'rgba(246,70,93,0.15)';
         } else {
-            cd.style.color = '#26a69a';
-            cd.style.borderColor = 'rgba(38,166,154,0.3)';
-            cd.style.background = 'rgba(38,166,154,0.15)';
+            cd.style.color = '#26a69a'; cd.style.borderColor = 'rgba(38,166,154,0.3)'; cd.style.background = 'rgba(38,166,154,0.15)';
         }
+
+        // 🚀 PHÉP MÀU: ĐỊNH VỊ TỌA ĐỘ ĐỘNG BÁM THEO GIÁ (KLineChart API)
+        try {
+            if (window.tvChart) {
+                const dataList = window.tvChart.getDataList();
+                if (dataList && dataList.length > 0) {
+                    const lastPrice = dataList[dataList.length - 1].close;
+                    
+                    // Chuyển đổi Giá (Value) thành Pixel trên màn hình
+                    const pixel = window.tvChart.convertToPixel({ value: lastPrice }, { paneId: 'candle_pane' });
+                    const y = typeof pixel === 'number' ? pixel : (pixel ? pixel.y : null);
+                    
+                    if (y !== null && !isNaN(y)) {
+                        cd.style.top = (y + 16) + 'px'; // Treo lơ lửng ngay dưới đường giá 16 pixel
+                        cd.style.bottom = 'auto';
+                        cd.style.right = '65px'; // Lùi vào 1 chút để không lẹm vào trục Y
+                    }
+                }
+            }
+        } catch(e) {}
     }
 })();

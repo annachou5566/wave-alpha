@@ -22,14 +22,15 @@ window.bookmapHistory = [];
 window.isHeatmapOn = true; 
 
 // =========================================================================
-// 🧠 BƯỚC 1: WAVE CHART ENGINE (ĐÃ VÁ LỖI NỀN, TIMEFRAME & GRADIENT)
+// 🧠 BƯỚC 1: WAVE CHART ENGINE (FIX MÀU VIỀN & BÓNG NẾN ĐỘC LẬP)
 // =========================================================================
 const DEFAULT_CHART_CONFIG = {
     chartType: 1, upColor: '#0ECB81', downColor: '#F6465D',
-    showWick: true, showBorder: true, wickIndependent: false, wickUpColor: '#0ECB81', wickDownColor: '#F6465D',
+    showWick: true, wickIndependent: false, wickUpColor: '#0ECB81', wickDownColor: '#F6465D',
+    showBorder: true, borderIndependent: false, borderUpColor: '#0ECB81', borderDownColor: '#F6465D', // 🚀 Bổ sung Viền độc lập
     abnormalVolColoring: false, yAxisMode: 'normal',
     showOHLC: true, showCountdown: true, showLastPriceLine: true, showHighLowTags: true, showWatermark: true, watermarkOpacity: 0.05,
-    bgType: 'solid', bgColor: '#131722', bgColor2: '#000000', // Đã thêm màu thứ 2 cho Gradient
+    bgType: 'solid', bgColor: '#131722', bgColor2: '#000000',
     gridVertical: true, gridHorizontal: true, gridColor: 'rgba(255,255,255,0.06)',
     sessionBreaks: false, crosshairMode: 'normal', rightMargin: 10, timezone: 'Asia/Ho_Chi_Minh',
     pacColoring: false, wickDimmer: false, volumeOverlay: false, baselineValue: 0, rangeTicks: 10, renkoSize: 10
@@ -42,9 +43,7 @@ window.WaveChartEngine = {
 
     init: function (chart) {
         this.chartInstance = chart; this.loadConfig(); this.applyNow();
-        // 🚀 FIX LỖI ĐỔI TIMEFRAME: Ép Engine vẽ lại ngay sau khi load nến mới
         window.__wa_onChartReady = () => this.applyNow();
-        console.log('[WaveChartEngine] Đã khởi tạo & Kích hoạt Hook Timeframe ✅');
     },
 
     update: function (newProps, instant = false) {
@@ -64,22 +63,26 @@ window.WaveChartEngine = {
         let kcChartType = 'candle_solid'; let isLine = false;
         if (c.chartType === 2) kcChartType = 'candle_stroke';
         else if (c.chartType === 3) kcChartType = 'ohlc';     
-        else if (c.chartType === 6) { kcChartType = 'area'; isLine = true; } // Đường Line
-        else if (c.chartType === 9) { kcChartType = 'area'; isLine = false; } // Vùng Area
+        else if (c.chartType === 6) { kcChartType = 'area'; isLine = true; } 
+        else if (c.chartType === 9) { kcChartType = 'area'; isLine = false; } 
+
+        // 🚀 TÍNH TOÁN MÀU VIỀN & BÓNG NẾN (Bảo vệ nến rỗng không bị tàng hình)
+        const isHollow = (c.chartType === 2);
+        const finalUpBorder = c.showBorder ? (c.borderIndependent ? c.borderUpColor : c.upColor) : (isHollow ? c.upColor : 'transparent');
+        const finalDownBorder = c.showBorder ? (c.borderIndependent ? c.borderDownColor : c.downColor) : (isHollow ? c.downColor : 'transparent');
+        const finalUpWick = c.showWick ? (c.wickIndependent ? c.wickUpColor : c.upColor) : 'transparent';
+        const finalDownWick = c.showWick ? (c.wickIndependent ? c.wickDownColor : c.downColor) : 'transparent';
 
         const styles = {
             grid: { horizontal: { show: c.gridHorizontal, color: c.gridColor, style: 'dashed' }, vertical: { show: c.gridVertical, color: c.gridColor, style: 'dashed' } },
             candle: {
                 type: kcChartType,
-                // 🚀 FIX LỖI OHLC: Nối thẻ cờ showOHLC vào hệ thống Tooltip của KLineChart
-                tooltip: { showRule: c.showOHLC ? 'always' : 'none' },
+                tooltip: { showRule: c.showOHLC ? 'always' : 'none' }, // Liên kết OHLC
                 bar: {
                     upColor: c.upColor, downColor: c.downColor, noChangeColor: '#787b86',
-                    upBorderColor: c.showBorder ? c.upColor : 'transparent', downBorderColor: c.showBorder ? c.downColor : 'transparent',
-                    upWickColor: c.showWick ? (c.wickIndependent ? c.wickUpColor : (c.wickDimmer ? this._dimColor(c.upColor, 0.4) : c.upColor)) : 'transparent',
-                    downWickColor: c.showWick ? (c.wickIndependent ? c.wickDownColor : (c.wickDimmer ? this._dimColor(c.downColor, 0.4) : c.downColor)) : 'transparent',
+                    upBorderColor: finalUpBorder, downBorderColor: finalDownBorder,
+                    upWickColor: finalUpWick, downWickColor: finalDownWick,
                 },
-                // Dùng upColor làm màu chính cho Line/Area
                 area: { lineSize: 2, lineColor: c.upColor, backgroundColor: isLine ? 'transparent' : [{ offset: 0, color: this._dimColor(c.upColor, 0.25) }, { offset: 1, color: 'transparent' }] },
                 priceMark: { show: c.showLastPriceLine, high: { show: false }, low: { show: false } }
             },
@@ -91,11 +94,9 @@ window.WaveChartEngine = {
             this.chartInstance.setPaneOptions({ id: 'candle_pane', axisOptions: { type: c.yAxisMode } });
         } catch(e) {}
 
-        // 🚀 FIX LỖI MÀU NỀN & GRADIENT: Trỏ đúng ID sc-chart-container
         const container = document.getElementById('sc-chart-container');
-        if (container) {
-            container.style.background = c.bgType === 'solid' ? c.bgColor : `linear-gradient(to bottom, ${c.bgColor} 0%, ${c.bgColor2} 100%)`; 
-        }
+        if (container) container.style.background = c.bgType === 'solid' ? c.bgColor : `linear-gradient(to bottom, ${c.bgColor} 0%, ${c.bgColor2} 100%)`; 
+        
         window.dispatchEvent(new CustomEvent('wa_chart_config_updated', { detail: c }));
     },
 
