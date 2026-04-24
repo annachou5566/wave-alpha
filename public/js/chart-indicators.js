@@ -1427,7 +1427,7 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
 
 
 // ════════════════════════════════════════════════════════════════════════════════
-//  WAVE_VPVR ULTIMATE v3.2 — CORE ENGINE (Fix Color & Clean UI)
+//  WAVE_VPVR ULTIMATE v3.3 — CORE ENGINE (Smart Session Anchoring & nPOC Fix)
 // ════════════════════════════════════════════════════════════════════════════════
 (function initWaveVpvrCore() {
   'use strict';
@@ -1443,15 +1443,10 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
   }
 
   function _waHex2Rgba(val, alpha) {
-    // 🚀 FIX: Dạy cho Canvas hiểu màu Trong Suốt
     if (val === 'transparent') return 'rgba(0,0,0,0)';
-    
     if (typeof val === 'number') {
       const h = Math.round(val) >>> 0;
-      const r = (h >> 16) & 0xFF;
-      const g = (h >>  8) & 0xFF;
-      const b =  h        & 0xFF;
-      return `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
+      return `rgba(${(h >> 16) & 0xFF},${(h >> 8) & 0xFF},${h & 0xFF},${alpha.toFixed(3)})`;
     }
     let hex = String(val).replace('#', '');
     if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
@@ -1476,6 +1471,24 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
     ctx.arcTo(x, y + h, x, y, r);
     ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
+  }
+
+  // 🚀 Hàm an toàn lấy tọa độ X trên Canvas
+  function _waGetXPixel(xAxis, dataIndex) {
+    if (!xAxis) return 0;
+    try {
+        let val = null;
+        if (typeof xAxis.convertToPixel === 'function') {
+            try { val = xAxis.convertToPixel({ dataIndex: dataIndex }); } catch(e){}
+            if (val == null || isNaN(val.x ?? val)) { try { val = xAxis.convertToPixel(dataIndex); } catch(e){} }
+            if (val != null) return typeof val === 'number' ? val : (val.x ?? 0);
+        }
+        if (typeof xAxis.getCoordinate === 'function') {
+            val = xAxis.getCoordinate(dataIndex);
+            if (val != null && !isNaN(val)) return val;
+        }
+    } catch(e) {}
+    return 0;
   }
 
   function _waCalcVpvrProfile(dataList, startIdx, endIdx, rowCount, vaPercent) {
@@ -1521,7 +1534,6 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
                 if (cRange === 0) {
                     binVol = d.volume * (overlapRange / step);
                 } else {
-                    // 🚀 LOGIC CHUÔNG GAUSS: Dồn 70% Volume vào Body, 30% cho Wick
                     const wBody = bodyRange > 0 ? (overlapBody / bodyRange) * 0.70 : 0;
                     const wWick = (cRange - bodyRange) > 0 ? (overlapWick / (cRange - bodyRange)) * 0.30 : 0;
                     binVol = d.volume * (wBody + wWick);
@@ -1542,7 +1554,6 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
     let curVA = pocBin.total, tgt = totalVol * (vaPercent / 100);
     let ui = pocBin.idx + 1, di = pocBin.idx - 1;
 
-    // 🚀 LOGIC STEIDLMAYER: So sánh tổng 2 Bins thay vì 1 Bin
     while (curVA < tgt && (ui < rowCount || di >= 0)) {
         let volUp = 0, volDown = 0;
         let u1 = ui < rowCount ? bins[ui].total : 0;
@@ -1591,67 +1602,65 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
       if (!groups.has(key)) groups.set(key, { start: i, end: i + 1 });
       else groups.get(key).end = i + 1;
     }
-    return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-5);
+    return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-10); // Cho phép xem lại lịch sử 10 phiên
   }
 
-  function _waDrawGradientBar(ctx, clrHex, startX, rectY, w, rectH, isLeft) {
-    if (w <= 0 || rectH <= 0) return;
-    const x0 = isLeft ? startX : startX + w;
-    const x1 = isLeft ? startX + w : startX;
+  function _waDrawGradientBar(ctx, clrHex, x0, x1, rectY, rectH) {
+    if (Math.abs(x1 - x0) <= 0 || rectH <= 0) return;
     const grad = ctx.createLinearGradient(x0, 0, x1, 0);
     grad.addColorStop(0, _waHex2Rgba(clrHex, 0.85));
     grad.addColorStop(1, _waHex2Rgba(clrHex, 0.15));
     ctx.fillStyle = grad;
-    ctx.fillRect(startX, rectY, w, rectH);
+    ctx.fillRect(Math.min(x0, x1), rectY, Math.abs(x1 - x0), rectH);
   }
 
-  function _waRenderBins(ctx, profile, maxWidthPx, isLeft, bounding, yAxis, C, showDelta) {
+  // 🚀 Logic render độc lập vị trí X (X-Agnostic Render)
+  function _waRenderBins(ctx, profile, maxW, anchorX, dir, yAxis, C, showDelta) {
     profile.bins.forEach(bin => {
       if (bin.total <= 0) return;
       const yB = yAxis.convertToPixel(bin.pLow), yT = yAxis.convertToPixel(bin.pHigh);
       if (yB === null || yT === null) return;
       
       const rectY = Math.min(yT, yB), rectH = Math.max(1, Math.abs(yB - yT) - 1);
-      const wUp = (bin.upVol / profile.maxVol) * maxWidthPx;
-      const wDn = (bin.downVol / profile.maxVol) * maxWidthPx;
+      const wUp = (bin.upVol / profile.maxVol) * maxW;
+      const wDn = (bin.downVol / profile.maxVol) * maxW;
 
       ctx.save();
       ctx.globalAlpha = bin.inVA ? C.opacityVA : C.opacityOut;
 
-      if (isLeft) {
-        _waDrawGradientBar(ctx, C.clrUp, 0, rectY, wUp, rectH, true);
-        _waDrawGradientBar(ctx, C.clrDn, wUp, rectY, wDn, rectH, true);
-      } else {
-        _waDrawGradientBar(ctx, C.clrDn, bounding.width - wDn, rectY, wDn, rectH, false);
-        _waDrawGradientBar(ctx, C.clrUp, bounding.width - wDn - wUp, rectY, wUp, rectH, false);
+      if (dir === 1) { // Vẽ từ Trái qua Phải
+        _waDrawGradientBar(ctx, C.clrUp, anchorX, anchorX + wUp, rectY, rectH);
+        _waDrawGradientBar(ctx, C.clrDn, anchorX + wUp, anchorX + wUp + wDn, rectY, rectH);
+      } else { // Vẽ từ Phải qua Trái
+        _waDrawGradientBar(ctx, C.clrDn, anchorX, anchorX - wDn, rectY, rectH);
+        _waDrawGradientBar(ctx, C.clrUp, anchorX - wDn, anchorX - wDn - wUp, rectY, rectH);
       }
       ctx.restore();
 
-      // 🚀 FIX: XÓA text "HVN" gây rối, chỉ giữ lại một viền mờ ranh giới mỏng
-      if (bin.total > profile.maxVol * 0.80) {
-        const totalW = wUp + wDn;
-        const hvnX = isLeft ? 0 : bounding.width - totalW;
+      const totalW = wUp + wDn;
+      const edgeX = anchorX + totalW * dir;
+
+      if (bin.total > profile.maxVol * 0.80) { // HVN
         ctx.save();
         ctx.strokeStyle = _waHex2Rgba(C.clrHvn, 0.40); ctx.lineWidth = 1;
-        ctx.strokeRect(hvnX, rectY, totalW, rectH);
+        ctx.strokeRect(Math.min(anchorX, edgeX), rectY, totalW, rectH);
         ctx.restore();
       }
 
-      // 🚀 FIX: XÓA hoàn toàn text "LVN", chỉ giữ lại fill mờ đánh dấu vùng rỗng thanh khoản
-      if (bin.total > 0 && bin.total < profile.maxVol * 0.10) {
-        const lvnX = isLeft ? 0 : bounding.width - maxWidthPx;
+      if (bin.total > 0 && bin.total < profile.maxVol * 0.10) { // LVN
         ctx.save();
-        ctx.fillStyle = _waHex2Rgba(C.clrLvn, 0.10); ctx.fillRect(lvnX, rectY, maxWidthPx, rectH);
+        ctx.fillStyle = _waHex2Rgba(C.clrLvn, 0.10); 
+        ctx.fillRect(Math.min(anchorX, anchorX + maxW * dir), rectY, maxW, rectH);
         ctx.restore();
       }
 
       if (showDelta && bin.inVA && (bin.upVol + bin.downVol > 0)) {
         const dr = bin.upVol / (bin.upVol + bin.downVol);
-        const iconX = isLeft ? wUp + wDn + 6 : bounding.width - wUp - wDn - 6;
+        const iconX = edgeX + (dir === 1 ? 6 : -6);
         if (dr > 0.75 || dr < 0.25) {
           ctx.save();
           ctx.font = `bold ${Math.max(8, C.fontSize - 2)}px system-ui,sans-serif`; 
-          ctx.textBaseline = 'middle'; ctx.textAlign = isLeft ? 'left' : 'right';
+          ctx.textBaseline = 'middle'; ctx.textAlign = dir === 1 ? 'left' : 'right';
           ctx.fillStyle = dr > 0.75 ? _waHex2Rgba(C.clrDeltaUp, 1) : _waHex2Rgba(C.clrDn, 1);
           ctx.fillText(dr > 0.75 ? '▲' : '▼', iconX, rectY + rectH / 2);
           ctx.restore();
@@ -1660,7 +1669,7 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
     });
   }
 
-  function _waRenderPOCLine(ctx, profile, maxWidthPx, isLeft, bounding, yAxis, dataList, C) {
+  function _waRenderPOCLine(ctx, profile, maxW, anchorX, dir, bounding, yAxis, dataList, C) {
     if (!profile.poc) return;
     const pocMid = (profile.poc.pLow + profile.poc.pHigh) / 2;
     const pocY = yAxis.convertToPixel(pocMid);
@@ -1674,25 +1683,32 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
       }
     }
 
+    const endOfProfileX = anchorX + (maxW + 20) * dir; // Kéo dài viền n POC thêm 20px cho đẹp
+
     ctx.save();
     ctx.shadowColor = _waHex2Rgba(C.clrPoc, 0.60); ctx.shadowBlur = 5;
     ctx.strokeStyle = _waHex2Rgba(C.clrPoc, 0.95); ctx.lineWidth = C.pocLineWidth;
     ctx.beginPath();
-    if (isLeft) { ctx.moveTo(0, pocY); ctx.lineTo(maxWidthPx + 20, pocY); }
-    else        { ctx.moveTo(bounding.width, pocY); ctx.lineTo(bounding.width - maxWidthPx - 20, pocY); }
+    ctx.moveTo(anchorX, pocY); 
+    ctx.lineTo(endOfProfileX, pocY);
     ctx.stroke(); ctx.shadowBlur = 0;
 
     if (isNaked) {
       ctx.strokeStyle = _waHex2Rgba(C.clrNpoc, 0.55); ctx.lineWidth = Math.max(1, C.pocLineWidth - 1);
       ctx.setLineDash(_waGetDash(C.npocStyle, 'npoc')); ctx.beginPath();
-      if (isLeft) { ctx.moveTo(maxWidthPx + 20, pocY); ctx.lineTo(bounding.width, pocY); }
-      else        { ctx.moveTo(bounding.width - maxWidthPx - 20, pocY); ctx.lineTo(0, pocY); }
+      ctx.moveTo(endOfProfileX, pocY);
+      
+      // 🚀 nPOC Tự tìm tới hiện tại hoặc rìa bên kia màn hình
+      const currentPriceX = bounding.width; // Mặc định vút ra sát lề phải màn hình
+      ctx.lineTo(dir === 1 ? currentPriceX : 0, pocY); 
+      
       ctx.stroke(); ctx.setLineDash([]);
       
       if (C.showLabels) {
         ctx.fillStyle = _waHex2Rgba(C.clrNpoc, 0.88); ctx.font = `bold ${C.fontSize - 1}px system-ui,sans-serif`; ctx.textBaseline = 'bottom';
-        if (isLeft) { ctx.textAlign = 'right'; ctx.fillText('nPOC', bounding.width - 4, pocY - 2); }
-        else        { ctx.textAlign = 'left';  ctx.fillText('nPOC', 4, pocY - 2); }
+        ctx.textAlign = dir === 1 ? 'right' : 'left'; 
+        const lblX = dir === 1 ? currentPriceX - 4 : 4;
+        ctx.fillText('nPOC', lblX, pocY - 2);
       }
     }
 
@@ -1700,7 +1716,7 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
       const label = 'POC ' + pocMid.toLocaleString('en-US', { maximumFractionDigits: 2 });
       ctx.font = `bold ${C.fontSize}px system-ui,sans-serif`; ctx.textBaseline = 'middle';
       const tw = ctx.measureText(label).width, bW = tw + 10, bH = C.fontSize + 8;
-      const bX = isLeft ? maxWidthPx + 25 : bounding.width - maxWidthPx - 25 - bW;
+      const bX = dir === 1 ? endOfProfileX + 5 : endOfProfileX - bW - 5;
       _waRoundRect(ctx, bX, pocY - bH / 2, bW, bH, 3);
       ctx.fillStyle = _waHex2Rgba(C.clrPoc, 1); ctx.fill();
       ctx.fillStyle = '#000000'; ctx.textAlign = 'left'; ctx.fillText(label, bX + 5, pocY);
@@ -1708,20 +1724,21 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
     ctx.restore();
   }
 
-  function _waRenderVALines(ctx, profile, maxWidthPx, isLeft, bounding, yAxis, C) {
+  function _waRenderVALines(ctx, profile, maxW, anchorX, dir, yAxis, C) {
     ctx.save();
     ctx.strokeStyle = _waHex2Rgba(C.clrVa, 0.88); ctx.lineWidth = C.vaLineWidth;
     const dashPat = _waGetDash(C.vaStyle, 'va');
+    const endX = anchorX + maxW * dir;
 
     if (profile.vah !== null) {
       const vahY = yAxis.convertToPixel(profile.vah);
       if (vahY !== null) {
         ctx.setLineDash(dashPat); ctx.beginPath();
-        ctx.moveTo(isLeft ? 0 : bounding.width, vahY); ctx.lineTo(isLeft ? bounding.width : 0, vahY); ctx.stroke();
+        ctx.moveTo(anchorX, vahY); ctx.lineTo(endX, vahY); ctx.stroke();
         if (C.showLabels) {
           ctx.setLineDash([]); ctx.fillStyle = _waHex2Rgba(C.clrVa, 0.95); ctx.font = `bold ${C.fontSize - 1}px system-ui,sans-serif`;
-          ctx.textBaseline = 'bottom'; ctx.textAlign = isLeft ? 'left' : 'right';
-          ctx.fillText('VAH ' + profile.vah.toLocaleString('en-US', { maximumFractionDigits: 2 }), isLeft ? 4 : bounding.width - 4, vahY - 2);
+          ctx.textBaseline = 'bottom'; ctx.textAlign = dir === 1 ? 'left' : 'right';
+          ctx.fillText('VAH ' + profile.vah.toLocaleString('en-US', { maximumFractionDigits: 2 }), dir === 1 ? anchorX + 4 : anchorX - 4, vahY - 2);
         }
       }
     }
@@ -1729,11 +1746,11 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
       const valY = yAxis.convertToPixel(profile.val);
       if (valY !== null) {
         ctx.setLineDash(dashPat); ctx.beginPath();
-        ctx.moveTo(isLeft ? 0 : bounding.width, valY); ctx.lineTo(isLeft ? bounding.width : 0, valY); ctx.stroke();
+        ctx.moveTo(anchorX, valY); ctx.lineTo(endX, valY); ctx.stroke();
         if (C.showLabels) {
           ctx.setLineDash([]); ctx.fillStyle = _waHex2Rgba(C.clrVa, 0.95); ctx.font = `bold ${C.fontSize - 1}px system-ui,sans-serif`;
-          ctx.textBaseline = 'top'; ctx.textAlign = isLeft ? 'left' : 'right';
-          ctx.fillText('VAL ' + profile.val.toLocaleString('en-US', { maximumFractionDigits: 2 }), isLeft ? 4 : bounding.width - 4, valY + 2);
+          ctx.textBaseline = 'top'; ctx.textAlign = dir === 1 ? 'left' : 'right';
+          ctx.fillText('VAL ' + profile.val.toLocaleString('en-US', { maximumFractionDigits: 2 }), dir === 1 ? anchorX + 4 : anchorX - 4, valY + 2);
         }
       }
     }
@@ -1743,17 +1760,12 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
   kc.registerIndicator({
     name: 'WAVE_VPVR',
     shortName: 'VPVR',
-    description: 'Volume Profile Visible Range ULTIMATE v3.2',
+    description: 'Volume Profile Visible Range ULTIMATE v3.3',
     category: 'wave_alpha',
     series: 'price',
     isStack: true,
-    createTooltipDataSource: function(args) {
-      return {
-          name: 'VPVR', 
-          calcParamsText: ' ', 
-          values: []
-      };
-  },
+    createTooltipDataSource: function() { return { name: 'VPVR', calcParamsText: ' ', values: [] }; },
+    
     calcParams: [
       60, 70, 30, 0, 0, 0,
       "#26A69A", "#EF5350", "#F0B90B", "#9575CD",
@@ -1767,7 +1779,7 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
     draw: function(args) {
       const dataList = args.kLineDataList || args.dataList || [];
       const visibleRange = args.visibleRange || { from: 0, to: dataList.length };
-      const { ctx, bounding, yAxis, indicator } = args;
+      const { ctx, bounding, xAxis, yAxis, indicator } = args; // Lấy xAxis
 
       if (!dataList || dataList.length === 0 || !bounding) return false;
 
@@ -1796,7 +1808,6 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
       if (from == null || to == null || from >= to) return false;
 
       const maxWidthPx = bounding.width * (widthPct / 100);
-      const GAP = 1;
       const liveVolume = dataList[to - 1] ? (dataList[to - 1].volume || 0) : 0;
       
       const cacheKey = `${from}_${to}_${rowCount}_${vaPercent}_${sessionMode}_${compositeMode}_${liveVolume}`;
@@ -1823,23 +1834,42 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
 
       if (compositeMode === 1 && cached.compProfile) {
         ctx.save(); ctx.globalAlpha = 0.25;
-        _waRenderBins(ctx, cached.compProfile, maxWidthPx, isLeft, bounding, yAxis, C, false);
+        const anchorX = isLeft ? 0 : bounding.width;
+        const dir = isLeft ? 1 : -1;
+        _waRenderBins(ctx, cached.compProfile, maxWidthPx, anchorX, dir, yAxis, C, false);
         ctx.restore();
       }
 
       if (sessionMode > 0 && cached.sessions.length > 0) {
+        // 🚀 SMART SESSION ANCHORING
         cached.sessions.forEach(({ profile, layerIdx, total }) => {
           if (!profile) return;
-          ctx.save(); ctx.globalAlpha = total <= 1 ? 0.85 : 0.20 + (layerIdx / (total - 1)) * 0.65;
-          _waRenderBins(ctx, profile, maxWidthPx, isLeft, bounding, yAxis, C, true);
+          ctx.save(); 
+          ctx.globalAlpha = total <= 1 ? 0.85 : 0.20 + (layerIdx / (total - 1)) * 0.65;
+          
+          // Tính toán vị trí X và chiều rộng cho từng phiên
+          const startX = _waGetXPixel(xAxis, profile.startIdx);
+          const endX = _waGetXPixel(xAxis, profile.endIdx - 1);
+          const sessionWidth = Math.max(10, Math.abs(endX - startX));
+          
+          // Hồ sơ phiên chỉ được phép chiếm 80% chiều rộng của cây nến thuộc phiên đó
+          const sessionMaxW = sessionWidth * 0.8; 
+          const anchorX = startX;
+          const dir = 1; // Mặc định Session vẽ từ Trái qua Phải
+
+          _waRenderBins(ctx, profile, sessionMaxW, anchorX, dir, yAxis, C, true);
           ctx.restore();
-          _waRenderPOCLine(ctx, profile, maxWidthPx, isLeft, bounding, yAxis, dataList, C);
-          _waRenderVALines(ctx, profile, maxWidthPx, isLeft, bounding, yAxis, C);
+          
+          _waRenderPOCLine(ctx, profile, sessionMaxW, anchorX, dir, bounding, yAxis, dataList, C);
+          _waRenderVALines(ctx, profile, sessionMaxW, anchorX, dir, yAxis, C);
         });
       } else if (cached.mainProfile) {
-        _waRenderBins(ctx, cached.mainProfile, maxWidthPx, isLeft, bounding, yAxis, C, true);
-        _waRenderPOCLine(ctx, cached.mainProfile, maxWidthPx, isLeft, bounding, yAxis, dataList, C);
-        _waRenderVALines(ctx, cached.mainProfile, maxWidthPx, isLeft, bounding, yAxis, C);
+        // 🚀 FULL SCREEN MODE
+        const anchorX = isLeft ? 0 : bounding.width;
+        const dir = isLeft ? 1 : -1;
+        _waRenderBins(ctx, cached.mainProfile, maxWidthPx, anchorX, dir, yAxis, C, true);
+        _waRenderPOCLine(ctx, cached.mainProfile, maxWidthPx, anchorX, dir, bounding, yAxis, dataList, C);
+        _waRenderVALines(ctx, cached.mainProfile, maxWidthPx, anchorX, dir, yAxis, C);
       }
 
       ctx.restore();
