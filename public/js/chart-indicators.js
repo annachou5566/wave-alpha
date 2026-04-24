@@ -3949,56 +3949,63 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
   
 
   // =========================================================================
-  // HỆ THỐNG UNIFIED SETTINGS MANAGER v2.0 (MINIMALIST & RESPONSIVE)
+  // HỆ THỐNG UNIFIED SETTINGS MANAGER v3.0 (MASTER PRO - COINGLASS STYLE)
   // =========================================================================
-  global.openIndicatorSettings = function (initialIndInfo) {
-    let targetName = typeof initialIndInfo === 'string' ? initialIndInfo : (initialIndInfo?.name || null);
+  global.openIndicatorSettings = function (indicatorObj, paneId) {
+    // Lấy tên chỉ báo cần mở
+    let targetName = null;
+    if (typeof indicatorObj === 'string') targetName = indicatorObj;
+    else if (indicatorObj && indicatorObj.name) targetName = indicatorObj.name;
+
+    // Nếu SC Active Indicators rỗng, cố gắng lấy từ arguments để không bị kẹt
+    if (!global.scActiveIndicators) global.scActiveIndicators = [];
+    
+    if (targetName && !global.scActiveIndicators.find(i => i.name === targetName)) {
+        global.scActiveIndicators.push({
+            name: targetName,
+            isStack: true, // Mặc định hiển thị đè nến
+            paneId: paneId || 'candle_pane',
+            params: (indicatorObj && indicatorObj.calcParams) ? indicatorObj.calcParams : [],
+            visible: true
+        });
+    }
+
+    if (global.scActiveIndicators.length === 0) {
+        alert('Chưa có chỉ báo nào được bật trên biểu đồ.');
+        return;
+    }
 
     const oldPanel = document.getElementById('wa-global-settings');
     if (oldPanel) oldPanel.remove();
     const oldPopover = document.getElementById('wa-color-popover');
     if (oldPopover) oldPopover.remove();
 
-    if (!global.scActiveIndicators || global.scActiveIndicators.length === 0) return;
-
-    // --- SVG ICONS (Minimalist) ---
+    // --- SVG ICONS ---
     const ICONS = {
-        close: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
-        eye: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`,
-        eyeOff: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`,
-        trash: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`,
-        reset: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>`
+        close: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+        eye: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
+        eyeOff: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>',
+        trash: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>',
+        reset: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>'
     };
 
+    // Tạo Panel
     const panel = document.createElement('div');
     panel.id = 'wa-global-settings';
-    panel.style.cssText = `
-        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-        width: 720px; max-width: 96vw; height: 600px; max-height: 90vh;
-        background: #1e2329; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
-        box-shadow: 0 24px 60px rgba(0,0,0,0.8); z-index: 99998; display: flex; flex-direction: column;
-        backdrop-filter: blur(20px); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        color: #EAECEF; user-select: none; overflow: hidden;
-    `;
+    panel.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 760px; max-width: 95vw; height: 600px; max-height: 90vh; background: #1e2329; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; box-shadow: 0 24px 60px rgba(0,0,0,0.8); z-index: 99998; display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #EAECEF; user-select: none; overflow: hidden;';
 
+    // Tạo Header
     const header = document.createElement('div');
-    header.style.cssText = `
-        padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02);
-        cursor: move; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
-    `;
-    header.innerHTML = `
-        <span style="font-size:14px; font-weight:600; color:#fff; display:flex; align-items:center; gap:10px; letter-spacing: 0.3px;">
-            HỒ SƠ CHỈ BÁO
-        </span>
-        <span id="wa-gs-close" style="cursor:pointer; color:#848e9c; display:flex; transition:0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#848e9c'">${ICONS.close}</span>
-    `;
+    header.style.cssText = 'padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02); cursor: move; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;';
+    header.innerHTML = '<span style="font-size:15px; font-weight:700; color:#fff; display:flex; align-items:center; gap:10px; letter-spacing: 0.5px;">⚙️ HỒ SƠ CHỈ BÁO</span><span id="wa-gs-close" style="cursor:pointer; color:#848e9c; display:flex; transition:0.2s;" onmouseover="this.style.color=\'#fff\'" onmouseout="this.style.color=\'#848e9c\'">' + ICONS.close + '</span>';
     panel.appendChild(header);
 
+    // Container Body
     const bodyWrapper = document.createElement('div');
     bodyWrapper.style.cssText = 'display: flex; flex: 1; overflow: hidden; background: #191c20;';
     
     const sidebar = document.createElement('div');
-    sidebar.style.cssText = 'width: 240px; border-right: 1px solid rgba(255,255,255,0.06); overflow-y: auto; background: #161a1e; display: flex; flex-direction: column;';
+    sidebar.style.cssText = 'width: 250px; border-right: 1px solid rgba(255,255,255,0.06); overflow-y: auto; background: #161a1e; display: flex; flex-direction: column;';
     
     const content = document.createElement('div');
     content.style.cssText = 'flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; position: relative;';
@@ -4011,36 +4018,77 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     style.innerHTML = `
         #wa-global-settings ::-webkit-scrollbar { width: 4px; }
         #wa-global-settings ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-        .wa-gs-section { font-size: 10px; font-weight: 800; color: #474d57; text-transform: uppercase; padding: 20px 20px 8px; letter-spacing: 1px; }
-        .wa-gs-item { padding: 12px 20px; min-height: 48px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; color: #b7bdc6; font-size: 13px; font-weight: 500; transition: 0.2s; border-left: 3px solid transparent; }
+        .wa-gs-section { font-size: 11px; font-weight: 800; color: #474d57; text-transform: uppercase; padding: 20px 20px 8px; letter-spacing: 1px; }
+        .wa-gs-item { padding: 14px 20px; min-height: 52px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; color: #b7bdc6; font-size: 14px; font-weight: 500; transition: 0.2s; border-left: 3px solid transparent; }
         .wa-gs-item:hover { background: rgba(255,255,255,0.03); color: #fff; }
         .wa-gs-item.active { background: rgba(240, 185, 11, 0.05); border-left-color: #f0b90b; color: #f0b90b; }
         
-        .wa-gs-actions { display: none; gap: 6px; align-items: center; }
+        .wa-gs-actions { display: none; gap: 8px; align-items: center; }
         .wa-gs-item:hover .wa-gs-actions { display: flex; }
         .wa-gs-btn { background: transparent; border: none; color: #848e9c; cursor: pointer; padding: 6px; border-radius: 4px; display: flex; transition: 0.2s; }
         .wa-gs-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
         .wa-gs-btn.delete:hover { color: #f6465d; background: rgba(246,70,93,0.1); }
 
         .wa-group-box { background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.04); border-radius: 10px; padding: 20px; }
-        .wa-group-title { color:#848e9c; font-size:11px; font-weight:700; margin-bottom:18px; text-transform:uppercase; letter-spacing:0.8px; border-left: 2px solid #f0b90b; padding-left: 10px; }
+        .wa-group-title { color:#848e9c; font-size:12px; font-weight:700; margin-bottom:18px; text-transform:uppercase; letter-spacing:0.8px; border-left: 2px solid #f0b90b; padding-left: 10px; }
         .wa-inp-row { display: flex; justify-content: space-between; align-items: center; gap:16px; margin-bottom:14px; }
         
-        .wa-inp-num { width: 72px; height: 32px; background: #0b0e11; border: 1px solid #474d57; border-radius: 4px; color: #fff; text-align: center; font-size: 13px; transition: 0.2s; }
+        .wa-inp-num { width: 80px; height: 36px; background: #0b0e11; border: 1px solid #474d57; border-radius: 6px; color: #fff; text-align: center; font-size: 14px; transition: 0.2s; }
         .wa-inp-num:focus { border-color: #f0b90b; outline: none; }
-        .wa-inp-hex { width: 90px; height: 32px; background: #0b0e11; border: 1px solid #474d57; border-radius: 4px; color: #fff; text-align: center; font-size: 12px; font-family: "Roboto Mono", monospace; outline: none; }
+        .wa-inp-hex { width: 96px; height: 36px; background: #0b0e11; border: 1px solid #474d57; border-radius: 6px; color: #fff; text-align: center; font-size: 13px; font-family: "Roboto Mono", monospace; outline: none; text-transform: uppercase; }
         
-        .wa-color-swatch-btn { width: 32px; height: 32px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; flex-shrink:0; position: relative; }
+        .wa-color-swatch-btn { width: 36px; height: 36px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; flex-shrink:0; position: relative; }
         .wa-is-transparent { background-image: conic-gradient(#333 0.25turn, #444 0.25turn 0.5turn, #333 0.5turn 0.75turn, #444 0.75turn); background-size: 8px 8px; }
 
-        @media (max-width: 600px) {
+        #wa-color-popover {
+            position: fixed; background: #1E222D; border: 1px solid #434651; border-radius: 8px;
+            padding: 12px; display: none; grid-template-columns: repeat(6, 26px); gap: 6px;
+            z-index: 999999; box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+        }
+        .wa-mini-color { width: 26px; height: 26px; border-radius: 4px; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); }
+        .wa-mini-color:hover { border-color: #FFF; transform: scale(1.15); box-shadow: 0 0 6px rgba(255,255,255,0.5); }
+
+        @media (max-width: 768px) {
             #wa-global-settings { width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; border-radius: 0; top:0; left:0; transform: none; }
-            sidebar { width: 60px; }
+            .wa-gs-sidebar { width: 64px !important; }
             .wa-gs-item span { display: none; }
             .wa-gs-section { display: none; }
         }
     `;
     panel.appendChild(style);
+    sidebar.classList.add('wa-gs-sidebar');
+
+    const TRADING_PALETTE = [
+        'transparent', '#FFFFFF', '#D1D4DC', '#B2B5BE', '#787B86', '#000000',
+        '#FFEB3B', '#FFC107', '#FF9800', '#FF5722', '#E65100', '#F0B90B',
+        '#F44336', '#EF5350', '#E53935', '#D32F2F', '#C62828', '#B71C1C',
+        '#4CAF50', '#66BB6A', '#26A69A', '#00897B', '#009688', '#0ECB81',
+        '#2196F3', '#2962FF', '#00BCD4', '#9C27B0', '#673AB7', '#9575CD',
+        '#E91E63', '#D50000', '#AA00FF', '#6200EA', '#304FFE', '#00B8D4'
+    ];
+    const colorPopover = document.createElement('div');
+    colorPopover.id = 'wa-color-popover';
+    TRADING_PALETTE.forEach(hex => {
+        const cDiv = document.createElement('div');
+        cDiv.className = 'wa-mini-color';
+        if (hex === 'transparent') cDiv.classList.add('wa-is-transparent');
+        else cDiv.style.background = hex;
+        cDiv.dataset.hex = hex;
+        cDiv.title = hex === 'transparent' ? 'Trong Suốt' : hex;
+        colorPopover.appendChild(cDiv);
+    });
+    document.body.appendChild(colorPopover);
+
+    let activeHexInputId = null, activeBtnId = null, currentActiveIndName = null;
+
+    const vpvrDescriptions = [
+        "Thanh ngang (10-200)", "Lõi Volume (70%)", "Chiều ngang (%)",
+        "0: Phải, 1: Trái", "0: Toàn, 1: Ngày, 2: Tuần", "0: Tắt, 1: Nền mờ",
+        "Lực Mua", "Lực Bán", "Point of Control", "Viền Giá Trị",
+        "HVN Dày", "LVN Mỏng", "nPOC Chưa Test", "Icon Phe Áp Đảo",
+        "Mờ trong VA (0-100)", "Mờ ngoài VA", "Dày nét (1-5px)", "Dày nét (1-4px)",
+        "0:Đứt 1:Chấm 2:Liền", "0:Đứt 1:Chấm 2:Dài", "Cỡ chữ (8-16)", "0:Ẩn 1:Hiện"
+    ];
 
     const liveUpdateChart = () => {
         if (!currentActiveIndName) return;
@@ -4080,8 +4128,8 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 item.innerHTML = `
                     <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; ${!isVisible ? 'opacity:0.3;' : ''}">${meta ? (meta.shortName || meta.name) : ind.name}</span>
                     <div class="wa-gs-actions">
-                        <button class="wa-gs-btn toggle-vis">${isVisible ? ICONS.eye : ICONS.eyeOff}</button>
-                        <button class="wa-gs-btn delete">${ICONS.trash}</button>
+                        <button class="wa-gs-btn toggle-vis" title="Ẩn/Hiện">${isVisible ? ICONS.eye : ICONS.eyeOff}</button>
+                        <button class="wa-gs-btn delete" title="Xóa">${ICONS.trash}</button>
                     </div>
                 `;
                 
@@ -4101,7 +4149,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
 
                 item.querySelector('.delete').onclick = (e) => {
                     e.stopPropagation();
-                    global.removeIndicatorFromChart(ind.name);
+                    if (typeof global.removeIndicatorFromChart === 'function') global.removeIndicatorFromChart(ind.name);
                     if (currentActiveIndName === ind.name) {
                         currentActiveIndName = null;
                         content.innerHTML = '';
@@ -4123,7 +4171,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         const indState = global.scActiveIndicators.find(x => x.name === indName);
         if (!meta || !indState) return;
 
-        const currentParams = indState.params || [...meta.defaultParams];
+        const currentParams = (indState.params && indState.params.length > 0) ? indState.params : [...meta.defaultParams];
         const labels = meta.paramLabels || [];
         const isVPVR = indName === 'WAVE_VPVR', isTPO = indName === 'WAVE_TPO';
 
@@ -4149,9 +4197,15 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 const row = document.createElement('div');
                 row.className = 'wa-inp-row';
                 if (isColor) {
-                    let dVal = typeof val === 'number' ? '#' + Math.round(val).toString(16).padStart(6, '0').toUpperCase() : val;
-                    row.innerHTML = `<span style="font-size:13px; color:#b7bdc6;">${lbl}</span>
-                        <div style="display:flex; gap:10px; align-items:center;">
+                    let dVal = val;
+                    // 🚀 BỌC THÉP: Sửa lỗi crash toString trên máy tính bảng cũ
+                    if (typeof val === 'number') {
+                        let hStr = Math.round(val).toString(16).toUpperCase();
+                        while(hStr.length < 6) hStr = '0' + hStr;
+                        dVal = '#' + hStr;
+                    }
+                    row.innerHTML = `<span style="font-size:14px; color:#b7bdc6; font-weight:500;">${lbl}</span>
+                        <div style="display:flex; gap:12px; align-items:center;">
                             <input type="text" id="wa-param-hex-${idx}" class="wa-inp-hex" value="${dVal}">
                             <div id="wa-color-btn-${idx}" class="wa-color-swatch-btn ${dVal==='transparent'?'wa-is-transparent':''}" style="background:${dVal}"></div>
                         </div>`;
@@ -4164,10 +4218,13 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                     colorBtn.onclick = (e) => {
                         e.stopPropagation(); activeHexInputId = `wa-param-hex-${idx}`; activeBtnId = `wa-color-btn-${idx}`;
                         const r = colorBtn.getBoundingClientRect();
-                        colorPopover.style.display = 'grid'; colorPopover.style.left = (r.left - 180) + 'px'; colorPopover.style.top = (r.bottom + 8) + 'px';
+                        colorPopover.style.display = 'grid'; 
+                        colorPopover.style.left = Math.max(10, r.left - 200) + 'px'; 
+                        colorPopover.style.top = (r.bottom + 8) + 'px';
                     };
                 } else {
-                    row.innerHTML = `<span style="font-size:13px; color:#b7bdc6;">${lbl}</span>
+                    const desc = (isVPVR && vpvrDescriptions[idx]) ? `<div style="font-size:11px; color:#5e6673; margin-top:4px;">${vpvrDescriptions[idx]}</div>` : '';
+                    row.innerHTML = `<div style="display:flex; flex-direction:column;"><span style="font-size:14px; color:#b7bdc6; font-weight:500;">${lbl}</span>${desc}</div>
                         <input type="number" id="wa-param-num-${idx}" class="wa-inp-num" value="${val}" step="any">`;
                     row.querySelector('input').oninput = liveUpdateChart;
                 }
@@ -4177,9 +4234,11 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         });
 
         const resetBtn = document.createElement('button');
-        resetBtn.style.cssText = 'display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:14px; background:transparent; border:1px dashed #474d57; border-radius:8px; color:#848e9c; cursor:pointer; font-weight:600; margin-top:10px; transition:0.2s;';
+        resetBtn.style.cssText = 'display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:16px; background:transparent; border:1px dashed #474d57; border-radius:8px; color:#848e9c; cursor:pointer; font-weight:700; margin-top:10px; transition:0.2s; font-size: 13px;';
         resetBtn.innerHTML = `${ICONS.reset} KHÔI PHỤC MẶC ĐỊNH`;
         resetBtn.onclick = () => { indState.params = [...meta.defaultParams]; renderContent(indName); liveUpdateChart(); };
+        resetBtn.onmouseover = () => { resetBtn.style.background = 'rgba(255,255,255,0.05)'; resetBtn.style.color = '#fff'; };
+        resetBtn.onmouseout = () => { resetBtn.style.background = 'transparent'; resetBtn.style.color = '#848e9c'; };
         content.appendChild(resetBtn);
     }
 
@@ -4187,13 +4246,27 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     if (targetName) renderContent(targetName); else if (global.scActiveIndicators.length > 0) renderContent(global.scActiveIndicators[0].name);
     
     document.body.appendChild(panel);
-    document.getElementById('wa-gs-close').onclick = () => { panel.remove(); colorPopover.remove(); };
+    document.getElementById('wa-gs-close').onclick = () => { 
+        if (typeof global.saveIndicatorState === 'function') global.saveIndicatorState();
+        panel.remove(); colorPopover.remove(); 
+    };
 
-    // Drag Logic
-    let isD = false, oX, oY;
-    header.onmousedown = (e) => { isD = true; oX = e.clientX - panel.offsetLeft; oY = e.clientY - panel.offsetTop; };
-    window.onmousemove = (e) => { if(isD) { panel.style.left = (e.clientX-oX)+'px'; panel.style.top = (e.clientY-oY)+'px'; panel.style.transform = 'none'; }};
-    window.onmouseup = () => isD = false;
+    // Drag Logic (An toàn)
+    let isD = false, oX = 0, oY = 0;
+    header.onmousedown = header.ontouchstart = (e) => { 
+        isD = true; 
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        oX = clientX - panel.offsetLeft; oY = clientY - panel.offsetTop; 
+    };
+    window.addEventListener('mousemove', (e) => { 
+        if(isD) { panel.style.left = (e.clientX-oX)+'px'; panel.style.top = (e.clientY-oY)+'px'; panel.style.transform = 'none'; }
+    });
+    window.addEventListener('touchmove', (e) => { 
+        if(isD) { panel.style.left = (e.touches[0].clientX-oX)+'px'; panel.style.top = (e.touches[0].clientY-oY)+'px'; panel.style.transform = 'none'; }
+    }, { passive: false });
+    window.addEventListener('mouseup', () => isD = false);
+    window.addEventListener('touchend', () => isD = false);
 
     colorPopover.onclick = (e) => {
         const c = e.target.dataset.hex;
@@ -4204,8 +4277,8 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
             liveUpdateChart(); colorPopover.style.display = 'none';
         }
     };
-    document.addEventListener('click', (e) => { if(!colorPopover.contains(e.target) && !e.target.closest('.wa-color-swatch-btn')) colorPopover.style.display='none'; });
-  };
+    document.addEventListener('click', (e) => { if(colorPopover && !colorPopover.contains(e.target) && !e.target.closest('.wa-color-swatch-btn')) colorPopover.style.display='none'; });
+};
 
   /**
    * Restore all active indicators after chart reload
