@@ -106,18 +106,18 @@ window.WaveChartEngine = {
     },
 
     applyNow: function () {
-        // Chỉ map data xuống KLineChart nếu chart đã tồn tại
         if (!this.chartInstance) return;
         const c = this.config;
 
-        // 1. Ánh xạ các loại Chart Type có sẵn (Native) của KLineChart
+        // 1. Ánh xạ Chart Type và Vá lỗi Line Chart
         let kcChartType = 'candle_solid';
-        if (c.chartType === 2) kcChartType = 'candle_stroke'; // Hollow
-        else if (c.chartType === 3) kcChartType = 'ohlc';     // Bars
-        else if (c.chartType === 6) kcChartType = 'line';     // Line
-        else if (c.chartType === 9) kcChartType = 'area';     // Area
+        let isLine = false;
+        if (c.chartType === 2) kcChartType = 'candle_stroke';
+        else if (c.chartType === 3) kcChartType = 'ohlc';     
+        else if (c.chartType === 6) { kcChartType = 'area'; isLine = true; } // LINE CHART
+        else if (c.chartType === 9) { kcChartType = 'area'; isLine = false; } // AREA CHART
 
-        // 2. Chuyển đổi Config thành KLineChart Styles Object
+        // 2. Chuyển đổi Config thành Styles Object
         const styles = {
             grid: {
                 horizontal: { show: c.gridHorizontal, color: c.gridColor, style: 'dashed' },
@@ -126,49 +126,33 @@ window.WaveChartEngine = {
             candle: {
                 type: kcChartType,
                 bar: {
-                    upColor: c.upColor,
-                    downColor: c.downColor,
-                    noChangeColor: '#787b86',
-                    upBorderColor: c.showBorder ? c.upColor : 'transparent',
-                    downBorderColor: c.showBorder ? c.downColor : 'transparent',
-                    noChangeBorderColor: '#787b86',
+                    upColor: c.upColor, downColor: c.downColor, noChangeColor: '#787b86',
+                    upBorderColor: c.showBorder ? c.upColor : 'transparent', downBorderColor: c.showBorder ? c.downColor : 'transparent',
                     upWickColor: c.showWick ? (c.wickIndependent ? c.wickUpColor : (c.wickDimmer ? this._dimColor(c.upColor, 0.4) : c.upColor)) : 'transparent',
                     downWickColor: c.showWick ? (c.wickIndependent ? c.wickDownColor : (c.wickDimmer ? this._dimColor(c.downColor, 0.4) : c.downColor)) : 'transparent',
                 },
-                priceMark: {
-                    show: c.showLastPriceLine, 
-                    high: { show: false }, // Tắt của native để dùng Overlay custom (Phase 4)
-                    low: { show: false }
-                }
+                area: {
+                    lineSize: 2, 
+                    lineColor: c.upColor, // Dùng upColor làm màu chủ đạo cho Line/Area
+                    backgroundColor: isLine ? 'transparent' : [{ offset: 0, color: this._dimColor(c.upColor, 0.25) }, { offset: 1, color: 'transparent' }]
+                },
+                priceMark: { show: c.showLastPriceLine, high: { show: false }, low: { show: false } }
             },
             crosshair: { show: c.crosshairMode !== 'hidden' },
             indicator: { lastValueMark: { show: true } }
         };
 
-        // 3. Đẩy cấu hình vào Chart
         try {
             this.chartInstance.setStyles(styles);
             this.chartInstance.setOffsetRightDistance(c.rightMargin);
-            this.chartInstance.setPaneOptions({
-                id: 'candle_pane',
-                axisOptions: { type: c.yAxisMode }
-            });
-        } catch(e) {
-            console.error('[WaveChartEngine] Lỗi khi setStyles:', e);
-        }
+            this.chartInstance.setPaneOptions({ id: 'candle_pane', axisOptions: { type: c.yAxisMode } });
+        } catch(e) { console.error('[WaveChartEngine] Lỗi:', e); }
 
-        // 4. Cập nhật nền (Background)
         const container = document.getElementById('tv-chart-container') || document.querySelector('.klinecharts-pro');
         if (container) {
-            if (c.bgType === 'solid') {
-                container.style.background = c.bgColor;
-            } else {
-                container.style.background = `linear-gradient(to bottom, ${c.bgColor} 0%, #000000 100%)`; 
-            }
+            container.style.background = c.bgType === 'solid' ? c.bgColor : `linear-gradient(to bottom, ${c.bgColor} 0%, #000000 100%)`; 
         }
 
-        // 5. Bắn Tín hiệu (Event) cho toàn bộ hệ thống biết Chart vừa đổi config
-        // Các module Watermark, Countdown (Bước 5) sẽ lắng nghe event này để tự vẽ lại
         window.dispatchEvent(new CustomEvent('wa_chart_config_updated', { detail: c }));
     },
 
