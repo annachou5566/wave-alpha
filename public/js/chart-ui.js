@@ -1401,99 +1401,27 @@ window.closeProChart = function() {
 
     // 3. Auto-inject Nút bấm vào Toolbar
     const checkToolbar = setInterval(() => {
-        const toolbar = document.querySelector('.sc-time-btn')?.parentNode || document.querySelector('.sc-tools-left') || document.querySelector('.sc-toolbar');
-        
+        const toolbar = document.querySelector('.sc-tools-left') || document.querySelector('.sc-toolbar') || document.querySelector('.wa-topbar-container');
         if (toolbar) {
             clearInterval(checkToolbar);
-
             const btnWrap = document.createElement('div');
-            btnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; margin-left: 8px;';
+            // 🚀 SỬA MARGIN TỪ 8PX THÀNH 2PX ĐỂ NÚT NẰM SÁT VÀO NHAU
+            btnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; margin-left: 2px; z-index: 10;';
             btnWrap.innerHTML = `
-                <button id="btn-wa-chart-type" title="Chart Type">
-                    <span id="wa-ct-btn-icon" style="display:flex; align-items:center;">${CHART_TYPES[0].icon}</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                <button id="btn-wa-chart-settings" title="Cài đặt Biểu đồ" style="background: rgba(255,255,255,0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 </button>
             `;
             
-            toolbar.appendChild(btnWrap);
-
-            const menu = document.createElement('div');
-            menu.id = 'wa-chart-type-menu';
-
-            // 🚀 BỎ LOGIC ÉP DÀI CHIỀU NGANG -> MẶC ĐỊNH LÀ GRID 2x2 CÂN ĐỐI
-            const groups = [...new Set(CHART_TYPES.map(t => t.grp))];
-            groups.forEach((gName) => {
-                const grpDiv = document.createElement('div');
-                grpDiv.className = 'wa-ct-grp';
-                grpDiv.innerHTML = `<div class="wa-ct-title">${gName}</div>`;
-                
-                CHART_TYPES.filter(t => t.grp === gName).forEach(item => {
-                    const isPro = item.phase > 1;
-                    const div = document.createElement('div');
-                    div.className = 'wa-ct-item';
-                    div.dataset.id = item.id;
-                    div.title = item.desc;
-                    div.innerHTML = `
-                        <span class="wa-ct-icon">${item.icon}</span>
-                        <span class="wa-ct-text">${item.name}</span>
-                        ${isPro ? '<span class="wa-ct-pro">PRO</span>' : ''}
-                    `;
-
-                    div.onclick = (e) => {
-                        e.stopPropagation();
-                        if (item.phase === 1) {
-                            if (window.WaveChartEngine) {
-                                window.WaveChartEngine.update({ chartType: item.id }, true);
-                            }
-                            document.getElementById('wa-ct-btn-icon').innerHTML = item.icon;
-                            
-                            menu.querySelectorAll('.wa-ct-item').forEach(el => el.classList.remove('active'));
-                            div.classList.add('active');
-                            menu.style.display = 'none';
-                        } else {
-                            if (typeof window.showToast === 'function') {
-                                window.showToast(`Loại biểu đồ "${item.name}" đang phát triển (Phase ${item.phase})`, "info");
-                            } else {
-                                alert(`🚀 Loại biểu đồ "${item.name}" thuộc tính năng Pro. Đang phát triển!`);
-                            }
-                        }
-                    };
-                    grpDiv.appendChild(div);
-                });
-                menu.appendChild(grpDiv);
-            });
-
-            document.body.appendChild(menu);
-
-            const btn = document.getElementById('btn-wa-chart-type');
-            btn.onclick = (e) => {
-                e.stopPropagation();
-                const isHidden = menu.style.display === 'none' || menu.style.display === '';
-                if (isHidden) {
-                    const rect = btn.getBoundingClientRect();
-                    menu.style.top = (rect.bottom + 6) + 'px';
-                    
-                    const menuWidth = 440; // Độ rộng mới
-                    if (rect.left + menuWidth > window.innerWidth) {
-                        menu.style.left = (window.innerWidth - menuWidth - 10) + 'px';
-                    } else {
-                        menu.style.left = rect.left + 'px';
-                    }
-
-                    menu.style.display = 'grid'; // Grid tự động chia 2 cột đều đặn
-                    
-                    const currentType = window.WaveChartEngine ? window.WaveChartEngine.config.chartType : 1;
-                    menu.querySelectorAll('.wa-ct-item').forEach(el => {
-                        if (parseInt(el.dataset.id) === currentType) el.classList.add('active');
-                        else el.classList.remove('active');
-                    });
-                } else {
-                    menu.style.display = 'none';
-                }
-            };
-
-            document.addEventListener('click', () => { menu.style.display = 'none'; });
-            menu.addEventListener('click', (e) => { e.stopPropagation(); });
+            // 🚀 CỐT LÕI VẤN ĐỀ NẰM Ở ĐÂY: Dán thẳng cái nút này vào ngay sau đít cái nút Đổi Nến
+            const chartTypeBtnWrap = document.getElementById('btn-wa-chart-type');
+            if (chartTypeBtnWrap && chartTypeBtnWrap.parentNode) {
+                chartTypeBtnWrap.parentNode.after(btnWrap);
+            } else {
+                toolbar.appendChild(btnWrap); // Fallback an toàn
+            }
+            
+            document.getElementById('btn-wa-chart-settings').onclick = (e) => { e.stopPropagation(); window.openChartSettings(); };
         }
     }, 200);
 })();

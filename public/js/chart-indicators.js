@@ -3833,7 +3833,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
       const timeBtns = document.querySelectorAll('.sc-time-btn');
       if (timeBtns.length > 0) {
           
-          // 1. STYLE TỐI GIẢN & CSS TOOLTIP MƯỢT MÀ (TÍCH HỢP FLEX ORDER SẮP XẾP TỰ ĐỘNG)
+          // 1. STYLE TỐI GIẢN & CSS TOOLTIP MƯỢT MÀ
           if (!document.getElementById('wa-topbar-minimal-style')) {
               const style = document.createElement('style');
               style.id = 'wa-topbar-minimal-style';
@@ -3844,11 +3844,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                       align-items: center; gap: 2px; padding-right: 10px;
                   }
                   .wa-topbar-container::-webkit-scrollbar { display: none !important; }
-                  
-                  /* 🚀 SẮP XẾP LAYOUT CHUẨN XÁC BẰNG FLEX ORDER MÀ KHÔNG CẦN CHẠY JS LOOP */
-                  .sc-time-btn { padding: 6px 10px !important; margin: 0 !important; min-width: unset !important; flex-shrink: 0; order: 1 !important; }
-                  .wa-topbar-container > div { order: 2; } /* Lực hút: Kéo các nút Nến & Cài đặt từ file UI lọt vào chính giữa */
-                  #wa-toolbar-right { order: 3 !important; } /* Lực đẩy: Ép nhóm Indicator & Fullscreen sang bên phải cùng */
+                  .sc-time-btn { padding: 6px 10px !important; margin: 0 !important; min-width: unset !important; flex-shrink: 0; }
                   
                   /* Style Nút Toolbar & Tooltip chuyên nghiệp */
                   .wa-topbtn {
@@ -3878,16 +3874,16 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
           container.classList.add('wa-topbar-container');
           if (container.parentElement) container.parentElement.classList.add('wa-topbar-container');
 
-          // 3. SVG ICONS (ĐÃ DỌN SẠCH ICON BÁNH RĂNG CŨ KHỎI HỆ THỐNG)
+          // 3. SVG ICONS
           const TOP_ICONS = {
               addInd: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>`,
               manageInd: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>`,
-              fullscreen: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>`
+              fullscreen: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>`,
+              chartCfg: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`
           };
 
-          // 4. KHUNG CHỨA NÚT MỚI (CHỈ CÒN NHÓM INDICATOR VÀ FULLSCREEN)
+          // 4. KHUNG CHỨA NÚT MỚI (LƯU Ý: Thêm data-tip thay vì title)
           const tbWrap = document.createElement('div');
-          tbWrap.id = 'wa-toolbar-right'; // 🚀 ID NÀY GIÚP CSS ĐẨY KHỐI NÀY SANG PHẢI CÙNG
           tbWrap.style.cssText = 'display:flex; align-items:center; gap:2px; flex-shrink:0;';
           tbWrap.innerHTML = `
               <div style="width:1px; height:18px; background:rgba(255,255,255,0.08); margin:0 6px;"></div>
@@ -3897,33 +3893,190 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
 
               <div style="width:1px; height:18px; background:rgba(255,255,255,0.08); margin:0 6px;"></div>
 
+              <button id="btn-wa-chart-cfg" class="wa-topbtn" data-tip="Cài đặt biểu đồ">${TOP_ICONS.chartCfg}</button>
               <button id="btn-wa-fs" class="wa-topbtn" data-tip="Toàn màn hình">${TOP_ICONS.fullscreen}</button>
           `;
           container.appendChild(tbWrap);
 
+          // 🚀 BƯỚC QUAN TRỌNG: TẠO MENU CHART SETTINGS NGAY TRÊN BODY (CHỐNG BỊ CLIPPED DO OVERFLOW-X AUTO)
+          let menuCfg = document.getElementById('wa-chart-cfg-menu');
+          if (!menuCfg) {
+              menuCfg = document.createElement('div');
+              menuCfg.id = 'wa-chart-cfg-menu';
+              menuCfg.style.cssText = `
+                  display:none; position:fixed; background:#1e2329; border:1px solid rgba(255,255,255,0.1); 
+                  border-radius:10px; padding:16px; min-width:270px; z-index:999999; box-shadow:0 16px 40px rgba(0,0,0,0.9);
+              `;
+              menuCfg.innerHTML = `
+                  <div style="font-size:10px; font-weight:800; color:#848e9c; letter-spacing:1px; margin-bottom:14px;">⚙️ GIAO DIỆN NẾN</div>
+                  
+                  <div style="display:grid; grid-template-columns: 80px 75px 26px 26px; align-items:center; gap:8px; margin-bottom:16px;">
+                      <span style="color:#848e9c; font-size:10px; text-align:right; grid-column:3" title="Màu Thân Nến">THÂN</span>
+                      <span style="color:#848e9c; font-size:10px; text-align:right; grid-column:4" title="Màu Viền Nến">VIỀN</span>
+
+                      <span style="color:#fff;font-size:12px;">📈 Nến Tăng</span>
+                      <input type="text" id="wa-hex-up" maxlength="11" style="width:100%; height:24px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#fff; font-size:11px; text-align:center; outline:none;" onchange="window.waCsSync('up', this.value); window.waCsApply()">
+                      <input type="color" id="wa-color-up" title="Màu Thân" style="width:26px;height:24px;border:1px solid rgba(255,255,255,0.1);border-radius:4px;cursor:pointer;background:transparent;padding:1px;" oninput="document.getElementById('wa-hex-up').value=this.value; window.waCsApply()">
+                      <input type="color" id="wa-color-up-bd" title="Màu Viền" style="width:26px;height:24px;border:1px solid rgba(255,255,255,0.1);border-radius:4px;cursor:pointer;background:transparent;padding:1px;" oninput="window.waCsApply()">
+
+                      <span style="color:#fff;font-size:12px;">📉 Nến Giảm</span>
+                      <input type="text" id="wa-hex-down" maxlength="11" style="width:100%; height:24px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#fff; font-size:11px; text-align:center; outline:none;" onchange="window.waCsSync('down', this.value); window.waCsApply()">
+                      <input type="color" id="wa-color-down" title="Màu Thân" style="width:26px;height:24px;border:1px solid rgba(255,255,255,0.1);border-radius:4px;cursor:pointer;background:transparent;padding:1px;" oninput="document.getElementById('wa-hex-down').value=this.value; window.waCsApply()">
+                      <input type="color" id="wa-color-down-bd" title="Màu Viền" style="width:26px;height:24px;border:1px solid rgba(255,255,255,0.1);border-radius:4px;cursor:pointer;background:transparent;padding:1px;" oninput="window.waCsApply()">
+
+                      <span style="color:#fff;font-size:12px;">🖼️ Màu Nền</span>
+                      <input type="text" id="wa-hex-bg" maxlength="11" style="width:100%; height:24px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#fff; font-size:11px; text-align:center; outline:none;" onchange="window.waCsSync('bg', this.value); window.waCsApply()">
+                      <input type="color" id="wa-color-bg" title="Màu Nền" style="width:26px;height:24px;border:1px solid rgba(255,255,255,0.1);border-radius:4px;cursor:pointer;background:transparent;padding:1px; grid-column: 3 / span 2;" oninput="document.getElementById('wa-hex-bg').value=this.value; window.waCsApply()">
+                  </div>
+
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.1);">
+                      <span style="color:#fff; font-size:12px;">Đường Lưới (Grid)</span>
+                      <div id="wa-grid-toggle" onclick="window.waCsToggleGrid()" data-on="1" style="width:36px; height:20px; background:#00F0FF; border-radius:34px; cursor:pointer; position:relative; transition:.2s;">
+                          <div id="wa-grid-knob" style="position:absolute; right:2px; top:2px; width:16px; height:16px; background:#fff; border-radius:50%; transition:.2s;"></div>
+                      </div>
+                  </div>
+
+                  <div style="font-size:10px; color:#848e9c; margin-bottom:8px; font-weight:600;">🎨 BỘ MÀU CÓ SẴN:</div>
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:12px;">
+                      <button onclick="window.waCsSetTheme('#2af592','#2af592','#eb367f','#eb367f','#0f1a1c')" style="background:rgba(42,245,146,0.1); border:1px solid rgba(42,245,146,0.3); border-radius:6px; padding:6px; color:#2af592; font-size:11px; font-weight:700; cursor:pointer; transition:0.2s;">Wave Alpha</button>
+                      <button onclick="window.waCsSetTheme('#089981','#089981','#f23645','#f23645','#161a1e')" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:6px; color:#0ECB81; font-size:11px; font-weight:700; cursor:pointer; transition:0.2s;">Truyền Thống</button>
+                      <button onclick="window.waCsSetTheme('transparent','#eceef2','#eceef2','#eceef2','#131722')" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:6px; color:#FFFFFF; font-size:11px; font-weight:700; cursor:pointer; transition:0.2s;">Zen (Hollow)</button>
+                      <button onclick="window.waCsSetTheme('#26A69A','#26A69A','#EF5350','#EF5350','#131722')" style="background:rgba(38,166,154,0.1); border:1px solid rgba(38,166,154,0.3); border-radius:6px; padding:6px; color:#26A69A; font-size:11px; font-weight:700; cursor:pointer; transition:0.2s;">Pro Trader</button>
+                  </div>
+
+                  <button onclick="window.waCsSetTheme('#2af592','#2af592','#cb55e3','#cb55e3','#0f1a1c', true)" style="width:100%; background:transparent; border:1px dashed #848e9c; color:#848e9c; border-radius:6px; padding:8px; font-size:11px; font-weight:700; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.color='#fff'" onmouseout="this.style.background='transparent'; this.style.color='#848e9c'">↩ KHÔI PHỤC MẶC ĐỊNH</button>
+              `;
+              document.body.appendChild(menuCfg); // Đẩy ra ngoài Body để không bị cắt xén
+          }
+
           // 5. GẮN SỰ KIỆN CHO CÁC NÚT
+          
+          // Mở Thư viện Chỉ báo
           document.getElementById('btn-fx-indicator').addEventListener('click', function (e) {
               e.stopPropagation();
               if (typeof global.openIndicatorModal === 'function') global.openIndicatorModal();
           });
 
+          // Mở Quản lý (Bảng Settings 2 cột)
           document.getElementById('btn-wa-manage-ind').addEventListener('click', function (e) {
               e.stopPropagation();
               if (typeof global.openIndicatorSettings === 'function') global.openIndicatorSettings();
           });
 
+          // Fullscreen
           document.getElementById('btn-wa-fs').addEventListener('click', function () {
               const el = document.getElementById('tv-chart-container') || document.documentElement;
               if (!document.fullscreenElement) el.requestFullscreen && el.requestFullscreen();
               else document.exitFullscreen && document.exitFullscreen();
           });
-      } 
-    } 
 
-    // =========================================================================
-    // NÚT TAM GIÁC ẨN/HIỆN TEXT CHỈ BÁO (AUTO-TRACKING V5 - ZERO LAG)
-    // =========================================================================
-    setTimeout(() => {
+          // Xử lý mở/đóng menu Cài đặt Chart
+          const btnCfg = document.getElementById('btn-wa-chart-cfg');
+          if (btnCfg && menuCfg) {
+              btnCfg.addEventListener('click', function(e) {
+                  e.stopPropagation();
+                  const isHidden = menuCfg.style.display === 'none';
+                  if (isHidden) {
+                      const rect = btnCfg.getBoundingClientRect();
+                      menuCfg.style.top = (rect.bottom + 8) + 'px';
+                      menuCfg.style.left = Math.max(10, rect.left - 240) + 'px'; // Canh phải nút
+                  }
+                  menuCfg.style.display = isHidden ? 'block' : 'none';
+              });
+              menuCfg.addEventListener('click', function(e) { e.stopPropagation(); });
+              document.addEventListener('click', function() { menuCfg.style.display = 'none'; });
+
+              // Load setting cũ 
+              const saved = JSON.parse(localStorage.getItem('wa_chart_settings') || '{}');
+              const ub = saved.colUp || '#2af592'; const ubd = saved.colUpBd || ub;
+              document.getElementById('wa-hex-up').value = ub;
+              if(ub !== 'transparent') document.getElementById('wa-color-up').value = ub;
+              document.getElementById('wa-color-up-bd').value = ubd;
+              
+              const db = saved.colDown || '#cb55e3'; const dbd = saved.colDownBd || db;
+              document.getElementById('wa-hex-down').value = db;
+              if(db !== 'transparent') document.getElementById('wa-color-down').value = db;
+              document.getElementById('wa-color-down-bd').value = dbd;
+              
+              const bg = saved.colBg || '#0f1a1c';
+              document.getElementById('wa-hex-bg').value = bg; document.getElementById('wa-color-bg').value = bg;
+              
+              if (saved.showGrid === false) {
+                  document.getElementById('wa-grid-toggle').dataset.on = '0';
+                  document.getElementById('wa-grid-toggle').style.background = '#374151';
+                  document.getElementById('wa-grid-knob').style.right = 'auto';
+                  document.getElementById('wa-grid-knob').style.left = '2px';
+              }
+          }
+
+          window.waCsToggleGrid = function() {
+              const tog = document.getElementById('wa-grid-toggle'), knob = document.getElementById('wa-grid-knob');
+              if (!tog) return;
+              const nowOn = tog.dataset.on !== '1';
+              tog.dataset.on = nowOn ? '1' : '0';
+              tog.style.background = nowOn ? '#00F0FF' : '#374151';
+              if (knob) { knob.style.right = nowOn ? '2px' : 'auto'; knob.style.left = nowOn ? 'auto' : '2px'; }
+              window.waCsApply();
+          };
+
+          window.waCsSetTheme = function(ub, ubd, db, dbd, bg, isReset = false) {
+              var norm = function(c) { return (c && c !== 'transparent' && c !== 'rgba(0,0,0,0)' && c.charAt(0) !== '#') ? '#' + c : c; };
+              ub = norm(ub); ubd = norm(ubd); db = norm(db); dbd = norm(dbd); bg = norm(bg);
+
+              document.getElementById('wa-hex-up').value = ub;
+              if(ub !== 'transparent') document.getElementById('wa-color-up').value = ub;
+              document.getElementById('wa-color-up-bd').value = ubd;
+              document.getElementById('wa-hex-down').value = db;
+              if(db !== 'transparent') document.getElementById('wa-color-down').value = db;
+              document.getElementById('wa-color-down-bd').value = dbd;
+              document.getElementById('wa-hex-bg').value = bg; document.getElementById('wa-color-bg').value = bg;
+              window.waCsApply();
+          };
+
+          window.waCsSync = function(type, val) {
+              var norm = function(c) { return (c && c !== 'transparent' && c !== 'rgba(0,0,0,0)' && c.charAt(0) !== '#') ? '#' + c : c; };
+              var nVal = norm(val);
+              if (type === 'up') {
+                  if (val !== 'transparent') document.getElementById('wa-color-up').value = nVal;
+                  document.getElementById('wa-color-up-bd').value = nVal;
+              } else if (type === 'down') {
+                  if (val !== 'transparent') document.getElementById('wa-color-down').value = nVal;
+                  document.getElementById('wa-color-down-bd').value = nVal;
+              } else if (type === 'bg') {
+                  document.getElementById('wa-color-bg').value = nVal;
+              }
+          };
+
+          window.waCsApply = function() {
+              const ub = document.getElementById('wa-hex-up').value, ubd = document.getElementById('wa-color-up-bd').value;
+              const db = document.getElementById('wa-hex-down').value, dbd = document.getElementById('wa-color-down-bd').value;
+              const bg = document.getElementById('wa-hex-bg').value, showGrid = document.getElementById('wa-grid-toggle').dataset.on === '1';
+              localStorage.setItem('wa_chart_settings', JSON.stringify({ showGrid, colUp: ub, colUpBd: ubd, colDown: db, colDownBd: dbd, colBg: bg }));
+              const chartContainer = document.getElementById('sc-chart-container');
+              if (chartContainer) chartContainer.style.background = bg;
+              
+              const getVolColor = (hex, fallbackHex) => {
+                  let target = (hex === 'transparent' || hex === 'rgba(0,0,0,0)') ? fallbackHex : hex;
+                  if (!target.startsWith('#')) return target;
+                  let r = parseInt(target.slice(1, 3), 16), g = parseInt(target.slice(3, 5), 16), b = parseInt(target.slice(5, 7), 16);
+                  return `rgba(${r}, ${g}, ${b}, 0.7)`;
+              };
+              
+              if (window.tvChart) {
+                  const cType = (ub === 'transparent' || ub === 'rgba(0,0,0,0)') ? 'candle_up_stroke' : 'candle_solid';
+                  window.tvChart.setStyles({
+                      grid: { horizontal: { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' }, vertical: { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' } },
+                      candle: { type: window.currentChartInterval === 'tick' ? 'area' : cType, bar: { upColor: ub, downColor: db, noChangeColor: '#848e9c', upBorderColor: ubd, downBorderColor: dbd, upWickColor: ubd, downWickColor: dbd } }
+                  });
+                  window.tvChart.overrideIndicator({ name: 'VOL', styles: { bars: [{ upColor: getVolColor(ub, ubd), downColor: getVolColor(db, dbd), noChangeColor: '#848e9c' }] } });
+                }
+              };
+          } 
+      } 
+      // =========================================================================
+      // NÚT TAM GIÁC ẨN/HIỆN TEXT CHỈ BÁO (AUTO-TRACKING V5 - ZERO LAG)
+      // =========================================================================
+      setTimeout(() => {
         const chartDom = document.getElementById('sc-chart-container') || 
                          document.getElementById('tv-chart-container') || 
                          document.querySelector('.klinecharts-pro');
@@ -3947,7 +4100,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
             toggleBtn.style.cssText = `
                 position: absolute;
                 left: 12px;
-                top: 36px;
+                top: 36px; /* Đẩy lùi xuống một chút so với giá OHLC */
                 z-index: 999;
                 width: 20px;
                 height: 20px;
@@ -3960,7 +4113,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 cursor: pointer;
                 border-radius: 4px;
                 backdrop-filter: blur(4px);
-                transition: top 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.2s, transform 0.2s;
+                transition: top 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.2s, transform 0.2s; /* Nhanh & nảy hơn */
             `;
             
             toggleBtn.innerHTML = `
@@ -3989,9 +4142,12 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
 
             chartDom.appendChild(toggleBtn);
 
+            // 🚀 AUTO-TRACKING V5: Quét tốc độ cao & Căn lề chuẩn
             let lastState = null; 
+            
             setInterval(() => {
                 if (!window.tvChart || !document.getElementById('wa-legend-toggle')) return;
+                
                 let count = 0;
                 try {
                     const inds = window.tvChart.getIndicatorByPaneId('candle_pane');
@@ -4011,14 +4167,16 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 if (lastState !== currentState) {
                     const baseTop = 34; 
                     const lineHeight = 24; 
+                    
                     const targetTop = isHidden ? baseTop : baseTop + (count * lineHeight);
                     toggleBtn.style.top = targetTop + 'px';
+                    
                     lastState = currentState; 
                 }
             }, 150); 
         }
     }, 800);
-  };
+    };
 
     
   // ══════════════════════════════════════════════════════
