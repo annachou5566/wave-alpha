@@ -3875,21 +3875,19 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
   
 
   // =========================================================================
-  // HỆ THỐNG UNIFIED SETTINGS MANAGER v3.0 (MASTER PRO - COINGLASS STYLE)
+  // HỆ THỐNG UNIFIED SETTINGS MANAGER v3.1 (TÍCH HỢP DRAG TO RESIZE)
   // =========================================================================
   global.openIndicatorSettings = function (indicatorObj, paneId) {
-    // Lấy tên chỉ báo cần mở
     let targetName = null;
     if (typeof indicatorObj === 'string') targetName = indicatorObj;
     else if (indicatorObj && indicatorObj.name) targetName = indicatorObj.name;
 
-    // Nếu SC Active Indicators rỗng, cố gắng lấy từ arguments để không bị kẹt
     if (!global.scActiveIndicators) global.scActiveIndicators = [];
     
     if (targetName && !global.scActiveIndicators.find(i => i.name === targetName)) {
         global.scActiveIndicators.push({
             name: targetName,
-            isStack: true, // Mặc định hiển thị đè nến
+            isStack: true,
             paneId: paneId || 'candle_pane',
             params: (indicatorObj && indicatorObj.calcParams) ? indicatorObj.calcParams : [],
             visible: true
@@ -3906,38 +3904,46 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     const oldPopover = document.getElementById('wa-color-popover');
     if (oldPopover) oldPopover.remove();
 
-    // --- SVG ICONS ---
     const ICONS = {
         close: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
         eye: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
         eyeOff: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>',
         trash: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>',
-        reset: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>'
+        reset: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>',
+        resize: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#848e9c" stroke-width="1.5"><line x1="12" y1="0" x2="0" y2="12"></line><line x1="12" y1="6" x2="6" y2="12"></line></svg>'
     };
 
-    // Tạo Panel
+    // 🚀 FIX TỌA ĐỘ GỐC: Dùng calc() thay vì transform để Resizer hoạt động mượt mà
     const panel = document.createElement('div');
     panel.id = 'wa-global-settings';
-    panel.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 760px; max-width: 95vw; height: 600px; max-height: 90vh; background: #1e2329; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; box-shadow: 0 24px 60px rgba(0,0,0,0.8); z-index: 99998; display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #EAECEF; user-select: none; overflow: hidden;';
+    panel.style.cssText = 'position: fixed; top: calc(50% - 300px); left: calc(50% - 380px); width: 760px; max-width: 98vw; height: 600px; max-height: 98vh; background: #1e2329; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; box-shadow: 0 24px 60px rgba(0,0,0,0.8); z-index: 99998; display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #EAECEF; user-select: none; overflow: hidden;';
 
-    // Tạo Header
     const header = document.createElement('div');
     header.style.cssText = 'padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02); cursor: move; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;';
-    header.innerHTML = '<span style="font-size:15px; font-weight:700; color:#fff; display:flex; align-items:center; gap:10px; letter-spacing: 0.5px;">⚙️ CÀI ĐẶT CHỈ BÁO</span><span id="wa-gs-close" style="cursor:pointer; color:#848e9c; display:flex; transition:0.2s;" onmouseover="this.style.color=\'#fff\'" onmouseout="this.style.color=\'#848e9c\'">' + ICONS.close + '</span>';
+    header.innerHTML = '<span style="font-size:15px; font-weight:700; color:#fff; display:flex; align-items:center; gap:10px; letter-spacing: 0.5px;">⚙️ HỒ SƠ CHỈ BÁO</span><span id="wa-gs-close" style="cursor:pointer; color:#848e9c; display:flex; padding:4px; margin:-4px; transition:0.2s;" onmouseover="this.style.color=\'#fff\'" onmouseout="this.style.color=\'#848e9c\'">' + ICONS.close + '</span>';
     panel.appendChild(header);
 
-    // Container Body
     const bodyWrapper = document.createElement('div');
-    bodyWrapper.style.cssText = 'display: flex; flex: 1; overflow: hidden; background: #191c20;';
+    bodyWrapper.style.cssText = 'display: flex; flex: 1; overflow: hidden; background: #191c20; position: relative;';
     
     const sidebar = document.createElement('div');
-    sidebar.style.cssText = 'width: 250px; border-right: 1px solid rgba(255,255,255,0.06); overflow-y: auto; background: #161a1e; display: flex; flex-direction: column;';
+    sidebar.style.cssText = 'width: 250px; border-right: 1px solid rgba(255,255,255,0.06); overflow-y: auto; background: #161a1e; display: flex; flex-direction: column; flex-shrink: 0;';
     
     const content = document.createElement('div');
     content.style.cssText = 'flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; position: relative;';
 
     bodyWrapper.appendChild(sidebar);
     bodyWrapper.appendChild(content);
+    
+    // 🚀 TẠO NÚT RESIZER Ở GÓC DƯỚI CÙNG BÊN PHẢI
+    const resizer = document.createElement('div');
+    resizer.id = 'wa-gs-resizer';
+    resizer.style.cssText = 'position: absolute; bottom: 0; right: 0; width: 24px; height: 24px; cursor: nwse-resize; display: flex; align-items: flex-end; justify-content: flex-end; padding: 4px; z-index: 10; opacity: 0.5; transition: 0.2s;';
+    resizer.innerHTML = ICONS.resize;
+    resizer.onmouseover = () => resizer.style.opacity = '1';
+    resizer.onmouseout = () => resizer.style.opacity = '0.5';
+    bodyWrapper.appendChild(resizer);
+
     panel.appendChild(bodyWrapper);
 
     const style = document.createElement('style');
@@ -3975,10 +3981,11 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         .wa-mini-color:hover { border-color: #FFF; transform: scale(1.15); box-shadow: 0 0 6px rgba(255,255,255,0.5); }
 
         @media (max-width: 768px) {
-            #wa-global-settings { width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; border-radius: 0; top:0; left:0; transform: none; }
+            #wa-global-settings { width: 100vw !important; height: 100vh !important; max-width: 100vw; max-height: 100vh; border-radius: 0; top:0 !important; left:0 !important; }
             .wa-gs-sidebar { width: 64px !important; }
             .wa-gs-item span { display: none; }
             .wa-gs-section { display: none; }
+            #wa-gs-resizer { display: none !important; } /* Tự ẩn resizer trên mobile */
         }
     `;
     panel.appendChild(style);
@@ -4124,7 +4131,6 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 row.className = 'wa-inp-row';
                 if (isColor) {
                     let dVal = val;
-                    // 🚀 BỌC THÉP: Sửa lỗi crash toString trên máy tính bảng cũ
                     if (typeof val === 'number') {
                         let hStr = Math.round(val).toString(16).toUpperCase();
                         while(hStr.length < 6) hStr = '0' + hStr;
@@ -4177,23 +4183,57 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         panel.remove(); colorPopover.remove(); 
     };
 
-    // Drag Logic (An toàn)
-    let isD = false, oX = 0, oY = 0;
+    // 🚀 XỬ LÝ KÉO THẢ & CO GIÃN (DRAG & RESIZE) - BỌC THÉP CHO MOUSE & TOUCH
+    let isDragging = false, isResizing = false;
+    let oX = 0, oY = 0, startW = 0, startH = 0, startX = 0, startY = 0;
+
+    // 1. Logic kéo khung (Header)
     header.onmousedown = header.ontouchstart = (e) => { 
-        isD = true; 
+        if(e.target === document.getElementById('wa-gs-close') || e.target.closest('#wa-gs-close')) return;
+        isDragging = true; 
         const clientX = e.clientX || (e.touches && e.touches[0].clientX);
         const clientY = e.clientY || (e.touches && e.touches[0].clientY);
         oX = clientX - panel.offsetLeft; oY = clientY - panel.offsetTop; 
     };
-    window.addEventListener('mousemove', (e) => { 
-        if(isD) { panel.style.left = (e.clientX-oX)+'px'; panel.style.top = (e.clientY-oY)+'px'; panel.style.transform = 'none'; }
-    });
-    window.addEventListener('touchmove', (e) => { 
-        if(isD) { panel.style.left = (e.touches[0].clientX-oX)+'px'; panel.style.top = (e.touches[0].clientY-oY)+'px'; panel.style.transform = 'none'; }
-    }, { passive: false });
-    window.addEventListener('mouseup', () => isD = false);
-    window.addEventListener('touchend', () => isD = false);
 
+    // 2. Logic kéo giãn kích thước (Resizer)
+    resizer.onmousedown = resizer.ontouchstart = (e) => {
+        e.preventDefault(); e.stopPropagation();
+        isResizing = true;
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        startW = panel.offsetWidth; startH = panel.offsetHeight;
+        startX = clientX; startY = clientY;
+    };
+
+    // 3. Sự kiện di chuyển chuột/ngón tay
+    const onMove = (e) => {
+        if (!isDragging && !isResizing) return;
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        
+        if (isDragging) {
+            panel.style.left = (clientX - oX) + 'px';
+            panel.style.top = (clientY - oY) + 'px';
+        } else if (isResizing) {
+            let newW = startW + (clientX - startX);
+            let newH = startH + (clientY - startY);
+            // Khóa kích thước tối thiểu
+            newW = Math.max(500, Math.min(newW, window.innerWidth * 0.98));
+            newH = Math.max(400, Math.min(newH, window.innerHeight * 0.98));
+            panel.style.width = newW + 'px';
+            panel.style.height = newH + 'px';
+        }
+    };
+
+    const onUp = () => { isDragging = false; isResizing = false; };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchend', onUp);
+
+    // Xử lý đóng Popover màu sắc
     colorPopover.onclick = (e) => {
         const c = e.target.dataset.hex;
         if (c && activeHexInputId) {
