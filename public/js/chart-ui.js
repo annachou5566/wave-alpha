@@ -1321,7 +1321,7 @@ window.closeProChart = function() {
 };
 
 // =========================================================================
-// 🧩 BƯỚC 2: CHART TYPE SELECTOR (21 LOẠI BIỂU ĐỒ - SVG PRO ICONS)
+// 🧩 BƯỚC 2: CHART TYPE SELECTOR (21 LOẠI BIỂU ĐỒ - VÁ LỖI TỌA ĐỘ)
 // =========================================================================
 (function initChartTypeSelector() {
     'use strict';
@@ -1347,7 +1347,7 @@ window.closeProChart = function() {
         { grp: 'ĐƯỜNG & VÙNG', id: 11, name: 'Đường Cơ Sở', icon: _svg('<line x1="3" y1="12" x2="21" y2="12" stroke-dasharray="2 2"/><polyline points="3 12 7 8 13 15 21 6"/>'), phase: 2, desc: 'Baseline: Trên xanh, dưới đỏ' },
         
         // Nhóm 3: Khử Nhiễu
-        { grp: 'KHỬ NHIỄU (PRO)', id: 12, name: 'Heikin Ashi', icon: _svg('<path d="M9 4v16M15 4v16M7 10h4v6H7zM13 8h4v8h-4z"/>'), phase: 1, desc: 'Nến trung bình lọc nhiễu sóng' }, // Heikin Ashi KLineChart hỗ trợ native
+        { grp: 'KHỬ NHIỄU (PRO)', id: 12, name: 'Heikin Ashi', icon: _svg('<path d="M9 4v16M15 4v16M7 10h4v6H7zM13 8h4v8h-4z"/>'), phase: 1, desc: 'Nến trung bình lọc nhiễu sóng' }, 
         { grp: 'KHỬ NHIỄU (PRO)', id: 13, name: 'Nến Khối Lượng', icon: _svg('<path d="M9 4v16M15 4v16M5 10h8v6H5zM14 8h2v8h-2z"/>'), phase: 2, desc: 'Bề ngang nến tỷ lệ với Volume' },
         { grp: 'KHỬ NHIỄU (PRO)', id: 14, name: 'Renko', icon: _svg('<rect x="5" y="14" width="6" height="6"/><rect x="11" y="8" width="6" height="6"/>'), phase: 2, desc: 'Gạch giá trị, loại bỏ thời gian' },
         { grp: 'KHỬ NHIỄU (PRO)', id: 15, name: 'Line Break', icon: _svg('<path d="M7 16h4v4H7zM13 8h4v12h-4zM7 4h4v10H7z"/>'), phase: 2, desc: 'Chỉ vẽ nến khi có Breakout' },
@@ -1364,11 +1364,17 @@ window.closeProChart = function() {
     // 2. CSS cho Menu
     const style = document.createElement('style');
     style.textContent = `
+        /* 🚀 Đổi từ position: absolute sang FIXED để tránh lỗi bay lên trời */
         #wa-chart-type-menu {
-            display: none; position: absolute; background: #1e222d; border: 1px solid rgba(255,255,255,0.1); 
-            border-radius: 8px; width: 380px; z-index: 999999; box-shadow: 0 16px 40px rgba(0,0,0,0.8);
+            display: none; position: fixed; background: #1e222d; border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 8px; width: 380px; max-height: 85vh; overflow-y: auto; z-index: 999999; box-shadow: 0 16px 40px rgba(0,0,0,0.8);
             padding: 16px; grid-template-columns: 1fr 1fr; gap: 20px 16px; align-items: start; user-select: none;
         }
+        /* Custom Scrollbar cho Menu để nhìn gọn gàng */
+        #wa-chart-type-menu::-webkit-scrollbar { width: 4px; }
+        #wa-chart-type-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        #wa-chart-type-menu::-webkit-scrollbar-track { background: transparent; }
+
         .wa-ct-grp { display: flex; flex-direction: column; gap: 4px; }
         .wa-ct-title { font-size: 10px; font-weight: 800; color: #848e9c; letter-spacing: 0.5px; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; text-transform: uppercase; }
         .wa-ct-item {
@@ -1393,13 +1399,11 @@ window.closeProChart = function() {
 
     // 3. Auto-inject Nút bấm vào Toolbar
     const checkToolbar = setInterval(() => {
-        // Tìm thanh chứa Timeframes để gắn nút chọn biểu đồ ngay bên cạnh
         const toolbar = document.querySelector('.sc-time-btn')?.parentNode || document.querySelector('.sc-tools-left') || document.querySelector('.sc-toolbar');
         
         if (toolbar) {
             clearInterval(checkToolbar);
 
-            // Tạo nút bấm trên thanh công cụ
             const btnWrap = document.createElement('div');
             btnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; margin-left: 8px;';
             btnWrap.innerHTML = `
@@ -1411,7 +1415,6 @@ window.closeProChart = function() {
             
             toolbar.appendChild(btnWrap);
 
-            // Xây dựng Dropdown Menu HTML
             const menu = document.createElement('div');
             menu.id = 'wa-chart-type-menu';
 
@@ -1419,7 +1422,6 @@ window.closeProChart = function() {
             groups.forEach((gName, idx) => {
                 const grpDiv = document.createElement('div');
                 grpDiv.className = 'wa-ct-grp';
-                // Nhóm Khử nhiễu chiếm full hàng ngang vì nó dài
                 if (idx === 2) grpDiv.style.gridColumn = '1 / -1'; 
                 
                 grpDiv.innerHTML = `<div class="wa-ct-title">${gName}</div>`;
@@ -1460,18 +1462,27 @@ window.closeProChart = function() {
                 menu.appendChild(grpDiv);
             });
 
-            // Gắn menu vào body
             document.body.appendChild(menu);
 
-            // Logic Bật/Tắt Menu
+            // 🚀 BẬT TẮT & TÍNH TỌA ĐỘ THÔNG MINH
             const btn = document.getElementById('btn-wa-chart-type');
             btn.onclick = (e) => {
                 e.stopPropagation();
                 const isHidden = menu.style.display === 'none' || menu.style.display === '';
                 if (isHidden) {
                     const rect = btn.getBoundingClientRect();
+                    
+                    // Tính tọa độ Top: Ngay dưới nút bấm
                     menu.style.top = (rect.bottom + 6) + 'px';
-                    menu.style.left = rect.left + 'px';
+                    
+                    // Tính tọa độ Left: Đảm bảo không bị tràn mép phải màn hình
+                    const menuWidth = 380;
+                    if (rect.left + menuWidth > window.innerWidth) {
+                        menu.style.left = (window.innerWidth - menuWidth - 10) + 'px';
+                    } else {
+                        menu.style.left = rect.left + 'px';
+                    }
+
                     menu.style.display = 'grid';
                     
                     const currentType = window.WaveChartEngine ? window.WaveChartEngine.config.chartType : 1;
