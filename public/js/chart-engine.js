@@ -22,7 +22,7 @@ window.bookmapHistory = [];
 window.isHeatmapOn = true; 
 
 // =========================================================================
-// 🧠 BƯỚC 1: WAVE CHART ENGINE (FIX TẬN GỐC HIỂN THỊ ĐỈNH ĐÁY - BUST CACHE)
+// 🧠 BƯỚC 1: WAVE CHART ENGINE (HOÀN THIỆN ĐỈNH ĐÁY CHUẨN TRADINGVIEW)
 // =========================================================================
 const DEFAULT_CHART_CONFIG = {
     chartType: 1, upColor: '#0ECB81', downColor: '#F6465D',
@@ -49,13 +49,12 @@ window.WaveChartEngine = {
         window.__wa_onChartReady = () => this.applyNow();
     },
 
-    // 🚀 ĐỘNG CƠ CỌ VẼ TRỰC TIẾP (Dùng ID mới WA_COL_CHART và WA_HL_CHART để phá vỡ Cache cũ)
     _registerCustomIndicators: function() {
         if (!window.klinecharts || !window.klinecharts.registerIndicator) return;
         try {
             // 1. CHỈ BÁO VẼ CỘT (COLUMNS)
             window.klinecharts.registerIndicator({
-                name: 'WA_COL_CHART', // 🚀 TÊN MỚI HOÀN TOÀN
+                name: 'WA_COL_CHART',
                 shortName: ' ', 
                 series: 'price',
                 calc: (dataList) => dataList,
@@ -65,7 +64,7 @@ window.WaveChartEngine = {
                     const bottomY = bounding.height;
                     const dataList = indicator.result; 
 
-                    ctx.save(); // Khóa trạng thái Canvas
+                    ctx.save(); 
                     const bSpace = barSpace.gapBar || barSpace.bar || 6;
                     const colWidth = Math.max(1, bSpace * 0.6);
 
@@ -78,14 +77,14 @@ window.WaveChartEngine = {
                         const closeY = yAxis.convertToPixel(kd.close);
                         ctx.fillRect(x - colWidth / 2, closeY, colWidth, bottomY - closeY);
                     }
-                    ctx.restore(); // Nhả trạng thái Canvas
+                    ctx.restore(); 
                     return true; 
                 }
             });
 
-            // 2. CHỈ BÁO VẼ ĐỈNH-ĐÁY (HIGH-LOW)
+            // 2. CHỈ BÁO VẼ ĐỈNH-ĐÁY (HIGH-LOW) CHUẨN TRADINGVIEW
             window.klinecharts.registerIndicator({
-                name: 'WA_HL_CHART', // 🚀 TÊN MỚI HOÀN TOÀN
+                name: 'WA_HL_CHART',
                 shortName: ' ',
                 series: 'price',
                 calc: (dataList) => dataList,
@@ -94,53 +93,47 @@ window.WaveChartEngine = {
                     const { from, to } = visibleRange;
                     const dataList = indicator.result;
 
-                    ctx.save(); // Khóa trạng thái Canvas
+                    ctx.save(); 
                     const bSpace = barSpace.gapBar || barSpace.bar || 6;
-                    const tickLen = Math.max(3, bSpace * 0.4);
-                    ctx.lineWidth = Math.max(1.5, bSpace * 0.15);
-                    ctx.lineCap = 'round';
-
-                    // 🚀 THUẬT TOÁN TỐI ƯU (GOM CỤM THEO MÀU ĐỂ RENDER MƯỢT GẤP 10 LẦN)
                     
-                    // --- VẼ TOÀN BỘ NẾN TĂNG (UP) ---
-                    ctx.beginPath();
+                    // 🚀 THAY ĐỔI: Đỉnh Đáy chuẩn TradingView là 1 khối trụ lơ lửng từ Low lên High
+                    const colWidth = Math.max(1, bSpace * 0.6);
+                    const isTextVisible = bSpace > 30; // Chữ số High/Low chỉ hiện khi bạn zoom đủ to
+
                     for (let i = from; i < to; i++) {
                         const kd = dataList[i];
-                        if (!kd || kd.close < kd.open) continue; // Chỉ vẽ nến UP
+                        if (!kd || kd.high === undefined || kd.low === undefined) continue;
+
+                        ctx.fillStyle = kd.close >= kd.open ? c.upColor : c.downColor;
                         
                         const x = xAxis.convertToPixel(i);
                         const highY = yAxis.convertToPixel(kd.high);
                         const lowY = yAxis.convertToPixel(kd.low);
-                        const closeY = yAxis.convertToPixel(kd.close);
-
-                        ctx.moveTo(x, highY); ctx.lineTo(x, lowY); // Trục dọc
-                        ctx.moveTo(x, closeY); ctx.lineTo(x + tickLen, closeY); // Râu ngang
-                    }
-                    ctx.strokeStyle = c.upColor || '#0ECB81';
-                    ctx.stroke();
-
-                    // --- VẼ TOÀN BỘ NẾN GIẢM (DOWN) ---
-                    ctx.beginPath();
-                    for (let i = from; i < to; i++) {
-                        const kd = dataList[i];
-                        if (!kd || kd.close >= kd.open) continue; // Chỉ vẽ nến DOWN
                         
-                        const x = xAxis.convertToPixel(i);
-                        const highY = yAxis.convertToPixel(kd.high);
-                        const lowY = yAxis.convertToPixel(kd.low);
-                        const closeY = yAxis.convertToPixel(kd.close);
+                        const rectY = Math.min(highY, lowY);
+                        const rectH = Math.max(1, Math.abs(highY - lowY));
 
-                        ctx.moveTo(x, highY); ctx.lineTo(x, lowY); // Trục dọc
-                        ctx.moveTo(x, closeY); ctx.lineTo(x + tickLen, closeY); // Râu ngang
+                        // 1. Vẽ khối trụ nổi giữa High và Low
+                        ctx.fillRect(x - colWidth / 2, rectY, colWidth, rectH);
+
+                        // 2. Tùy chọn: Vẽ chữ số High/Low ở 2 đầu (Giống hệt TradingView)
+                        if (isTextVisible) {
+                            ctx.font = '10px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillStyle = '#848e9c';
+                            
+                            ctx.textBaseline = 'bottom';
+                            ctx.fillText(kd.high.toString(), x, rectY - 3); // In High trên đỉnh
+                            
+                            ctx.textBaseline = 'top';
+                            ctx.fillText(kd.low.toString(), x, rectY + rectH + 3); // In Low dưới đáy
+                        }
                     }
-                    ctx.strokeStyle = c.downColor || '#F6465D';
-                    ctx.stroke();
-
-                    ctx.restore(); // Nhả trạng thái Canvas
+                    ctx.restore(); 
                     return true; 
                 }
             });
-            console.log('[WaveChartEngine] Đã nạp Custom Chart V3 siêu mượt ✅');
+            console.log('[WaveChartEngine] Đã nạp Custom Chart V4 (Columns, High-Low chuẩn) ✅');
         } catch(e) { console.error("Lỗi nạp Custom Indicator:", e); }
     },
 
@@ -167,18 +160,17 @@ window.WaveChartEngine = {
         else if (c.chartType === 6 || c.chartType === 7 || c.chartType === 8) { kcChartType = 'area'; isLine = true; } 
         else if (c.chartType === 9 || c.chartType === 10 || c.chartType === 11) { kcChartType = 'area'; isLine = false; } 
 
-        // 🚀 ROUTER KÍCH HOẠT CUSTOM INDICATOR VỚI TÊN MỚI
-        if (c.chartType === 4) { // CỘT
+        if (c.chartType === 4) { 
             this.chartInstance.removeIndicator('candle_pane', 'WA_HL_CHART');
             this.chartInstance.createIndicator('WA_COL_CHART', false, { id: 'candle_pane' });
             hideCandle = true;
         } 
-        else if (c.chartType === 5) { // ĐỈNH - ĐÁY
+        else if (c.chartType === 5) { 
             this.chartInstance.removeIndicator('candle_pane', 'WA_COL_CHART');
             this.chartInstance.createIndicator('WA_HL_CHART', false, { id: 'candle_pane' });
             hideCandle = true;
         } 
-        else { // NẾN BÌNH THƯỜNG
+        else { 
             this.chartInstance.removeIndicator('candle_pane', 'WA_COL_CHART');
             this.chartInstance.removeIndicator('candle_pane', 'WA_HL_CHART');
         }
