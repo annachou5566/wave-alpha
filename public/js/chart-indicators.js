@@ -3845,14 +3845,10 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                   }
                   .wa-topbar-container::-webkit-scrollbar { display: none !important; }
                   
-                  /* SẮP XẾP LAYOUT CHUẨN XÁC BẰNG FLEX ORDER */
+                  /* 🚀 SẮP XẾP LAYOUT CHUẨN XÁC BẰNG FLEX ORDER MÀ KHÔNG CẦN CHẠY JS LOOP */
                   .sc-time-btn { padding: 6px 10px !important; margin: 0 !important; min-width: unset !important; flex-shrink: 0; order: 1 !important; }
-                  
-                  /* Nút Đổi Nến và Cài Đặt (từ file chart-ui sinh ra) tự động mang order 2 */
-                  .wa-topbar-container > div { order: 2; } 
-                  
-                  /* Nhóm Nút Phải (Indicator, Fullscreen) bị đẩy dạt sang phải */
-                  #wa-toolbar-right { order: 4 !important; margin-left: auto; }
+                  .wa-topbar-container > div { order: 2; } /* Lực hút: Kéo các nút Nến & Cài đặt từ file UI lọt vào chính giữa */
+                  #wa-toolbar-right { order: 3 !important; } /* Lực đẩy: Ép nhóm Indicator & Fullscreen sang bên phải cùng */
                   
                   /* Style Nút Toolbar & Tooltip chuyên nghiệp */
                   .wa-topbtn {
@@ -3882,27 +3878,30 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
           container.classList.add('wa-topbar-container');
           if (container.parentElement) container.parentElement.classList.add('wa-topbar-container');
 
-          // 3. SVG ICONS (CHỈ GIỮ LẠI CÁC NÚT QUẢN LÝ CHỈ BÁO VÀ FULLSCREEN)
+          // 3. SVG ICONS (ĐÃ DỌN SẠCH ICON BÁNH RĂNG CŨ KHỎI HỆ THỐNG)
           const TOP_ICONS = {
               addInd: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>`,
               manageInd: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>`,
               fullscreen: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>`
           };
 
-          // 4. KHUNG CHỨA NÚT BÊN PHẢI (ORDER: 4 - ĐẨY DẠT RA PHÍA SAU)
+          // 4. KHUNG CHỨA NÚT MỚI (CHỈ CÒN NHÓM INDICATOR VÀ FULLSCREEN)
           const tbWrap = document.createElement('div');
-          tbWrap.id = 'wa-toolbar-right';
+          tbWrap.id = 'wa-toolbar-right'; // 🚀 ID NÀY GIÚP CSS ĐẨY KHỐI NÀY SANG PHẢI CÙNG
           tbWrap.style.cssText = 'display:flex; align-items:center; gap:2px; flex-shrink:0;';
           tbWrap.innerHTML = `
               <div style="width:1px; height:18px; background:rgba(255,255,255,0.08); margin:0 6px;"></div>
+
               <button id="btn-fx-indicator" class="wa-topbtn" data-tip="Thêm chỉ báo mới">${TOP_ICONS.addInd}</button>
               <button id="btn-wa-manage-ind" class="wa-topbtn" data-tip="Cài đặt & Quản lý chỉ báo">${TOP_ICONS.manageInd}</button>
+
               <div style="width:1px; height:18px; background:rgba(255,255,255,0.08); margin:0 6px;"></div>
+
               <button id="btn-wa-fs" class="wa-topbtn" data-tip="Toàn màn hình">${TOP_ICONS.fullscreen}</button>
           `;
           container.appendChild(tbWrap);
 
-          // 5. GẮN SỰ KIỆN CHO CÁC NÚT (Đã xóa sạch sự kiện của nút Bánh Răng cũ)
+          // 5. GẮN SỰ KIỆN CHO CÁC NÚT
           document.getElementById('btn-fx-indicator').addEventListener('click', function (e) {
               e.stopPropagation();
               if (typeof global.openIndicatorModal === 'function') global.openIndicatorModal();
@@ -3919,11 +3918,12 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
               else document.exitFullscreen && document.exitFullscreen();
           });
       } 
-    }
-      // =========================================================================
-      // NÚT TAM GIÁC ẨN/HIỆN TEXT CHỈ BÁO (AUTO-TRACKING V5 - ZERO LAG)
-      // =========================================================================
-      setTimeout(() => {
+    } 
+
+    // =========================================================================
+    // NÚT TAM GIÁC ẨN/HIỆN TEXT CHỈ BÁO (AUTO-TRACKING V5 - ZERO LAG)
+    // =========================================================================
+    setTimeout(() => {
         const chartDom = document.getElementById('sc-chart-container') || 
                          document.getElementById('tv-chart-container') || 
                          document.querySelector('.klinecharts-pro');
@@ -3947,7 +3947,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
             toggleBtn.style.cssText = `
                 position: absolute;
                 left: 12px;
-                top: 36px; /* Đẩy lùi xuống một chút so với giá OHLC */
+                top: 36px;
                 z-index: 999;
                 width: 20px;
                 height: 20px;
@@ -3960,7 +3960,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 cursor: pointer;
                 border-radius: 4px;
                 backdrop-filter: blur(4px);
-                transition: top 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.2s, transform 0.2s; /* Nhanh & nảy hơn */
+                transition: top 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.2s, transform 0.2s;
             `;
             
             toggleBtn.innerHTML = `
@@ -3989,12 +3989,9 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
 
             chartDom.appendChild(toggleBtn);
 
-            // 🚀 AUTO-TRACKING V5: Quét tốc độ cao & Căn lề chuẩn
             let lastState = null; 
-            
             setInterval(() => {
                 if (!window.tvChart || !document.getElementById('wa-legend-toggle')) return;
-                
                 let count = 0;
                 try {
                     const inds = window.tvChart.getIndicatorByPaneId('candle_pane');
@@ -4014,16 +4011,14 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 if (lastState !== currentState) {
                     const baseTop = 34; 
                     const lineHeight = 24; 
-                    
                     const targetTop = isHidden ? baseTop : baseTop + (count * lineHeight);
                     toggleBtn.style.top = targetTop + 'px';
-                    
                     lastState = currentState; 
                 }
             }, 150); 
         }
     }, 800);
-    };
+  };
 
     
   // ══════════════════════════════════════════════════════
@@ -4692,4 +4687,3 @@ if (isColor) {
 
   console.log('[Wave Alpha v' + WAVE_ALPHA_VERSION + '] Indicator Core initialized with Button/Unicode Fix.');
 })(window);
-
