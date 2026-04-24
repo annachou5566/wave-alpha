@@ -49,57 +49,52 @@ window.WaveChartEngine = {
         window.__wa_onChartReady = () => this.applyNow();
     },
 
-   // 🚀 CHẾ TẠO CỌ VẼ CUSTOM CHO BIỂU ĐỒ CỘT & ĐỈNH-ĐÁY (CHUẨN DECLARATIVE V9)
+   // 🚀 CHẾ TẠO CỌ VẼ CUSTOM CHO BIỂU ĐỒ CỘT & ĐỈNH-ĐÁY (VẼ TRỰC TIẾP CANVAS - SIÊU ĐƠN GIẢN)
    _registerCustomFigures: function() {
     if (!window.klinecharts || !window.klinecharts.registerFigure) return;
     try {
         // Cọ vẽ số 1: Cột (Columns)
         window.klinecharts.registerFigure({
             name: 'wave_columns',
-            draw: ({ coordinate, bounding, barSpace, data }) => {
+            draw: ({ ctx, coordinate, bounding, barSpace }) => {
                 const c = window.WaveChartEngine.config;
-                const isUp = data.close >= data.open; 
-                const color = isUp ? c.upColor : c.downColor;
-                const width = Math.max(1, barSpace * 0.6); // Độ mập của cột
+                // Tọa độ Canvas: Y càng nhỏ càng cao -> close <= open nghĩa là Giá Tăng
+                const isUp = coordinate.close <= coordinate.open; 
+                ctx.fillStyle = isUp ? c.upColor : c.downColor;
+                const width = Math.max(1, barSpace * 0.6); 
                 const x = coordinate.x - width / 2;
                 const y = coordinate.close;
-                const h = Math.max(1, bounding.height - y); // Cột mọc từ dưới đáy màn hình lên
+                const h = Math.max(1, bounding.height - y); // Mọc từ đáy màn hình lên
                 
-                // 🚀 V9 Bắt buộc trả về Object hình khối
-                return {
-                    name: 'rect',
-                    attrs: { x: x, y: y, width: width, height: h },
-                    styles: { style: 'fill', color: color }
-                };
+                ctx.fillRect(x, y, width, h);
             }
         });
 
         // Cọ vẽ số 2: Đỉnh - Đáy (High - Low)
         window.klinecharts.registerFigure({
             name: 'wave_high_low',
-            draw: ({ coordinate, barSpace, data }) => {
+            draw: ({ ctx, coordinate, barSpace }) => {
                 const c = window.WaveChartEngine.config;
-                const isUp = data.close >= data.open;
-                const color = isUp ? c.upColor : c.downColor;
-                const lineWidth = Math.max(1.5, barSpace * 0.15);
-                const tickWidth = Math.max(3, barSpace * 0.4);
+                const isUp = coordinate.close <= coordinate.open;
+                ctx.strokeStyle = isUp ? c.upColor : c.downColor;
+                ctx.lineWidth = Math.max(1.5, barSpace * 0.15);
+                ctx.lineCap = 'round';
+                
+                // Vẽ trục dọc nối High và Low
+                ctx.beginPath();
+                ctx.moveTo(coordinate.x, coordinate.high);
+                ctx.lineTo(coordinate.x, coordinate.low);
+                ctx.stroke();
 
-                // 🚀 Trả về mảng chứa 2 đoạn thẳng (Cột dọc + Râu ngang)
-                return [
-                    {
-                        name: 'line',
-                        attrs: { coordinates: [{ x: coordinate.x, y: coordinate.high }, { x: coordinate.x, y: coordinate.low }] },
-                        styles: { style: 'stroke', color: color, size: lineWidth }
-                    },
-                    {
-                        name: 'line',
-                        attrs: { coordinates: [{ x: coordinate.x, y: coordinate.close }, { x: coordinate.x + tickWidth, y: coordinate.close }] },
-                        styles: { style: 'stroke', color: color, size: lineWidth }
-                    }
-                ];
+                // Vẽ râu ngang bên phải (Chỉ giá Close)
+                const tickWidth = Math.max(3, barSpace * 0.4);
+                ctx.beginPath();
+                ctx.moveTo(coordinate.x, coordinate.close);
+                ctx.lineTo(coordinate.x + tickWidth, coordinate.close);
+                ctx.stroke();
             }
         });
-        console.log('[WaveChartEngine] Đã nạp Cọ vẽ Cấp 1 (Columns, High-Low) chuẩn v9 ✅');
+        console.log('[WaveChartEngine] Đã nạp Cọ vẽ Cấp 1 siêu gọn nhẹ ✅');
     } catch(e) { console.error("Lỗi nạp Cọ vẽ:", e); }
 },
 
