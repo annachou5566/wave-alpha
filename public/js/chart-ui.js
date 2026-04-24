@@ -1401,25 +1401,30 @@ window.closeProChart = function() {
 
     // 3. Auto-inject Nút bấm vào Toolbar
     const checkToolbar = setInterval(() => {
-        const toolbar = document.querySelector('.sc-tools-left') || document.querySelector('.sc-toolbar') || document.querySelector('.wa-topbar-container');
-        if (toolbar) {
+        const timeBtns = document.querySelectorAll('.sc-time-btn');
+        if (timeBtns.length > 0) {
             clearInterval(checkToolbar);
+            const lastTimeBtn = timeBtns[timeBtns.length - 1];
+
+            // 🚀 Xây vách ngăn VIP (order: 1 !important) để ép nó xếp ngay sau Timeframes
+            let waGroup = document.getElementById('wa-chart-tools-group');
+            if (!waGroup) {
+                waGroup = document.createElement('div');
+                waGroup.id = 'wa-chart-tools-group';
+                waGroup.style.cssText = 'display: flex; align-items: center; gap: 4px; margin-left: 8px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,0.15); order: 1 !important; flex-shrink: 0;';
+                lastTimeBtn.after(waGroup);
+            }
+
             const btnWrap = document.createElement('div');
-            // 🚀 SỬA MARGIN TỪ 8PX THÀNH 2PX ĐỂ NÚT NẰM SÁT VÀO NHAU
-            btnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; margin-left: 2px; z-index: 10;';
+            btnWrap.style.cssText = 'position: relative; display: flex; align-items: center;';
             btnWrap.innerHTML = `
-                <button id="btn-wa-chart-settings" title="Cài đặt Biểu đồ" style="background: rgba(255,255,255,0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <button id="btn-wa-chart-type" title="Chart Type">
+                    <span id="wa-ct-btn-icon" style="display:flex; align-items:center;">${CHART_TYPES[0].icon}</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
                 </button>
             `;
             
-            // 🚀 CỐT LÕI VẤN ĐỀ NẰM Ở ĐÂY: Dán thẳng cái nút này vào ngay sau đít cái nút Đổi Nến
-            const chartTypeBtnWrap = document.getElementById('btn-wa-chart-type');
-            if (chartTypeBtnWrap && chartTypeBtnWrap.parentNode) {
-                chartTypeBtnWrap.parentNode.after(btnWrap);
-            } else {
-                toolbar.appendChild(btnWrap); // Fallback an toàn
-            }
+            waGroup.appendChild(btnWrap);
             
             document.getElementById('btn-wa-chart-settings').onclick = (e) => { e.stopPropagation(); window.openChartSettings(); };
         }
@@ -1667,17 +1672,21 @@ window.closeProChart = function() {
     });
 
     const checkToolbar = setInterval(() => {
-        const toolbar = document.querySelector('.sc-tools-left') || document.querySelector('.sc-toolbar') || document.querySelector('.wa-topbar-container');
-        if (toolbar) {
+        const waGroup = document.getElementById('wa-chart-tools-group');
+        if (waGroup) {
             clearInterval(checkToolbar);
+            
             const btnWrap = document.createElement('div');
-            btnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; margin-left: 8px;';
+            btnWrap.style.cssText = 'position: relative; display: flex; align-items: center; z-index: 10; margin-left: 2px;';
             btnWrap.innerHTML = `
                 <button id="btn-wa-chart-settings" title="Cài đặt Biểu đồ" style="background: rgba(255,255,255,0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 </button>
             `;
-            toolbar.appendChild(btnWrap);
+            
+            // 🚀 Bơm thẳng vào Vách ngăn VIP
+            waGroup.appendChild(btnWrap);
+            
             document.getElementById('btn-wa-chart-settings').onclick = (e) => { e.stopPropagation(); window.openChartSettings(); };
         }
     }, 200);
