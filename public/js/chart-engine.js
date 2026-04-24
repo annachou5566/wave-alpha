@@ -21,7 +21,169 @@ window.quantStats = {
 window.bookmapHistory = [];
 window.isHeatmapOn = true; 
 
+// =========================================================================
+// 🧠 BƯỚC 1: WAVE CHART ENGINE (QUẢN LÝ TRẠNG THÁI BIỂU ĐỒ TẬP TRUNG)
+// =========================================================================
+const DEFAULT_CHART_CONFIG = {
+    // TAB 1: SYMBOL (Nến & Kiểu Biểu đồ)
+    chartType: 1,                 // 1: Candles, 2: Hollow, 3: Bars, 6: Line, 9: Area
+    upColor: '#0ECB81',           // Xanh Wave Alpha mặc định
+    downColor: '#F6465D',         // Đỏ Wave Alpha mặc định
+    showWick: true,               // Hiện râu nến
+    showBorder: true,             // Hiện viền nến
+    wickIndependent: false,       // Độc lập màu râu
+    wickUpColor: '#0ECB81',
+    wickDownColor: '#F6465D',
+    abnormalVolColoring: false,   // Tô màu Volume đột biến
+    yAxisMode: 'normal',          // 'normal', 'percentage', 'log'
 
+    // TAB 2: STATUS LINE (Trạng thái)
+    showOHLC: true,
+    showCountdown: true,
+    showLastPriceLine: true,
+    showHighLowTags: true,
+    showWatermark: true,
+    watermarkOpacity: 0.05,
+
+    // TAB 3: APPEARANCE (Giao diện)
+    bgType: 'solid',
+    bgColor: '#131722',           // Chuẩn Dark Mode TradingView
+    gridVertical: true,           
+    gridHorizontal: true,
+    gridColor: 'rgba(255,255,255,0.06)',
+    sessionBreaks: false,         // Chia phiên giao dịch
+    crosshairMode: 'normal',
+    rightMargin: 10,              // Padding nến lề phải
+    timezone: 'Asia/Ho_Chi_Minh',
+
+    // TAB 4: PRO TOOLS (Công cụ Nâng cao)
+    pacColoring: false,
+    wickDimmer: false,            // Làm mờ râu nến
+    volumeOverlay: false,
+    baselineValue: 0,
+    rangeTicks: 10,
+    renkoSize: 10
+};
+
+const LS_CONFIG_KEY = 'wave_alpha_chart_config';
+
+window.WaveChartEngine = {
+    chartInstance: null,
+    config: { ...DEFAULT_CHART_CONFIG },
+    _debounceTimer: null,
+
+    init: function (chart) {
+        this.chartInstance = chart;
+        this.loadConfig();
+        this.applyNow();
+        console.log('[WaveChartEngine] Đã khởi tạo Bộ não quản lý Chart ✅');
+    },
+
+    update: function (newProps, instant = false) {
+        this.config = { ...this.config, ...newProps };
+        this.saveConfig();
+
+        if (instant) {
+            this.applyNow();
+        } else {
+            // Debounce 50ms chống lag khi kéo thanh trượt màu/độ mờ
+            clearTimeout(this._debounceTimer);
+            this._debounceTimer = setTimeout(() => this.applyNow(), 50);
+        }
+    },
+
+    getConfig: function () { return this.config; },
+
+    saveConfig: function () { localStorage.setItem(LS_CONFIG_KEY, JSON.stringify(this.config)); },
+
+    loadConfig: function () {
+        try {
+            const saved = JSON.parse(localStorage.getItem(LS_CONFIG_KEY));
+            if (saved) this.config = { ...this.config, ...saved };
+        } catch (e) {
+            console.warn('[WaveChartEngine] Không đọc được config cũ, dùng mặc định.');
+        }
+    },
+
+    applyNow: function () {
+        // Chỉ map data xuống KLineChart nếu chart đã tồn tại
+        if (!this.chartInstance) return;
+        const c = this.config;
+
+        // 1. Ánh xạ các loại Chart Type có sẵn (Native) của KLineChart
+        let kcChartType = 'candle_solid';
+        if (c.chartType === 2) kcChartType = 'candle_stroke'; // Hollow
+        else if (c.chartType === 3) kcChartType = 'ohlc';     // Bars
+        else if (c.chartType === 6) kcChartType = 'line';     // Line
+        else if (c.chartType === 9) kcChartType = 'area';     // Area
+
+        // 2. Chuyển đổi Config thành KLineChart Styles Object
+        const styles = {
+            grid: {
+                horizontal: { show: c.gridHorizontal, color: c.gridColor, style: 'dashed' },
+                vertical:   { show: c.gridVertical, color: c.gridColor, style: 'dashed' }
+            },
+            candle: {
+                type: kcChartType,
+                bar: {
+                    upColor: c.upColor,
+                    downColor: c.downColor,
+                    noChangeColor: '#787b86',
+                    upBorderColor: c.showBorder ? c.upColor : 'transparent',
+                    downBorderColor: c.showBorder ? c.downColor : 'transparent',
+                    noChangeBorderColor: '#787b86',
+                    upWickColor: c.showWick ? (c.wickIndependent ? c.wickUpColor : (c.wickDimmer ? this._dimColor(c.upColor, 0.4) : c.upColor)) : 'transparent',
+                    downWickColor: c.showWick ? (c.wickIndependent ? c.wickDownColor : (c.wickDimmer ? this._dimColor(c.downColor, 0.4) : c.downColor)) : 'transparent',
+                },
+                priceMark: {
+                    show: c.showLastPriceLine, 
+                    high: { show: false }, // Tắt của native để dùng Overlay custom (Phase 4)
+                    low: { show: false }
+                }
+            },
+            crosshair: { show: c.crosshairMode !== 'hidden' },
+            indicator: { lastValueMark: { show: true } }
+        };
+
+        // 3. Đẩy cấu hình vào Chart
+        try {
+            this.chartInstance.setStyles(styles);
+            this.chartInstance.setOffsetRightDistance(c.rightMargin);
+            this.chartInstance.setPaneOptions({
+                id: 'candle_pane',
+                axisOptions: { type: c.yAxisMode }
+            });
+        } catch(e) {
+            console.error('[WaveChartEngine] Lỗi khi setStyles:', e);
+        }
+
+        // 4. Cập nhật nền (Background)
+        const container = document.getElementById('tv-chart-container') || document.querySelector('.klinecharts-pro');
+        if (container) {
+            if (c.bgType === 'solid') {
+                container.style.background = c.bgColor;
+            } else {
+                container.style.background = `linear-gradient(to bottom, ${c.bgColor} 0%, #000000 100%)`; 
+            }
+        }
+
+        // 5. Bắn Tín hiệu (Event) cho toàn bộ hệ thống biết Chart vừa đổi config
+        // Các module Watermark, Countdown (Bước 5) sẽ lắng nghe event này để tự vẽ lại
+        window.dispatchEvent(new CustomEvent('wa_chart_config_updated', { detail: c }));
+    },
+
+    _dimColor: function(hex, opacity) {
+        if (!hex) return 'transparent';
+        if (hex.startsWith('rgba')) return hex;
+        let r = 0, g = 0, b = 0;
+        if (hex.length === 4) {
+            r = parseInt(hex[1] + hex[1], 16); g = parseInt(hex[2] + hex[2], 16); b = parseInt(hex[3] + hex[3], 16);
+        } else if (hex.length === 7) {
+            r = parseInt(hex.substring(1, 3), 16); g = parseInt(hex.substring(3, 5), 16); b = parseInt(hex.substring(5, 7), 16);
+        }
+        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+    }
+};
 
 
 // ==========================================

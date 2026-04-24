@@ -1081,6 +1081,11 @@ if (isTimeSwitch && window.tvChart) {
             }
         });
 
+// 🚀 KÍCH HOẠT WAVE CHART ENGINE NGAY SAU KHI KLINECHART VỪA INIT XONG
+if (window.WaveChartEngine && window.tvChart) {
+    window.WaveChartEngine.init(window.tvChart);
+}
+
         // ĐĂNG KÝ CLICK ICON (Xử lý mượt cả VOL mặc định)
         window.tvChart.subscribeAction('onTooltipIconClick', function(data) {
             if (!data.indicatorName) return;
