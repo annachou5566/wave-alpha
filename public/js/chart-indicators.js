@@ -274,7 +274,7 @@
       // 19 Params: [Core 0-4], [UI/UX 5-9], [Colors 10-18]
       defaultParams: [
         120, 0, 4, 9995, 500,
-        1, 1, 1, 2, 1,
+        1, 1, 0, 2, 1,
         "#26A69A", "#EF5350",
         60, 75,
         "#FFF176", "#FF7043", "#26A69A", "#EF5350", "#FFD600"
@@ -1405,9 +1405,9 @@ kc.registerIndicator({
 // ── Preset API ──
 window.WA_COB_PRESET = function(preset, chartInstance, paneId) {
   const PRESETS = {
-    dark: [120,0,4,9995,500,1,1,1,2,1,"#26A69A","#EF5350",60,75,"#FFF176","#FF7043","#26A69A","#EF5350","#FFD600"],
-    classic: [120,0,4,9995,500,1,1,1,2,1,"#1976D2","#F44336",65,80,"#FFEB3B","#FF5722","#1976D2","#F44336","#FFC107"],
-    bookmap: [140,0,5,9990,250,1,1,1,0,2,"#00BFA5","#E53935",55,90,"#F9A825","#DD2C00","#00BFA5","#E53935","#FFEA00"],
+    dark: [120,0,4,9995,500,1,1,0,2,1,"#26A69A","#EF5350",60,75,"#FFF176","#FF7043","#26A69A","#EF5350","#FFD600"],
+    classic: [120,0,4,9995,500,1,1,0,2,1,"#1976D2","#F44336",65,80,"#FFEB3B","#FF5722","#1976D2","#F44336","#FFC107"],
+    bookmap: [140,0,5,9990,250,1,1,0,0,2,"#00BFA5","#E53935",55,90,"#F9A825","#DD2C00","#00BFA5","#E53935","#FFEA00"],
     mono: [100,0,3,9998,500,0,0,0,2,0,"#90A4AE","#78909C",50,70,"#EEEEEE","#BDBDBD","#90A4AE","#78909C","#E0E0E0"],
   };
   const params = PRESETS[preset];
@@ -4550,7 +4550,7 @@ if (isColor) {
               options.push({ val: parseInt(kv[0].trim()), text: kv[1].trim() });
           }
       });
-      if (options.length > 0) {
+      if (options.length > 1) {
           cleanLbl = lbl.replace(match[0], '').trim(); 
       }
   }
