@@ -1767,7 +1767,7 @@ window.closeProChart = function() {
 })();
 
 // =========================================================================
-// 🚀 BƯỚC 8: TỔNG QUẢN THANH CÔNG CỤ (FIX LỖI LIỆT NÚT & SAI THỨ TỰ)
+// 🚀 BƯỚC 8: TỔNG QUẢN THANH CÔNG CỤ (CHỐNG LIỆT NÚT & FIX VỊ TRÍ)
 // =========================================================================
 (function initUnifiedToolbar() {
     const checkToolbar = setInterval(() => {
@@ -1781,60 +1781,39 @@ window.closeProChart = function() {
             if (!waGroup) {
                 waGroup = document.createElement('div');
                 waGroup.id = 'wa-chart-tools-group';
-                waGroup.style.cssText = 'display: flex; align-items: center; gap: 4px; margin-left: 8px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,0.15); order: 2 !important; flex-shrink: 0; z-index: 10;';
+                // order: 2 !important để chắc chắn nằm sau Timeframe (order 1)
+                waGroup.style.cssText = 'display: flex; align-items: center; gap: 4px; margin-left: 8px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,0.15); order: 2 !important; flex-shrink: 0; z-index: 100;';
                 lastTimeBtn.after(waGroup);
             }
 
-            // 2. Tạo nút Chọn Loại Nến
+            // 2. Tạo nút Chọn Loại Nến (Nếu chưa có)
             if (!document.getElementById('btn-wa-chart-type')) {
                 const typeBtnWrap = document.createElement('div');
                 typeBtnWrap.style.cssText = 'position: relative; display: flex; align-items: center;';
                 typeBtnWrap.innerHTML = `
                     <button id="btn-wa-chart-type" class="wa-topbtn-new" title="Chọn loại biểu đồ">
-                        <span id="wa-ct-btn-icon" style="display:flex; align-items:center;">
+                        <span id="wa-ct-btn-icon" style="display:flex; align-items:center; pointer-events:none;">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4v16M15 4v16M7 8h4v8H7zM13 10h4v6h-4z"/></svg>
                         </span>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:2px;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:2px; pointer-events:none;"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </button>
                 `;
                 waGroup.appendChild(typeBtnWrap);
-                
-                const btnType = document.getElementById('btn-wa-chart-type');
-                const menuType = document.getElementById('wa-chart-type-menu');
-                if(btnType && menuType) {
-                    btnType.onclick = (e) => {
-                        e.stopPropagation();
-                        const isHidden = menuType.style.display === 'none' || menuType.style.display === '';
-                        if (isHidden) {
-                            const rect = btnType.getBoundingClientRect();
-                            menuType.style.top = (rect.bottom + 6) + 'px';
-                            menuType.style.left = rect.left + 'px';
-                            menuType.style.display = 'grid';
-                        } else {
-                            menuType.style.display = 'none';
-                        }
-                    };
-                }
             }
 
-            // 3. Tạo nút Bánh Răng Cài Đặt
+            // 3. Tạo nút Bánh Răng Cài Đặt (Nếu chưa có)
             if (!document.getElementById('btn-wa-chart-settings')) {
                 const setBtnWrap = document.createElement('div');
                 setBtnWrap.style.cssText = 'position: relative; display: flex; align-items: center;';
                 setBtnWrap.innerHTML = `
                     <button id="btn-wa-chart-settings" class="wa-topbtn-new" title="Cài đặt giao diện">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events:none;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     </button>
                 `;
                 waGroup.appendChild(setBtnWrap);
-                
-                const btnSet = document.getElementById('btn-wa-chart-settings');
-                if(btnSet) {
-                    btnSet.onclick = (e) => { e.stopPropagation(); if(window.openChartSettings) window.openChartSettings(); };
-                }
             }
 
-            // 4. CSS bổ sung để nút không bị liệt
+            // 4. CSS Fix lỗi hiển thị & Đè Z-Index
             if (!document.getElementById('wa-toolbar-fix-style')) {
                 const s = document.createElement('style');
                 s.id = 'wa-toolbar-fix-style';
@@ -1842,7 +1821,7 @@ window.closeProChart = function() {
                     .wa-topbtn-new {
                         background: rgba(255,255,255,0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); 
                         border-radius: 4px; height: 28px; padding: 0 8px; display: flex; align-items: center; 
-                        justify-content: center; cursor: pointer; transition: 0.2s; pointer-events: auto !important; z-index: 100;
+                        justify-content: center; cursor: pointer; transition: 0.2s; pointer-events: auto !important;
                     }
                     .wa-topbtn-new:hover { background: rgba(255,255,255,0.1); color: #fff; }
                 `;
@@ -1850,4 +1829,47 @@ window.closeProChart = function() {
             }
         }
     }, 500);
+
+    // 🚀 GIẢI PHÁP CHỐNG LIỆT: Lắng nghe sự kiện click trên toàn bộ Document
+    document.addEventListener('click', (e) => {
+        // A. Xử lý nút Đổi Nến
+        const btnType = e.target.closest('#btn-wa-chart-type');
+        if (btnType) {
+            e.stopPropagation();
+            const menu = document.getElementById('wa-chart-type-menu');
+            if (menu) {
+                const isHidden = menu.style.display === 'none' || menu.style.display === '';
+                if (isHidden) {
+                    const rect = btnType.getBoundingClientRect();
+                    menu.style.top = (rect.bottom + 6) + 'px';
+                    menu.style.left = rect.left + 'px';
+                    menu.style.display = 'grid';
+                    
+                    // Cập nhật Active Item
+                    const currentType = window.WaveChartEngine ? window.WaveChartEngine.config.chartType : 1;
+                    menu.querySelectorAll('.wa-ct-item').forEach(el => {
+                        if (parseInt(el.dataset.id) === currentType) el.classList.add('active');
+                        else el.classList.remove('active');
+                    });
+                } else {
+                    menu.style.display = 'none';
+                }
+            }
+            return;
+        }
+
+        // B. Xử lý nút Cài Đặt (Bánh răng)
+        const btnSet = e.target.closest('#btn-wa-chart-settings');
+        if (btnSet) {
+            e.stopPropagation();
+            if (typeof window.openChartSettings === 'function') window.openChartSettings();
+            return;
+        }
+
+        // C. Click ra ngoài thì đóng menu nến
+        const menu = document.getElementById('wa-chart-type-menu');
+        if (menu && !menu.contains(e.target)) {
+            menu.style.display = 'none';
+        }
+    });
 })();
