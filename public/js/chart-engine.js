@@ -22,7 +22,7 @@ window.bookmapHistory = [];
 window.isHeatmapOn = true; 
 
 // =========================================================================
-// 🧠 BƯỚC 1: WAVE CHART ENGINE (CHUẨN KLINECHART V9 - DÙNG INDICATOR OVERRIDE)
+// 🧠 BƯỚC 1: WAVE CHART ENGINE (FIX TẬN GỐC V9: INDICATOR VÀ BARSPACE)
 // =========================================================================
 const DEFAULT_CHART_CONFIG = {
     chartType: 1, upColor: '#0ECB81', downColor: '#F6465D',
@@ -59,13 +59,14 @@ window.WaveChartEngine = {
                 shortName: ' ', // Giấu tên trên góc trái màn hình
                 series: 'price',
                 calc: (dataList) => dataList,
-                draw: ({ ctx, kLineDataList, visibleRange, bounding, barSpace, xAxis, yAxis }) => {
+                draw: ({ ctx, indicator, visibleRange, bounding, barSpace, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
                     const bottomY = bounding.height;
+                    const dataList = indicator.result; // 🚀 VÁ LỖI 1: Lấy data từ indicator.result
 
                     for (let i = from; i < to; i++) {
-                        const kd = kLineDataList[i];
+                        const kd = dataList[i];
                         if (!kd) continue;
 
                         const isUp = kd.close >= kd.open;
@@ -73,11 +74,13 @@ window.WaveChartEngine = {
 
                         const x = xAxis.convertToPixel(i);
                         const closeY = yAxis.convertToPixel(kd.close);
+                        
+                        // 🚀 VÁ LỖI 2: barSpace trong V9 là Object, phải gọi barSpace.gapBar
                         const colWidth = Math.max(1, barSpace.gapBar * 0.6);
 
                         ctx.fillRect(x - colWidth / 2, closeY, colWidth, bottomY - closeY);
                     }
-                    return true; // 🚀 TRUE: Lệnh cho KLineChart dừng vẽ nến mặc định
+                    return true; // Lệnh cho KLineChart dừng vẽ nến mặc định
                 }
             });
 
@@ -87,15 +90,18 @@ window.WaveChartEngine = {
                 shortName: ' ',
                 series: 'price',
                 calc: (dataList) => dataList,
-                draw: ({ ctx, kLineDataList, visibleRange, barSpace, xAxis, yAxis }) => {
+                draw: ({ ctx, indicator, visibleRange, barSpace, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
+                    const dataList = indicator.result;
+
+                    // 🚀 VÁ LỖI 2: Phải gọi barSpace.gapBar
                     const tickLen = Math.max(3, barSpace.gapBar * 0.3);
                     ctx.lineWidth = Math.max(1.5, barSpace.gapBar * 0.15);
                     ctx.lineCap = 'round';
 
                     for (let i = from; i < to; i++) {
-                        const kd = kLineDataList[i];
+                        const kd = dataList[i];
                         if (!kd) continue;
 
                         ctx.strokeStyle = kd.close >= kd.open ? c.upColor : c.downColor;
@@ -113,7 +119,7 @@ window.WaveChartEngine = {
                         ctx.lineTo(x + tickLen, yAxis.convertToPixel(kd.close));
                         ctx.stroke();
                     }
-                    return true; // 🚀 TRUE: Lệnh cho KLineChart dừng vẽ nến mặc định
+                    return true; // Lệnh cho KLineChart dừng vẽ nến mặc định
                 }
             });
             console.log('[WaveChartEngine] Đã nạp Custom Chart Indicators (Columns, High-Low) ✅');
@@ -136,20 +142,23 @@ window.WaveChartEngine = {
 
         let kcChartType = 'candle_solid'; 
         let isLine = false; 
+        let hideCandle = false;
 
         if (c.chartType === 2) kcChartType = 'candle_stroke';
         else if (c.chartType === 3) kcChartType = 'ohlc';     
         else if (c.chartType === 6 || c.chartType === 7 || c.chartType === 8) { kcChartType = 'area'; isLine = true; } 
         else if (c.chartType === 9 || c.chartType === 10 || c.chartType === 11) { kcChartType = 'area'; isLine = false; } 
 
-        // 🚀 ROUTER KÍCH HOẠT CUSTOM INDICATOR
+        // 🚀 ROUTER KÍCH HOẠT CUSTOM INDICATOR VÀ BẬT CHẾ ĐỘ TÀNG HÌNH NẾN GỐC
         if (c.chartType === 4) { // CỘT
-            this.chartInstance.removeIndicator('candle_pane', 'WAVE_HIGH_LOW'); // Xóa Đỉnh Đáy nếu có
+            this.chartInstance.removeIndicator('candle_pane', 'WAVE_HIGH_LOW');
             this.chartInstance.createIndicator('WAVE_COLUMNS', false, { id: 'candle_pane' });
+            hideCandle = true;
         } 
         else if (c.chartType === 5) { // ĐỈNH - ĐÁY
-            this.chartInstance.removeIndicator('candle_pane', 'WAVE_COLUMNS'); // Xóa Cột nếu có
+            this.chartInstance.removeIndicator('candle_pane', 'WAVE_COLUMNS');
             this.chartInstance.createIndicator('WAVE_HIGH_LOW', false, { id: 'candle_pane' });
+            hideCandle = true;
         } 
         else { // NẾN BÌNH THƯỜNG
             this.chartInstance.removeIndicator('candle_pane', 'WAVE_COLUMNS');
@@ -157,10 +166,16 @@ window.WaveChartEngine = {
         }
 
         const isHollow = (c.chartType === 2);
-        const finalUpBorder = c.showBorder ? (c.borderIndependent ? c.borderUpColor : c.upColor) : (isHollow ? c.upColor : 'transparent');
-        const finalDownBorder = c.showBorder ? (c.borderIndependent ? c.borderDownColor : c.downColor) : (isHollow ? c.downColor : 'transparent');
-        const finalUpWick = c.showWick ? (c.wickIndependent ? c.wickUpColor : c.upColor) : 'transparent';
-        const finalDownWick = c.showWick ? (c.wickIndependent ? c.wickDownColor : c.downColor) : 'transparent';
+        
+        // BẢO HIỂM 2 LỚP: Vừa return true ở Indicator, vừa làm nến gốc trong suốt nếu Indicator sập
+        const finalUpColor = hideCandle ? 'transparent' : c.upColor;
+        const finalDownColor = hideCandle ? 'transparent' : c.downColor;
+        const finalNoChange = hideCandle ? 'transparent' : '#787b86';
+
+        const finalUpBorder = hideCandle ? 'transparent' : (c.showBorder ? (c.borderIndependent ? c.borderUpColor : c.upColor) : (isHollow ? c.upColor : 'transparent'));
+        const finalDownBorder = hideCandle ? 'transparent' : (c.showBorder ? (c.borderIndependent ? c.borderDownColor : c.downColor) : (isHollow ? c.downColor : 'transparent'));
+        const finalUpWick = hideCandle ? 'transparent' : (c.showWick ? (c.wickIndependent ? c.wickUpColor : c.upColor) : 'transparent');
+        const finalDownWick = hideCandle ? 'transparent' : (c.showWick ? (c.wickIndependent ? c.wickDownColor : c.downColor) : 'transparent');
 
         const styles = {
             grid: { horizontal: { show: c.gridHorizontal, color: c.gridColor, style: 'dashed' }, vertical: { show: c.gridVertical, color: c.gridColor, style: 'dashed' } },
@@ -168,13 +183,13 @@ window.WaveChartEngine = {
                 type: kcChartType,
                 tooltip: { showRule: c.showOHLC ? 'always' : 'none' },
                 bar: {
-                    upColor: c.upColor, downColor: c.downColor, noChangeColor: '#787b86',
+                    upColor: finalUpColor, downColor: finalDownColor, noChangeColor: finalNoChange,
                     upBorderColor: finalUpBorder, downBorderColor: finalDownBorder,
                     upWickColor: finalUpWick, downWickColor: finalDownWick,
                 },
                 area: { 
-                    lineSize: 2, lineColor: c.upColor, 
-                    backgroundColor: isLine ? 'transparent' : [{ offset: 0, color: this._dimColor(c.upColor, 0.25) }, { offset: 1, color: 'transparent' }] 
+                    lineSize: 2, lineColor: hideCandle ? 'transparent' : c.upColor, 
+                    backgroundColor: (isLine || hideCandle) ? 'transparent' : [{ offset: 0, color: this._dimColor(c.upColor, 0.25) }, { offset: 1, color: 'transparent' }] 
                 },
                 priceMark: { show: c.showLastPriceLine, high: { show: false }, low: { show: false } }
             },
