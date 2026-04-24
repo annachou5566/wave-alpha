@@ -22,7 +22,7 @@ window.bookmapHistory = [];
 window.isHeatmapOn = true; 
 
 // =========================================================================
-// 🧠 BƯỚC 1 + 7: WAVE CHART ENGINE & CUSTOM FIGURES (MỞ KHÓA CẤP 1)
+// 🧠 BƯỚC 1 + 6: WAVE CORE ENGINE (HỢP NHẤT CHART & DATA BẰNG MONKEY PATCH)
 // =========================================================================
 const DEFAULT_CHART_CONFIG = {
     chartType: 1, upColor: '#0ECB81', downColor: '#F6465D',
@@ -38,68 +38,156 @@ const DEFAULT_CHART_CONFIG = {
 
 const LS_CONFIG_KEY = 'wave_alpha_chart_config';
 
+// Tương thích ngược với các Hook thủ công ở bản trước (Bảo vệ an toàn chống lỗi)
+window.safeUpdateChartData = function(candle) { if(window.tvChart) window.tvChart.updateData(candle); };
+
+// 🧮 1. ĐỘNG CƠ DỮ LIỆU (DATA ENGINE)
+window.WaveDataEngine = {
+    rawHistory: [], lastChartType: 1,
+
+    processHistory: function(rawData) {
+        if (!rawData || !rawData.length) return [];
+        if (rawData._isCooked) return rawData; // 🛡️ Chống nấu 2 lần nếu user quên xóa hook cũ
+
+        const config = window.WaveChartEngine ? window.WaveChartEngine.getConfig() : null;
+        if (!config) return rawData;
+        this.lastChartType = config.chartType;
+
+        let cooked = rawData;
+        // Nếu là Heikin Ashi (ID 12)
+        if (config.chartType === 12) cooked = this._toHeikinAshi(rawData);
+        
+        Object.defineProperty(cooked, '_isCooked', { value: true, enumerable: false });
+        return cooked;
+    },
+
+    processTick: function(rawTick, chartData) {
+        if (rawTick._isCooked) return rawTick;
+        const config = window.WaveChartEngine ? window.WaveChartEngine.getConfig() : null;
+        if (!config || !chartData || chartData.length === 0) return rawTick;
+        
+        let cooked = rawTick;
+        // Nếu là Heikin Ashi (ID 12)
+        if (config.chartType === 12) cooked = this._updateHeikinAshiTick(rawTick, chartData);
+        
+        Object.defineProperty(cooked, '_isCooked', { value: true, enumerable: false });
+        return cooked;
+    },
+
+    updateRawTick: function(rawTick) {
+        if (this.rawHistory.length === 0) return;
+        let lastRaw = this.rawHistory[this.rawHistory.length - 1];
+        if (rawTick.timestamp === lastRaw.timestamp) {
+            this.rawHistory[this.rawHistory.length - 1] = { ...rawTick };
+        } else if (rawTick.timestamp > lastRaw.timestamp) {
+            this.rawHistory.push({ ...rawTick });
+            if (this.rawHistory.length > 5000) this.rawHistory.shift();
+        }
+    },
+
+    reapplyData: function() {
+        if (window.tvChart && this.rawHistory.length > 0) {
+            window._waTargetCandle = null; window._waCurrentCandle = null;
+            let cookedData = this.processHistory(this.rawHistory);
+            if (window.tvChart._originalApplyNewData) window.tvChart._originalApplyNewData(cookedData);
+            else window.tvChart.applyNewData(cookedData);
+        }
+    },
+
+    _toHeikinAshi: function(data) {
+        let haData = [];
+        for (let i = 0; i < data.length; i++) {
+            let curr = data[i]; let ha = { ...curr };
+            ha.close = (curr.open + curr.high + curr.low + curr.close) / 4;
+            if (i === 0) {
+                ha.open = (curr.open + curr.close) / 2; ha.high = curr.high; ha.low = curr.low;
+            } else {
+                let prevHA = haData[i - 1];
+                ha.open = (prevHA.open + prevHA.close) / 2;
+                ha.high = Math.max(curr.high, ha.open, ha.close);
+                ha.low = Math.min(curr.low, ha.open, ha.close);
+            }
+            haData.push(ha);
+        }
+        return haData;
+    },
+
+    _updateHeikinAshiTick: function(curr, chartData) {
+        let lastRendered = chartData[chartData.length - 1]; let prevHA;
+        if (curr.timestamp === lastRendered.timestamp) {
+            prevHA = chartData.length > 1 ? chartData[chartData.length - 2] : lastRendered;
+        } else { prevHA = lastRendered; }
+        let ha = { ...curr };
+        ha.close = (curr.open + curr.high + curr.low + curr.close) / 4;
+        ha.open = (prevHA.open + prevHA.close) / 2;
+        ha.high = Math.max(curr.high, ha.open, ha.close);
+        ha.low = Math.min(curr.low, ha.open, ha.close);
+        return ha;
+    }
+};
+
+// 🎨 2. ĐỘNG CƠ ĐỒ HỌA (CHART ENGINE)
 window.WaveChartEngine = {
     chartInstance: null, config: { ...DEFAULT_CHART_CONFIG }, _debounceTimer: null,
 
     init: function (chart) {
         this.chartInstance = chart; 
-        this._registerCustomFigures(); // 🚀 Bơm Cọ vẽ Cấp 1 vào lõi KLineChart
-        this.loadConfig(); 
-        this.applyNow();
+        this._registerCustomFigures(); 
+        
+        // 🚀 MONKEY PATCHING: Chiếm quyền Lõi KLineChart để tự động bắt data
+        if (!chart._originalApplyNewData) {
+            chart._originalApplyNewData = chart.applyNewData.bind(chart);
+            chart.applyNewData = (dataList, more, callback) => {
+                if (dataList._isCooked) { chart._originalApplyNewData(dataList, more, callback); return; }
+                window.WaveDataEngine.rawHistory = JSON.parse(JSON.stringify(dataList));
+                let cookedData = window.WaveDataEngine.processHistory(dataList);
+                chart._originalApplyNewData(cookedData, more, callback);
+            };
+        }
+        if (!chart._originalUpdateData) {
+            chart._originalUpdateData = chart.updateData.bind(chart);
+            chart.updateData = (data, callback) => {
+                if (data._isCooked) { chart._originalUpdateData(data, callback); return; }
+                window.WaveDataEngine.updateRawTick(data);
+                let cookedCandle = window.WaveDataEngine.processTick(data, chart.getDataList());
+                chart._originalUpdateData(cookedCandle, callback);
+            };
+        }
+
+        this.loadConfig(); this.applyNow();
         window.__wa_onChartReady = () => this.applyNow();
     },
 
-    // 🚀 CHẾ TẠO CỌ VẼ CUSTOM CHO BIỂU ĐỒ CỘT & ĐỈNH-ĐÁY (FIX API 'draw' CỦA V9)
     _registerCustomFigures: function() {
         if (!window.klinecharts || !window.klinecharts.registerFigure) return;
         try {
-            // Cọ vẽ số 1: Cột (Columns)
             window.klinecharts.registerFigure({
                 name: 'wave_columns',
                 draw: ({ ctx, coordinate, bounding, barSpace, data }) => {
-                    const c = this.config;
-                    const isUp = data.close >= data.open; 
+                    const c = this.config; const isUp = data.close >= data.open; 
                     ctx.fillStyle = isUp ? c.upColor : c.downColor;
-                    const width = Math.max(1, barSpace * 0.6); // Độ mập của cột
-                    const x = coordinate.x - width / 2;
-                    const y = coordinate.close;
-                    const h = Math.max(1, bounding.height - y); // Kéo dài xuống tận đáy màn hình
+                    const width = Math.max(1, barSpace * 0.6); 
+                    const x = coordinate.x - width / 2; const y = coordinate.close;
+                    const h = Math.max(1, bounding.height - y); 
                     ctx.fillRect(x, y, width, h);
                 }
             });
-
-            // Cọ vẽ số 2: Đỉnh - Đáy (High - Low)
             window.klinecharts.registerFigure({
                 name: 'wave_high_low',
                 draw: ({ ctx, coordinate, barSpace, data }) => {
-                    const c = this.config;
-                    const isUp = data.close >= data.open;
-                    ctx.lineWidth = Math.max(1.5, barSpace * 0.15);
-                    ctx.lineCap = 'round';
-                    ctx.strokeStyle = isUp ? c.upColor : c.downColor;
-                    
-                    // Vẽ gạch dọc nối Đỉnh và Đáy
-                    ctx.beginPath();
-                    ctx.moveTo(coordinate.x, coordinate.high);
-                    ctx.lineTo(coordinate.x, coordinate.low);
-                    ctx.stroke();
-
-                    // Vẽ râu ngang nhỏ chỉ giá Close
+                    const c = this.config; const isUp = data.close >= data.open;
+                    ctx.lineWidth = Math.max(1.5, barSpace * 0.15); ctx.lineCap = 'round'; ctx.strokeStyle = isUp ? c.upColor : c.downColor;
+                    ctx.beginPath(); ctx.moveTo(coordinate.x, coordinate.high); ctx.lineTo(coordinate.x, coordinate.low); ctx.stroke();
                     const tickWidth = Math.max(3, barSpace * 0.4);
-                    ctx.beginPath();
-                    ctx.moveTo(coordinate.x, coordinate.close);
-                    ctx.lineTo(coordinate.x + tickWidth, coordinate.close);
-                    ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(coordinate.x, coordinate.close); ctx.lineTo(coordinate.x + tickWidth, coordinate.close); ctx.stroke();
                 }
             });
-            console.log('[WaveChartEngine] Đã nạp Cọ vẽ Cấp 1 (Columns, High-Low) ✅');
-        } catch(e) { console.error("Lỗi nạp Cọ vẽ:", e); }
+        } catch(e) {}
     },
 
     update: function (newProps, instant = false) {
         this.config = { ...this.config, ...newProps }; this.saveConfig();
-        if (instant) this.applyNow();
-        else { clearTimeout(this._debounceTimer); this._debounceTimer = setTimeout(() => this.applyNow(), 50); }
+        if (instant) this.applyNow(); else { clearTimeout(this._debounceTimer); this._debounceTimer = setTimeout(() => this.applyNow(), 50); }
     },
 
     getConfig: function () { return this.config; },
@@ -109,16 +197,14 @@ window.WaveChartEngine = {
     applyNow: function () {
         if (!this.chartInstance) return;
         const c = this.config;
-
         let kcChartType = 'candle_solid'; let isLine = false;
         
-        // 🚀 BỘ CHIA ĐƯỜNG (ROUTER) ÁNH XẠ BIỂU ĐỒ CẤP 1
         if (c.chartType === 2) kcChartType = 'candle_stroke';
         else if (c.chartType === 3) kcChartType = 'ohlc';     
-        else if (c.chartType === 4) kcChartType = 'wave_columns';  // Trỏ vào cọ vẽ Columns
-        else if (c.chartType === 5) kcChartType = 'wave_high_low'; // Trỏ vào cọ vẽ High-Low
-        else if (c.chartType === 6 || c.chartType === 7 || c.chartType === 8) { kcChartType = 'area'; isLine = true; } // Tạm mượn Đường Line
-        else if (c.chartType === 9 || c.chartType === 10 || c.chartType === 11) { kcChartType = 'area'; isLine = false; } // Tạm mượn Vùng Area
+        else if (c.chartType === 4) kcChartType = 'wave_columns';  
+        else if (c.chartType === 5) kcChartType = 'wave_high_low'; 
+        else if (c.chartType === 6 || c.chartType === 7 || c.chartType === 8) { kcChartType = 'area'; isLine = true; } 
+        else if (c.chartType === 9 || c.chartType === 10 || c.chartType === 11) { kcChartType = 'area'; isLine = false; } 
 
         const isHollow = (c.chartType === 2);
         const finalUpBorder = c.showBorder ? (c.borderIndependent ? c.borderUpColor : c.upColor) : (isHollow ? c.upColor : 'transparent');
@@ -131,11 +217,7 @@ window.WaveChartEngine = {
             candle: {
                 type: kcChartType,
                 tooltip: { showRule: c.showOHLC ? 'always' : 'none' },
-                bar: {
-                    upColor: c.upColor, downColor: c.downColor, noChangeColor: '#787b86',
-                    upBorderColor: finalUpBorder, downBorderColor: finalDownBorder,
-                    upWickColor: finalUpWick, downWickColor: finalDownWick,
-                },
+                bar: { upColor: c.upColor, downColor: c.downColor, noChangeColor: '#787b86', upBorderColor: finalUpBorder, downBorderColor: finalDownBorder, upWickColor: finalUpWick, downWickColor: finalDownWick },
                 area: { lineSize: 2, lineColor: c.upColor, backgroundColor: isLine ? 'transparent' : [{ offset: 0, color: this._dimColor(c.upColor, 0.25) }, { offset: 1, color: 'transparent' }] },
                 priceMark: { show: c.showLastPriceLine, high: { show: false }, low: { show: false } }
             },
@@ -161,6 +243,15 @@ window.WaveChartEngine = {
         return `rgba(${r}, ${g}, ${b}, ${opacity})`;
     }
 };
+
+// 🎯 TRẠM LẮNG NGHE: ÉP CHART VẼ LẠI KHI USER CLICK MENU ĐỔI NẾN
+window.addEventListener('wa_chart_config_updated', (e) => {
+    const c = e.detail;
+    if (window.WaveDataEngine && c.chartType !== window.WaveDataEngine.lastChartType) {
+        window.WaveDataEngine.lastChartType = c.chartType;
+        window.WaveDataEngine.reapplyData();
+    }
+});
 
 
 // ==========================================
