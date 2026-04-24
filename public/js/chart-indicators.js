@@ -3779,7 +3779,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
             toggleBtn.style.cssText = `
                 position: absolute;
                 top: 12px; 
-                left: 12px;
+                right: 70px;
                 z-index: 999;
                 width: 24px;
                 height: 24px;
