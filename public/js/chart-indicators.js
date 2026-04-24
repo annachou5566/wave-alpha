@@ -3759,7 +3759,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
           } 
       } 
       // =========================================================================
-      // NÚT TAM GIÁC ẨN/HIỆN TEXT CHỈ BÁO (AUTO-TRACKING DYNAMIC Y-AXIS)
+      // NÚT TAM GIÁC ẨN/HIỆN TEXT CHỈ BÁO (AUTO-TRACKING DYNAMIC Y-AXIS - V4 FIX)
       // =========================================================================
       setTimeout(() => {
         const chartDom = document.getElementById('sc-chart-container') || 
@@ -3771,7 +3771,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 chartDom.style.position = 'relative';
             }
 
-            // Khôi phục lại lề chuẩn của Tooltip (Bỏ cái thụt lề 28px của bản trước đi)
+            // Khôi phục lề chuẩn của KLineCharts
             if (window.tvChart) {
                 window.tvChart.setStyles({
                     indicator: { tooltip: { text: { marginLeft: 8 } } }
@@ -3781,11 +3781,12 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
             const toggleBtn = document.createElement('div');
             toggleBtn.id = 'wa-legend-toggle';
             toggleBtn.title = "Thu gọn/Mở rộng danh sách chỉ báo";
+            toggleBtn.dataset.hidden = "false"; // Khởi tạo trạng thái
             
             toggleBtn.style.cssText = `
                 position: absolute;
                 left: 12px;
-                top: 36px; /* Vị trí khởi điểm */
+                top: 32px; 
                 z-index: 999;
                 width: 20px;
                 height: 20px;
@@ -3798,13 +3799,13 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 cursor: pointer;
                 border-radius: 4px;
                 backdrop-filter: blur(4px);
-                transition: top 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.2s, transform 0.2s; /* Hiệu ứng trượt mượt mà */
+                transition: top 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.2s, transform 0.2s;
             `;
             
-            // Icon Chevron Mũi tên
             toggleBtn.innerHTML = `
                 <svg id="wa-legend-icon" style="transition: transform 0.3s ease;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="18 15 12 9 6 15"></polyline> </svg>
+                    <polyline points="18 15 12 9 6 15"></polyline>
+                </svg>
             `;
 
             toggleBtn.onmouseover = () => { toggleBtn.style.background = 'rgba(255,255,255,0.1)'; toggleBtn.style.color = '#fff'; };
@@ -3814,9 +3815,8 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
             toggleBtn.onclick = (e) => {
                 e.stopPropagation();
                 isLegendVisible = !isLegendVisible;
-                toggleBtn.dataset.hidden = !isLegendVisible;
+                toggleBtn.dataset.hidden = (!isLegendVisible).toString(); // Cập nhật state cho Engine
                 
-                // Xoay icon: Mở = chĩa lên, Đóng = chĩa xuống (xoay 180 độ)
                 document.getElementById('wa-legend-icon').style.transform = isLegendVisible ? 'rotate(0deg)' : 'rotate(180deg)';
                 
                 if (window.tvChart) {
@@ -3828,33 +3828,41 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
 
             chartDom.appendChild(toggleBtn);
 
-            // 🚀 AUTO-TRACKING ENGINE: Tự động đo chiều cao và bám theo số lượng chỉ báo
+            // 🚀 AUTO-TRACKING ENGINE: Đã Fix lỗi đếm Map của KLineCharts
+            let lastState = null; 
+            
             setInterval(() => {
                 if (!window.tvChart || !document.getElementById('wa-legend-toggle')) return;
                 
                 let count = 0;
                 try {
-                    // Bắt thẳng vào core KLineCharts để đếm số lượng chỉ báo trên nến
+                    // Sửa lỗi: Nhận diện cấu trúc dữ liệu Map()
                     const inds = window.tvChart.getIndicatorByPaneId('candle_pane');
-                    if (inds) count = Math.max(0, Object.keys(inds).length);
-                } catch(e) {
-                    // Fallback lấy từ mảng của chúng ta
-                    count = global.scActiveIndicators ? global.scActiveIndicators.filter(i => i.isStack).length : 0;
+                    if (inds) {
+                        if (inds instanceof Map) count = inds.size;
+                        else count = Object.keys(inds).length;
+                    }
+                } catch(e) {}
+
+                // Fallback an toàn lấy từ mảng hệ thống nếu API thất bại
+                if (count === 0 && global.scActiveIndicators) {
+                    count = global.scActiveIndicators.filter(i => i.isStack).length;
                 }
 
                 const isHidden = toggleBtn.dataset.hidden === 'true';
+                const currentState = count + "_" + isHidden;
                 
-                // Tính toán Tọa độ Y:
-                // - Khoảng cách từ nóc chart xuống dưới dòng OHLC mặc định: ~32px
-                // - Mỗi dòng chỉ báo cao thêm: ~20px
-                const baseTop = 32; 
-                const lineHeight = 20; 
-                
-                // Nếu bị ẩn -> trượt thẳng lên baseTop. Nếu hiện -> trượt xuống lót đáy
-                const targetTop = isHidden ? baseTop : baseTop + (count * lineHeight);
-                toggleBtn.style.top = targetTop + 'px';
-
-            }, 400); // Quét liên tục 0.4s/lần, logic cực nhẹ không ăn FPS
+                // Chỉ thay đổi CSS khi người dùng thực sự thêm/xóa chỉ báo (Zero-lag)
+                if (lastState !== currentState) {
+                    const baseTop = 32; // Vị trí nằm ngay dưới dòng OHLC
+                    const lineHeight = 20; // Chiều cao mỗi dòng chỉ báo (20px)
+                    
+                    const targetTop = isHidden ? baseTop : baseTop + (count * lineHeight);
+                    toggleBtn.style.top = targetTop + 'px';
+                    
+                    lastState = currentState; 
+                }
+            }, 400); 
         }
     }, 800);
     };
