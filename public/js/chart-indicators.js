@@ -3833,7 +3833,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
       const timeBtns = document.querySelectorAll('.sc-time-btn');
       if (timeBtns.length > 0) {
           
-          // 1. STYLE TỐI GIẢN & CSS TOOLTIP MƯỢT MÀ
+          // 1. STYLE TỐI GIẢN & CSS TOOLTIP MƯỢT MÀ (TÍCH HỢP FLEX ORDER SẮP XẾP TỰ ĐỘNG)
           if (!document.getElementById('wa-topbar-minimal-style')) {
               const style = document.createElement('style');
               style.id = 'wa-topbar-minimal-style';
@@ -3844,7 +3844,18 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                       align-items: center; gap: 2px; padding-right: 10px;
                   }
                   .wa-topbar-container::-webkit-scrollbar { display: none !important; }
-                  .sc-time-btn { padding: 6px 10px !important; margin: 0 !important; min-width: unset !important; flex-shrink: 0; }
+                  
+                  /* 🚀 SẮP XẾP LAYOUT CHUẨN XÁC BẰNG FLEX ORDER MÀ KHÔNG CẦN CHẠY JS LOOP */
+                  .sc-time-btn { padding: 6px 10px !important; margin: 0 !important; min-width: unset !important; flex-shrink: 0; order: 1 !important; }
+                  
+                  /* Nút Đổi Nến (từ file chart-ui sinh ra) tự động mang order 2 */
+                  .wa-topbar-container > div { order: 2; } 
+                  
+                  /* Nút Cài Đặt Nến (sát bên Nút Đổi Nến) */
+                  #wa-chart-cfg-wrap { order: 3 !important; margin-left: 2px; }
+                  
+                  /* Nhóm Nút Phải (Indicator, Fullscreen) bị đẩy dạt sang phải */
+                  #wa-toolbar-right { order: 4 !important; margin-left: auto; }
                   
                   /* Style Nút Toolbar & Tooltip chuyên nghiệp */
                   .wa-topbtn {
@@ -3882,23 +3893,27 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
               chartCfg: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`
           };
 
-          // 4. KHUNG CHỨA NÚT MỚI (LƯU Ý: Thêm data-tip thay vì title)
+          // 4A. KHUNG CHỨA NÚT CÀI ĐẶT NẾN (ORDER: 3)
+          const cfgWrap = document.createElement('div');
+          cfgWrap.id = 'wa-chart-cfg-wrap';
+          cfgWrap.style.cssText = 'display:flex; align-items:center; flex-shrink:0;';
+          cfgWrap.innerHTML = `<button id="btn-wa-chart-cfg" class="wa-topbtn" data-tip="Cài đặt biểu đồ">${TOP_ICONS.chartCfg}</button>`;
+          container.appendChild(cfgWrap);
+
+          // 4B. KHUNG CHỨA NÚT BÊN PHẢI (ORDER: 4 - ĐẨY DẠT RA PHÍA SAU)
           const tbWrap = document.createElement('div');
+          tbWrap.id = 'wa-toolbar-right';
           tbWrap.style.cssText = 'display:flex; align-items:center; gap:2px; flex-shrink:0;';
           tbWrap.innerHTML = `
               <div style="width:1px; height:18px; background:rgba(255,255,255,0.08); margin:0 6px;"></div>
-
               <button id="btn-fx-indicator" class="wa-topbtn" data-tip="Thêm chỉ báo mới">${TOP_ICONS.addInd}</button>
               <button id="btn-wa-manage-ind" class="wa-topbtn" data-tip="Cài đặt & Quản lý chỉ báo">${TOP_ICONS.manageInd}</button>
-
               <div style="width:1px; height:18px; background:rgba(255,255,255,0.08); margin:0 6px;"></div>
-
-              <button id="btn-wa-chart-cfg" class="wa-topbtn" data-tip="Cài đặt biểu đồ">${TOP_ICONS.chartCfg}</button>
               <button id="btn-wa-fs" class="wa-topbtn" data-tip="Toàn màn hình">${TOP_ICONS.fullscreen}</button>
           `;
           container.appendChild(tbWrap);
 
-          // 🚀 BƯỚC QUAN TRỌNG: TẠO MENU CHART SETTINGS NGAY TRÊN BODY (CHỐNG BỊ CLIPPED DO OVERFLOW-X AUTO)
+          // 5. PHỤC HỒI BẢNG CÀI ĐẶT NẾN (GIAO DIỆN NẾN) VÀ ĐẨY RA BODY
           let menuCfg = document.getElementById('wa-chart-cfg-menu');
           if (!menuCfg) {
               menuCfg = document.createElement('div');
@@ -3946,31 +3961,26 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
 
                   <button onclick="window.waCsSetTheme('#2af592','#2af592','#cb55e3','#cb55e3','#0f1a1c', true)" style="width:100%; background:transparent; border:1px dashed #848e9c; color:#848e9c; border-radius:6px; padding:8px; font-size:11px; font-weight:700; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.color='#fff'" onmouseout="this.style.background='transparent'; this.style.color='#848e9c'">↩ KHÔI PHỤC MẶC ĐỊNH</button>
               `;
-              document.body.appendChild(menuCfg); // Đẩy ra ngoài Body để không bị cắt xén
+              document.body.appendChild(menuCfg);
           }
 
-          // 5. GẮN SỰ KIỆN CHO CÁC NÚT
-          
-          // Mở Thư viện Chỉ báo
+          // 6. GẮN SỰ KIỆN CHO CÁC NÚT
           document.getElementById('btn-fx-indicator').addEventListener('click', function (e) {
               e.stopPropagation();
               if (typeof global.openIndicatorModal === 'function') global.openIndicatorModal();
           });
 
-          // Mở Quản lý (Bảng Settings 2 cột)
           document.getElementById('btn-wa-manage-ind').addEventListener('click', function (e) {
               e.stopPropagation();
               if (typeof global.openIndicatorSettings === 'function') global.openIndicatorSettings();
           });
 
-          // Fullscreen
           document.getElementById('btn-wa-fs').addEventListener('click', function () {
               const el = document.getElementById('tv-chart-container') || document.documentElement;
               if (!document.fullscreenElement) el.requestFullscreen && el.requestFullscreen();
               else document.exitFullscreen && document.exitFullscreen();
           });
 
-          // Xử lý mở/đóng menu Cài đặt Chart
           const btnCfg = document.getElementById('btn-wa-chart-cfg');
           if (btnCfg && menuCfg) {
               btnCfg.addEventListener('click', function(e) {
@@ -3979,14 +3989,14 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                   if (isHidden) {
                       const rect = btnCfg.getBoundingClientRect();
                       menuCfg.style.top = (rect.bottom + 8) + 'px';
-                      menuCfg.style.left = Math.max(10, rect.left - 240) + 'px'; // Canh phải nút
+                      menuCfg.style.left = Math.max(10, rect.left - 240) + 'px'; // Canh phải
                   }
                   menuCfg.style.display = isHidden ? 'block' : 'none';
               });
               menuCfg.addEventListener('click', function(e) { e.stopPropagation(); });
               document.addEventListener('click', function() { menuCfg.style.display = 'none'; });
 
-              // Load setting cũ 
+              // Load setting cũ
               const saved = JSON.parse(localStorage.getItem('wa_chart_settings') || '{}');
               const ub = saved.colUp || '#2af592'; const ubd = saved.colUpBd || ub;
               document.getElementById('wa-hex-up').value = ub;
@@ -4055,28 +4065,23 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
               const chartContainer = document.getElementById('sc-chart-container');
               if (chartContainer) chartContainer.style.background = bg;
               
-              const getVolColor = (hex, fallbackHex) => {
-                  let target = (hex === 'transparent' || hex === 'rgba(0,0,0,0)') ? fallbackHex : hex;
-                  if (!target.startsWith('#')) return target;
-                  let r = parseInt(target.slice(1, 3), 16), g = parseInt(target.slice(3, 5), 16), b = parseInt(target.slice(5, 7), 16);
-                  return `rgba(${r}, ${g}, ${b}, 0.7)`;
-              };
-              
-              if (window.tvChart) {
-                  const cType = (ub === 'transparent' || ub === 'rgba(0,0,0,0)') ? 'candle_up_stroke' : 'candle_solid';
-                  window.tvChart.setStyles({
-                      grid: { horizontal: { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' }, vertical: { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' } },
-                      candle: { type: window.currentChartInterval === 'tick' ? 'area' : cType, bar: { upColor: ub, downColor: db, noChangeColor: '#848e9c', upBorderColor: ubd, downBorderColor: dbd, upWickColor: ubd, downWickColor: dbd } }
-                  });
-                  window.tvChart.overrideIndicator({ name: 'VOL', styles: { bars: [{ upColor: getVolColor(ub, ubd), downColor: getVolColor(db, dbd), noChangeColor: '#848e9c' }] } });
-                }
-              };
-          } 
+              if (window.WaveChartEngine) {
+                  window.WaveChartEngine.update({
+                      upColor: ub, downColor: db,
+                      upBorderColor: ubd, downBorderColor: dbd, borderIndependent: true,
+                      upWickColor: ubd, downWickColor: dbd, wickIndependent: true,
+                      bgColor: bg, bgType: 'solid',
+                      gridHorizontal: showGrid, gridVertical: showGrid
+                  }, true);
+              }
+          };
       } 
-      // =========================================================================
-      // NÚT TAM GIÁC ẨN/HIỆN TEXT CHỈ BÁO (AUTO-TRACKING V5 - ZERO LAG)
-      // =========================================================================
-      setTimeout(() => {
+    } 
+
+    // =========================================================================
+    // NÚT TAM GIÁC ẨN/HIỆN TEXT CHỈ BÁO (AUTO-TRACKING V5 - ZERO LAG)
+    // =========================================================================
+    setTimeout(() => {
         const chartDom = document.getElementById('sc-chart-container') || 
                          document.getElementById('tv-chart-container') || 
                          document.querySelector('.klinecharts-pro');
@@ -4100,7 +4105,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
             toggleBtn.style.cssText = `
                 position: absolute;
                 left: 12px;
-                top: 36px; /* Đẩy lùi xuống một chút so với giá OHLC */
+                top: 36px;
                 z-index: 999;
                 width: 20px;
                 height: 20px;
@@ -4113,7 +4118,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 cursor: pointer;
                 border-radius: 4px;
                 backdrop-filter: blur(4px);
-                transition: top 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.2s, transform 0.2s; /* Nhanh & nảy hơn */
+                transition: top 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.2s, transform 0.2s;
             `;
             
             toggleBtn.innerHTML = `
@@ -4142,12 +4147,9 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
 
             chartDom.appendChild(toggleBtn);
 
-            // 🚀 AUTO-TRACKING V5: Quét tốc độ cao & Căn lề chuẩn
             let lastState = null; 
-            
             setInterval(() => {
                 if (!window.tvChart || !document.getElementById('wa-legend-toggle')) return;
-                
                 let count = 0;
                 try {
                     const inds = window.tvChart.getIndicatorByPaneId('candle_pane');
@@ -4167,16 +4169,14 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 if (lastState !== currentState) {
                     const baseTop = 34; 
                     const lineHeight = 24; 
-                    
                     const targetTop = isHidden ? baseTop : baseTop + (count * lineHeight);
                     toggleBtn.style.top = targetTop + 'px';
-                    
                     lastState = currentState; 
                 }
             }, 150); 
         }
     }, 800);
-    };
+  };
 
     
   // ══════════════════════════════════════════════════════
