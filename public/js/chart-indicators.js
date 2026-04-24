@@ -4550,14 +4550,14 @@ if (isColor) {
               options.push({ val: parseInt(kv[0].trim()), text: kv[1].trim() });
           }
       });
-      if (options.length > 1) {
+      if (options.length > 0) {
           cleanLbl = lbl.replace(match[0], '').trim(); 
       }
   }
 
   const desc = (isVPVR && vpvrDescriptions[idx]) ? `<div style="font-size:11px; color:#5e6673; margin-top:4px;">${vpvrDescriptions[idx]}</div>` : '';
 
-  if (options.length > 0) {
+  if (options.length > 1) {
       let btnHTML = `<div style="display:flex; background:rgba(0,0,0,0.4); border-radius:6px; padding:2px; border:1px solid rgba(255,255,255,0.05); width:100%;">`;
       
       options.forEach(opt => {
