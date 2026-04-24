@@ -3759,7 +3759,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
           } 
       } 
       // =========================================================================
-      // NÚT TAM GIÁC ẨN/HIỆN TEXT CHỈ BÁO TRÊN CHART (CHUẨN TRADINGVIEW)
+      // NÚT TAM GIÁC ẨN/HIỆN TEXT CHỈ BÁO (AUTO-TRACKING DYNAMIC Y-AXIS)
       // =========================================================================
       setTimeout(() => {
         const chartDom = document.getElementById('sc-chart-container') || 
@@ -3771,64 +3771,90 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 chartDom.style.position = 'relative';
             }
 
-            // 🚀 ẢO THUẬT: Đẩy toàn bộ chữ của Chỉ báo sang phải 28px để chừa chỗ cho mũi tên
-            // (Chữ của Nến OHLC dòng đầu tiên vẫn giữ nguyên không bị ảnh hưởng)
+            // Khôi phục lại lề chuẩn của Tooltip (Bỏ cái thụt lề 28px của bản trước đi)
             if (window.tvChart) {
                 window.tvChart.setStyles({
-                    indicator: { tooltip: { text: { marginLeft: 28 } } }
+                    indicator: { tooltip: { text: { marginLeft: 8 } } }
                 });
             }
 
             const toggleBtn = document.createElement('div');
             toggleBtn.id = 'wa-legend-toggle';
-            toggleBtn.title = "Ẩn/Hiện danh sách chỉ báo";
+            toggleBtn.title = "Thu gọn/Mở rộng danh sách chỉ báo";
             
-            // 🚀 Nút trong suốt, đặt đúng vị trí thụt lề ở dòng thứ 2
             toggleBtn.style.cssText = `
                 position: absolute;
-                top: 36px;  /* Nằm ngay dưới hàng chữ Giá Nến (OHLC) */
-                left: 4px;  /* Đứng chốt chặn ngay đầu dòng chữ chỉ báo */
+                left: 12px;
+                top: 36px; /* Vị trí khởi điểm */
                 z-index: 999;
                 width: 20px;
                 height: 20px;
-                background: transparent; /* Không màu nền để chìm hoàn toàn vào chart */
+                background: rgba(30, 35, 41, 0.4);
+                border: 1px solid rgba(255,255,255,0.05);
                 color: #848e9c;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 cursor: pointer;
                 border-radius: 4px;
-                transition: all 0.2s ease;
+                backdrop-filter: blur(4px);
+                transition: top 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.2s, transform 0.2s; /* Hiệu ứng trượt mượt mà */
             `;
             
+            // Icon Chevron Mũi tên
             toggleBtn.innerHTML = `
-                <svg id="wa-legend-icon" style="transition: transform 0.3s ease;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
+                <svg id="wa-legend-icon" style="transition: transform 0.3s ease;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="18 15 12 9 6 15"></polyline> </svg>
             `;
 
-            // Hiệu ứng rê chuột: sáng nhẹ lên
-            toggleBtn.onmouseover = () => { toggleBtn.style.background = 'rgba(255,255,255,0.08)'; toggleBtn.style.color = '#fff'; };
-            toggleBtn.onmouseout = () => { toggleBtn.style.background = 'transparent'; toggleBtn.style.color = '#848e9c'; };
+            toggleBtn.onmouseover = () => { toggleBtn.style.background = 'rgba(255,255,255,0.1)'; toggleBtn.style.color = '#fff'; };
+            toggleBtn.onmouseout = () => { toggleBtn.style.background = 'rgba(30, 35, 41, 0.4)'; toggleBtn.style.color = '#848e9c'; };
 
             let isLegendVisible = true;
             toggleBtn.onclick = (e) => {
                 e.stopPropagation();
                 isLegendVisible = !isLegendVisible;
+                toggleBtn.dataset.hidden = !isLegendVisible;
                 
-                // Xoay icon mượt mà
-                document.getElementById('wa-legend-icon').style.transform = isLegendVisible ? 'rotate(0deg)' : 'rotate(-90deg)';
+                // Xoay icon: Mở = chĩa lên, Đóng = chĩa xuống (xoay 180 độ)
+                document.getElementById('wa-legend-icon').style.transform = isLegendVisible ? 'rotate(0deg)' : 'rotate(180deg)';
                 
                 if (window.tvChart) {
                     window.tvChart.setStyles({
-                        indicator: {
-                            tooltip: { showRule: isLegendVisible ? 'always' : 'none' }
-                        }
+                        indicator: { tooltip: { showRule: isLegendVisible ? 'always' : 'none' } }
                     });
                 }
             };
 
             chartDom.appendChild(toggleBtn);
+
+            // 🚀 AUTO-TRACKING ENGINE: Tự động đo chiều cao và bám theo số lượng chỉ báo
+            setInterval(() => {
+                if (!window.tvChart || !document.getElementById('wa-legend-toggle')) return;
+                
+                let count = 0;
+                try {
+                    // Bắt thẳng vào core KLineCharts để đếm số lượng chỉ báo trên nến
+                    const inds = window.tvChart.getIndicatorByPaneId('candle_pane');
+                    if (inds) count = Math.max(0, Object.keys(inds).length);
+                } catch(e) {
+                    // Fallback lấy từ mảng của chúng ta
+                    count = global.scActiveIndicators ? global.scActiveIndicators.filter(i => i.isStack).length : 0;
+                }
+
+                const isHidden = toggleBtn.dataset.hidden === 'true';
+                
+                // Tính toán Tọa độ Y:
+                // - Khoảng cách từ nóc chart xuống dưới dòng OHLC mặc định: ~32px
+                // - Mỗi dòng chỉ báo cao thêm: ~20px
+                const baseTop = 32; 
+                const lineHeight = 20; 
+                
+                // Nếu bị ẩn -> trượt thẳng lên baseTop. Nếu hiện -> trượt xuống lót đáy
+                const targetTop = isHidden ? baseTop : baseTop + (count * lineHeight);
+                toggleBtn.style.top = targetTop + 'px';
+
+            }, 400); // Quét liên tục 0.4s/lần, logic cực nhẹ không ăn FPS
         }
     }, 800);
     };
