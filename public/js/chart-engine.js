@@ -49,14 +49,14 @@ window.WaveChartEngine = {
         window.__wa_onChartReady = () => this.applyNow();
     },
 
-    // 🚀 CHẾ TẠO CỌ VẼ CUSTOM CHO BIỂU ĐỒ CỘT & ĐỈNH-ĐÁY
+    // 🚀 CHẾ TẠO CỌ VẼ CUSTOM CHO BIỂU ĐỒ CỘT & ĐỈNH-ĐÁY (FIX API 'draw' CỦA V9)
     _registerCustomFigures: function() {
         if (!window.klinecharts || !window.klinecharts.registerFigure) return;
         try {
             // Cọ vẽ số 1: Cột (Columns)
             window.klinecharts.registerFigure({
                 name: 'wave_columns',
-                render: ({ ctx, coordinate, bounding, barSpace, data }) => {
+                draw: ({ ctx, coordinate, bounding, barSpace, data }) => {
                     const c = this.config;
                     const isUp = data.close >= data.open; 
                     ctx.fillStyle = isUp ? c.upColor : c.downColor;
@@ -71,20 +71,20 @@ window.WaveChartEngine = {
             // Cọ vẽ số 2: Đỉnh - Đáy (High - Low)
             window.klinecharts.registerFigure({
                 name: 'wave_high_low',
-                render: ({ ctx, coordinate, barSpace, data }) => {
+                draw: ({ ctx, coordinate, barSpace, data }) => {
                     const c = this.config;
                     const isUp = data.close >= data.open;
                     ctx.lineWidth = Math.max(1.5, barSpace * 0.15);
                     ctx.lineCap = 'round';
                     ctx.strokeStyle = isUp ? c.upColor : c.downColor;
                     
-                    // Vẽ gạch dọc
+                    // Vẽ gạch dọc nối Đỉnh và Đáy
                     ctx.beginPath();
                     ctx.moveTo(coordinate.x, coordinate.high);
                     ctx.lineTo(coordinate.x, coordinate.low);
                     ctx.stroke();
 
-                    // Vẽ râu ngang chỉ giá Close
+                    // Vẽ râu ngang nhỏ chỉ giá Close
                     const tickWidth = Math.max(3, barSpace * 0.4);
                     ctx.beginPath();
                     ctx.moveTo(coordinate.x, coordinate.close);
