@@ -1808,14 +1808,21 @@ window.closeProChart = function() {
         const now = new Date();
         let nextTime = new Date(now.getTime());
 
+        // 🚀 FIX LỖI ĐỨNG HÌNH: Dùng thuật toán Floor + Chu kỳ để luôn tính nến Tương lai
         if (interval.includes('m')) {
             const m = parseInt(interval);
-            nextTime.setMinutes(Math.ceil(now.getMinutes() / m) * m); nextTime.setSeconds(0);
+            nextTime.setMinutes(Math.floor(now.getMinutes() / m) * m + m);
+            nextTime.setSeconds(0);
+            nextTime.setMilliseconds(0);
         } else if (interval.includes('h')) {
             const h = parseInt(interval);
-            nextTime.setHours(Math.ceil(now.getHours() / h) * h); nextTime.setMinutes(0); nextTime.setSeconds(0);
+            nextTime.setHours(Math.floor(now.getHours() / h) * h + h);
+            nextTime.setMinutes(0); 
+            nextTime.setSeconds(0);
+            nextTime.setMilliseconds(0);
         } else if (interval === '1d') {
-            nextTime.setUTCDate(now.getUTCDate() + 1); nextTime.setUTCHours(0, 0, 0, 0); 
+            nextTime.setUTCDate(now.getUTCDate() + 1); 
+            nextTime.setUTCHours(0, 0, 0, 0); 
         } else {
             cd.style.display = 'none'; return; 
         }
