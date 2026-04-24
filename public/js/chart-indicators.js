@@ -3754,11 +3754,11 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                       candle: { type: window.currentChartInterval === 'tick' ? 'area' : cType, bar: { upColor: ub, downColor: db, noChangeColor: '#848e9c', upBorderColor: ubd, downBorderColor: dbd, upWickColor: ubd, downWickColor: dbd } }
                   });
                   window.tvChart.overrideIndicator({ name: 'VOL', styles: { bars: [{ upColor: getVolColor(ub, ubd), downColor: getVolColor(db, dbd), noChangeColor: '#848e9c' }] } });
-              }
-          };
+                }
+              };
+          } 
       } 
-  }
-}
+    };
   // ══════════════════════════════════════════════════════
   // SECTION 6: EVENT HANDLERS & STATE MANAGEMENT
   // ══════════════════════════════════════════════════════
