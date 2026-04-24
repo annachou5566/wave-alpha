@@ -941,9 +941,10 @@ if (isTimeSwitch && window.tvChart) {
 
     window.fetchBinanceHistory(t, window.currentChartInterval, isTick).then(histData => {
         if (histData && histData.length > 0) {
-            window.tvChart.applyNewData(histData);
+            // 🚀 HOOK 1: Nấu data lịch sử trước khi nạp vào Chart
+            let finalData = window.WaveDataEngine ? window.WaveDataEngine.processHistory(histData) : histData;
+            window.tvChart.applyNewData(finalData);
         }
-        // 🚀 BẮT BUỘC KÍCH HOẠT LẠI ENGINE SAU KHI ĐỔ DATA ĐỂ ÁP DỤNG MÀU SẮC
         if (typeof window.__wa_onChartReady === 'function') window.__wa_onChartReady();
         if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, true);
     });
@@ -1247,7 +1248,9 @@ if (typeof window.fetchBinanceHistory === 'function') {
             window._waTargetCandle = null;
             window._waCurrentCandle = null;
             
-            window.tvChart.applyNewData(histData);
+            // 🚀 HOOK 2: Nấu data lịch sử trước khi nạp vào Chart
+            let finalData = window.WaveDataEngine ? window.WaveDataEngine.processHistory(histData) : histData;
+            window.tvChart.applyNewData(finalData);
         }
 
 if (window.WaveIndicatorAPI) {

@@ -117,6 +117,19 @@ window._waTargetCandle = null;
 window._waCurrentCandle = null;
 window._waRafRunning = false;
 
+// ==========================================
+// 🚀 TRẠM ĐÁNH CHẶN REALTIME (HOOK) CHO DATA ENGINE
+// ==========================================
+window.safeUpdateChartData = function(candleObj) {
+    if (!window.tvChart) return;
+    let finalCandle = candleObj;
+    if (window.WaveDataEngine) {
+        let dataList = window.tvChart.getDataList();
+        finalCandle = window.WaveDataEngine.processTick(candleObj, dataList);
+    }
+    window.tvChart.updateData(finalCandle);
+};
+
 window.startWaterfallEngine = function() {
     if (window._waRafRunning || !window.tvChart) return;
     window._waRafRunning = true;
@@ -142,7 +155,7 @@ window.startWaterfallEngine = function() {
 
         if (!c || c.timestamp !== t.timestamp) {
             window._waCurrentCandle = { ...t };
-            window.tvChart.updateData(window._waCurrentCandle);
+            window.safeUpdateChartData(window._waCurrentCandle);
             lastDraw = time;
             return;
         }
@@ -160,7 +173,7 @@ window.startWaterfallEngine = function() {
                 c.close = t.close;
             }
 
-            window.tvChart.updateData(c);
+            window.safeUpdateChartData(c);
             lastDraw = time;
         }
     }
@@ -578,14 +591,9 @@ try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'
                     } else {
                         // Khi sang nến mới hoặc chốt sổ: Đẩy thẳng vào KLineChart và Reset Target
                         window._waTargetCandle = {
-                            timestamp: correctTk, 
-                            open: parseFloat(k.o), 
-                            high: parseFloat(k.h), 
-                            low: parseFloat(k.l), 
-                            close: currentClose, 
-                            volume: isNaN(currentVol) ? 0 : currentVol
+                            timestamp: correctTk, open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: currentClose, volume: isNaN(currentVol) ? 0 : currentVol
                         };
-                        window.tvChart.updateData(window._waTargetCandle);
+                        window.safeUpdateChartData(window._waTargetCandle); // 🚀 Dùng hàm đánh chặn an toàn
                     }
                 }
             }
