@@ -4845,3 +4845,4 @@ if (isColor) {
 
   console.log('[Wave Alpha v' + WAVE_ALPHA_VERSION + '] Indicator Core initialized with Button/Unicode Fix.');
 })(window);
+

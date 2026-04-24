@@ -1315,3 +1315,172 @@ window.closeProChart = function() {
     window.currentChartToken = null; 
 };
 
+// =========================================================================
+// 🧩 BƯỚC 2: CHART TYPE SELECTOR (21 LOẠI BIỂU ĐỒ - SVG PRO ICONS)
+// =========================================================================
+(function initChartTypeSelector() {
+    'use strict';
+
+    // Hàm bọc SVG để đồng bộ style (Nét thanh 2px, tự động nhận màu currentColor)
+    const _svg = (paths) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+
+    // 1. Data 21 loại biểu đồ với Custom SVG Icons
+    const CHART_TYPES = [
+        // Nhóm 1: Cơ bản
+        { grp: 'CƠ BẢN', id: 1, name: 'Nến Nhật', icon: _svg('<path d="M9 4v16M15 4v16M7 8h4v8H7zM13 10h4v6h-4z"/>'), phase: 1, desc: 'Nến Open-High-Low-Close chuẩn' },
+        { grp: 'CƠ BẢN', id: 2, name: 'Nến Rỗng', icon: _svg('<path d="M9 4v16M15 4v16"/><rect x="7" y="8" width="4" height="8"/><rect x="13" y="10" width="4" height="6"/>'), phase: 1, desc: 'Nến tăng rỗng ruột giúp giảm mỏi mắt' },
+        { grp: 'CƠ BẢN', id: 3, name: 'Thanh (Bars)', icon: _svg('<path d="M9 4v16M6 8h3M9 16h3M15 4v16M12 10h3M15 18h3"/>'), phase: 1, desc: 'Thanh OHLC chuẩn thị trường Mỹ' },
+        { grp: 'CƠ BẢN', id: 4, name: 'Cột (Columns)', icon: _svg('<path d="M18 20V10M12 20V4M6 20v-4"/>'), phase: 2, desc: 'Cột hiển thị theo giá Close' },
+        { grp: 'CƠ BẢN', id: 5, name: 'Đỉnh - Đáy', icon: _svg('<path d="M12 4v16M8 8l4-4 4 4M8 16l4 4 4-4"/>'), phase: 2, desc: 'Bỏ qua Open/Close, chỉ xem biên độ' },
+        
+        // Nhóm 2: Đường & Vùng
+        { grp: 'ĐƯỜNG & VÙNG', id: 6, name: 'Đường (Line)', icon: _svg('<polyline points="3 17 9 11 15 15 21 5"/>'), phase: 1, desc: 'Đường nối các giá đóng cửa' },
+        { grp: 'ĐƯỜNG & VÙNG', id: 7, name: 'Đường + Điểm', icon: _svg('<polyline points="3 17 9 11 15 15 21 5"/><circle cx="9" cy="11" r="2"/><circle cx="15" cy="15" r="2"/><circle cx="21" cy="5" r="2"/>'), phase: 2, desc: 'Đường Line có đánh dấu đỉnh/đáy' },
+        { grp: 'ĐƯỜNG & VÙNG', id: 8, name: 'Bậc Thang', icon: _svg('<polyline points="3 17 9 17 9 11 15 11 15 5 21 5"/>'), phase: 2, desc: 'Step Line giúp nhìn rõ nền giá' },
+        { grp: 'ĐƯỜNG & VÙNG', id: 9, name: 'Vùng (Area)', icon: _svg('<path d="M3 20h18V5l-6 10-6-4-6 9z" fill="currentColor" fill-opacity="0.2"/>'), phase: 1, desc: 'Đổ bóng Gradient dưới đường Line' },
+        { grp: 'ĐƯỜNG & VÙNG', id: 10, name: 'Vùng HLC', icon: _svg('<path d="M3 17l6-6 6 4 6-10v14H3z" fill="currentColor" fill-opacity="0.15"/><path d="M3 21l6-6 6 4 6-10" opacity="0.4"/>'), phase: 2, desc: 'Vùng dao động thực tế High-Low-Close' },
+        { grp: 'ĐƯỜNG & VÙNG', id: 11, name: 'Đường Cơ Sở', icon: _svg('<line x1="3" y1="12" x2="21" y2="12" stroke-dasharray="2 2"/><polyline points="3 12 7 8 13 15 21 6"/>'), phase: 2, desc: 'Baseline: Trên xanh, dưới đỏ' },
+        
+        // Nhóm 3: Khử Nhiễu
+        { grp: 'KHỬ NHIỄU (PRO)', id: 12, name: 'Heikin Ashi', icon: _svg('<path d="M9 4v16M15 4v16M7 10h4v6H7zM13 8h4v8h-4z"/>'), phase: 1, desc: 'Nến trung bình lọc nhiễu sóng' }, // Heikin Ashi KLineChart hỗ trợ native
+        { grp: 'KHỬ NHIỄU (PRO)', id: 13, name: 'Nến Khối Lượng', icon: _svg('<path d="M9 4v16M15 4v16M5 10h8v6H5zM14 8h2v8h-2z"/>'), phase: 2, desc: 'Bề ngang nến tỷ lệ với Volume' },
+        { grp: 'KHỬ NHIỄU (PRO)', id: 14, name: 'Renko', icon: _svg('<rect x="5" y="14" width="6" height="6"/><rect x="11" y="8" width="6" height="6"/>'), phase: 2, desc: 'Gạch giá trị, loại bỏ thời gian' },
+        { grp: 'KHỬ NHIỄU (PRO)', id: 15, name: 'Line Break', icon: _svg('<path d="M7 16h4v4H7zM13 8h4v12h-4zM7 4h4v10H7z"/>'), phase: 2, desc: 'Chỉ vẽ nến khi có Breakout' },
+        { grp: 'KHỬ NHIỄU (PRO)', id: 16, name: 'Point & Figure', icon: _svg('<path d="M6 6l4 4M10 6l-4 4M14 14l4 4M18 14l-4 4M14 6h4v4h-4z"/>'), phase: 2, desc: 'Lưới X-O kinh điển của Wyckoff' },
+        { grp: 'KHỬ NHIỄU (PRO)', id: 17, name: 'Kagi', icon: _svg('<polyline points="5 18 5 10 12 10 12 4 19 4 19 14" stroke-width="3"/><polyline points="12 10 12 16 19 16 19 14" stroke-width="1"/>'), phase: 2, desc: 'Đường gãy khúc theo tỷ lệ đảo chiều' },
+        { grp: 'KHỬ NHIỄU (PRO)', id: 18, name: 'Range Bars', icon: _svg('<rect x="5" y="6" width="4" height="12"/><rect x="15" y="6" width="4" height="12"/><line x1="3" y1="6" x2="21" y2="6" stroke-dasharray="2 2"/><line x1="3" y1="18" x2="21" y2="18" stroke-dasharray="2 2"/>'), phase: 2, desc: 'Mỗi nến có biên độ Ticks bằng nhau' },
+        
+        // Nhóm 4: Order Flow
+        { grp: 'ORDER FLOW (PRO)', id: 19, name: 'Footprint', icon: _svg('<rect x="8" y="4" width="8" height="16"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="16" y2="16"/>'), phase: 3, desc: 'In Volume Bid/Ask vào lõi nến' },
+        { grp: 'ORDER FLOW (PRO)', id: 20, name: 'TPO Profile', icon: _svg('<path d="M5 6h4M5 12h8M5 18h6M11 6h2M15 12h2" stroke-width="3"/>'), phase: 3, desc: 'Hồ sơ thời gian chữ cái' },
+        { grp: 'ORDER FLOW (PRO)', id: 21, name: 'VPVR Profile', icon: _svg('<path d="M3 6h12M3 10h8M3 14h16M3 18h10"/>'), phase: 3, desc: 'Hồ sơ khối lượng dồn dập' }
+    ];
+
+    // 2. CSS cho Menu
+    const style = document.createElement('style');
+    style.textContent = `
+        #wa-chart-type-menu {
+            display: none; position: absolute; background: #1e222d; border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 8px; width: 380px; z-index: 999999; box-shadow: 0 16px 40px rgba(0,0,0,0.8);
+            padding: 16px; grid-template-columns: 1fr 1fr; gap: 20px 16px; align-items: start; user-select: none;
+        }
+        .wa-ct-grp { display: flex; flex-direction: column; gap: 4px; }
+        .wa-ct-title { font-size: 10px; font-weight: 800; color: #848e9c; letter-spacing: 0.5px; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; text-transform: uppercase; }
+        .wa-ct-item {
+            display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 6px; cursor: pointer;
+            transition: all 0.2s ease; background: transparent; border: 1px solid transparent; color: #EAECEF;
+        }
+        .wa-ct-item:hover { background: rgba(255,255,255,0.05); color: #FFF; }
+        .wa-ct-item.active { background: rgba(0,240,255,0.08); border-color: rgba(0,240,255,0.2); color: #00F0FF; }
+        .wa-ct-icon { display: flex; align-items: center; justify-content: center; opacity: 0.7; transition: opacity 0.2s; }
+        .wa-ct-item:hover .wa-ct-icon, .wa-ct-item.active .wa-ct-icon { opacity: 1; }
+        .wa-ct-text { font-size: 12px; font-weight: 500; flex: 1; }
+        .wa-ct-item.active .wa-ct-text { font-weight: 700; }
+        .wa-ct-pro { font-size: 8px; background: rgba(240,185,11,0.15); color: #F0B90B; padding: 2px 5px; border-radius: 4px; font-weight: 800; letter-spacing: 0.5px; border: 1px solid rgba(240,185,11,0.3); }
+        #btn-wa-chart-type {
+            background: rgba(255,255,255,0.03); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 4px; padding: 4px 10px; height: 26px; display: inline-flex; align-items: center; 
+            gap: 6px; transition: 0.2s; cursor: pointer;
+        }
+        #btn-wa-chart-type:hover { background: rgba(255,255,255,0.08); color: #EAECEF; }
+    `;
+    document.head.appendChild(style);
+
+    // 3. Auto-inject Nút bấm vào Toolbar
+    const checkToolbar = setInterval(() => {
+        // Tìm thanh chứa Timeframes để gắn nút chọn biểu đồ ngay bên cạnh
+        const toolbar = document.querySelector('.sc-time-btn')?.parentNode || document.querySelector('.sc-tools-left') || document.querySelector('.sc-toolbar');
+        
+        if (toolbar) {
+            clearInterval(checkToolbar);
+
+            // Tạo nút bấm trên thanh công cụ
+            const btnWrap = document.createElement('div');
+            btnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; margin-left: 8px;';
+            btnWrap.innerHTML = `
+                <button id="btn-wa-chart-type" title="Chart Type">
+                    <span id="wa-ct-btn-icon" style="display:flex; align-items:center;">${CHART_TYPES[0].icon}</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+            `;
+            
+            toolbar.appendChild(btnWrap);
+
+            // Xây dựng Dropdown Menu HTML
+            const menu = document.createElement('div');
+            menu.id = 'wa-chart-type-menu';
+
+            const groups = [...new Set(CHART_TYPES.map(t => t.grp))];
+            groups.forEach((gName, idx) => {
+                const grpDiv = document.createElement('div');
+                grpDiv.className = 'wa-ct-grp';
+                // Nhóm Khử nhiễu chiếm full hàng ngang vì nó dài
+                if (idx === 2) grpDiv.style.gridColumn = '1 / -1'; 
+                
+                grpDiv.innerHTML = `<div class="wa-ct-title">${gName}</div>`;
+                
+                CHART_TYPES.filter(t => t.grp === gName).forEach(item => {
+                    const isPro = item.phase > 1;
+                    const div = document.createElement('div');
+                    div.className = 'wa-ct-item';
+                    div.dataset.id = item.id;
+                    div.title = item.desc;
+                    div.innerHTML = `
+                        <span class="wa-ct-icon">${item.icon}</span>
+                        <span class="wa-ct-text">${item.name}</span>
+                        ${isPro ? '<span class="wa-ct-pro">PRO</span>' : ''}
+                    `;
+
+                    div.onclick = (e) => {
+                        e.stopPropagation();
+                        if (item.phase === 1) {
+                            if (window.WaveChartEngine) {
+                                window.WaveChartEngine.update({ chartType: item.id }, true);
+                            }
+                            document.getElementById('wa-ct-btn-icon').innerHTML = item.icon;
+                            
+                            menu.querySelectorAll('.wa-ct-item').forEach(el => el.classList.remove('active'));
+                            div.classList.add('active');
+                            menu.style.display = 'none';
+                        } else {
+                            if (typeof window.showToast === 'function') {
+                                window.showToast(`Loại biểu đồ "${item.name}" đang phát triển (Phase ${item.phase})`, "info");
+                            } else {
+                                alert(`🚀 Loại biểu đồ "${item.name}" thuộc tính năng Pro. Đang phát triển!`);
+                            }
+                        }
+                    };
+                    grpDiv.appendChild(div);
+                });
+                menu.appendChild(grpDiv);
+            });
+
+            // Gắn menu vào body
+            document.body.appendChild(menu);
+
+            // Logic Bật/Tắt Menu
+            const btn = document.getElementById('btn-wa-chart-type');
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const isHidden = menu.style.display === 'none' || menu.style.display === '';
+                if (isHidden) {
+                    const rect = btn.getBoundingClientRect();
+                    menu.style.top = (rect.bottom + 6) + 'px';
+                    menu.style.left = rect.left + 'px';
+                    menu.style.display = 'grid';
+                    
+                    const currentType = window.WaveChartEngine ? window.WaveChartEngine.config.chartType : 1;
+                    menu.querySelectorAll('.wa-ct-item').forEach(el => {
+                        if (parseInt(el.dataset.id) === currentType) el.classList.add('active');
+                        else el.classList.remove('active');
+                    });
+                } else {
+                    menu.style.display = 'none';
+                }
+            };
+
+            document.addEventListener('click', () => { menu.style.display = 'none'; });
+            menu.addEventListener('click', (e) => { e.stopPropagation(); });
+        }
+    }, 200);
+})();
