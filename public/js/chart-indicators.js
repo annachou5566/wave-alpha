@@ -302,32 +302,33 @@
       ],
     },
     
-    {
-      name: 'WAVE_VPVR',
-      shortName: 'VPVR',
-      description: 'Hồ Sơ Khối Lượng Giao Dịch (Volume Profile)',
-      category: 'wave_alpha',
-      isStack: true,
-      builtIn: false,
-      // Đã đổi màu sang dạng String (#HEX) để kích hoạt Bảng chọn màu
-      defaultParams: [
-        60, 70, 30, 0, 0, 0,
-        "#26A69A", "#EF5350", "#F0B90B", "#9575CD",
-        "#FFFFFF", "#FF9800", "#F0B90B", "#26A69A",
-        80, 25, 2, 1, 0, 0, 10, 1
-      ],
-      paramLabels: [
-        'Số Hàng - Bins (10–200)', 'Vùng Giá Trị VA % (10–100)', 'Độ Rộng % (10–80)',
-        'Vị Trí (0=Phải, 1=Trái)', 'Chế Độ Phiên (0=Toàn màn, 1=Ngày, 2=Tuần)', 'Lớp Nền Mờ (0=Tắt, 1=Bật)',
-        'Màu Lực Mua', 'Màu Lực Bán', 'Màu Đường POC',
-        'Màu Viền VAH/VAL', 'Màu Viền HVN', 'Màu Nền LVN',
-        'Màu Đường nPOC', 'Màu Icon Mua (▲)',
-        'Độ Mờ Vùng VA (%)', 'Độ Mờ Ngoài VA (%)',
-        'Độ Dày POC (1-5)', 'Độ Dày VAH/VAL (1-4)',
-        'Nét VA (0=Đứt, 1=Chấm, 2=Liền)', 'Nét nPOC (0=Đứt, 1=Chấm, 2=Dài)',
-        'Cỡ Chữ (8-16)', 'Hiện Giá (0=Tắt, 1=Bật)',
-      ],
-    },
+{
+  name: 'WAVE_VPVR',
+  shortName: 'VPVR',
+  description: 'Hồ Sơ Khối Lượng Giao Dịch (Volume Profile)',
+  category: 'wave_alpha',
+  isStack: true,
+  builtIn: false,
+  // 24 Params (Đã thêm: Số phiên hiển thị, Toggle Box Nền)
+  defaultParams: [
+    60, 70, 30, 0, 0, 10, 0, 1,
+    "#26A69A", "#EF5350", "#F0B90B", "#9575CD",
+    "#FFFFFF", "#FF9800", "#F0B90B", "#26A69A",
+    80, 25, 2, 1, 0, 0, 10, 1
+  ],
+  paramLabels: [
+    'Số Hàng - Bins (10–200)', 'Vùng Giá Trị VA % (10–100)', 'Độ Rộng % (10–80)',
+    'Vị Trí (0=Phải, 1=Trái)', 'Chế Độ Phiên (0=Toàn màn, 1=Ngày, 2=Tuần)', 
+    'Số Phiên Lịch Sử (1-50)', 'VPVR Tổng Background (0=Tắt, 1=Bật)', 'Hiển thị Viền/Nền Box (0=Tắt, 1=Bật)',
+    'Màu Lực Mua', 'Màu Lực Bán', 'Màu Đường POC',
+    'Màu Viền VAH/VAL', 'Màu Viền HVN', 'Màu Nền LVN',
+    'Màu Đường nPOC', 'Màu Icon Mua (▲)',
+    'Độ Mờ Vùng VA (%)', 'Độ Mờ Ngoài VA (%)',
+    'Độ Dày POC (1-5)', 'Độ Dày VAH/VAL (1-4)',
+    'Nét VA (0=Đứt, 1=Chấm, 2=Liền)', 'Nét nPOC (0=Đứt, 1=Chấm, 2=Dài)',
+    'Cỡ Chữ (8-16)', 'Hiện Giá (0=Tắt, 1=Bật)',
+  ],
+},
 
     {
       name: 'WAVE_TPO',
@@ -1427,7 +1428,7 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
 
 
 // ════════════════════════════════════════════════════════════════════════════════
-//  WAVE_VPVR ULTIMATE v3.3 — CORE ENGINE (Smart Session Anchoring & nPOC Fix)
+//  WAVE_VPVR ULTIMATE v3.4 — CORE ENGINE (Smart Anchoring & Clean Background)
 // ════════════════════════════════════════════════════════════════════════════════
 (function initWaveVpvrCore() {
   'use strict';
@@ -1437,9 +1438,7 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
   function _waVpvrCacheSet(key, value) {
     if (window._waVpvrCache.has(key)) window._waVpvrCache.delete(key);
     window._waVpvrCache.set(key, value);
-    if (window._waVpvrCache.size > 10) {
-      window._waVpvrCache.delete(window._waVpvrCache.keys().next().value);
-    }
+    if (window._waVpvrCache.size > 10) window._waVpvrCache.delete(window._waVpvrCache.keys().next().value);
   }
 
   function _waHex2Rgba(val, alpha) {
@@ -1465,12 +1464,9 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
   function _waRoundRect(ctx, x, y, w, h, r) {
     r = Math.min(r, w / 2, h / 2);
     ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
 
   // 🚀 Hàm an toàn lấy tọa độ X trên Canvas
@@ -1516,7 +1512,6 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
         const bodyBot = Math.min(d.open, d.close);
         const cRange = d.high - d.low;
         const bodyRange = bodyTop - bodyBot;
-
         const s = Math.max(0, Math.floor((d.low - minP) / step));
         const e = Math.min(rowCount - 1, Math.floor((d.high - minP) / step));
 
@@ -1524,21 +1519,18 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
             const bin = bins[j];
             const oL = Math.max(d.low, bin.pLow);
             const oH = Math.min(d.high, bin.pHigh);
-            
             if (oH > oL) {
                 let binVol = 0;
                 const overlapRange = oH - oL;
                 const overlapBody = Math.max(0, Math.min(oH, bodyTop) - Math.max(oL, bodyBot));
                 const overlapWick = overlapRange - overlapBody;
 
-                if (cRange === 0) {
-                    binVol = d.volume * (overlapRange / step);
-                } else {
+                if (cRange === 0) { binVol = d.volume * (overlapRange / step); } 
+                else {
                     const wBody = bodyRange > 0 ? (overlapBody / bodyRange) * 0.70 : 0;
                     const wWick = (cRange - bodyRange) > 0 ? (overlapWick / (cRange - bodyRange)) * 0.30 : 0;
                     binVol = d.volume * (wBody + wWick);
                 }
-
                 if (isNaN(binVol)) binVol = 0;
                 if (isUp) { bin.upVol += binVol; } else { bin.downVol += binVol; }
                 bin.total += binVol;
@@ -1587,7 +1579,7 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
     };
   }
 
-  function _waGroupBySession(dataList, from, to, sessionMode) {
+  function _waGroupBySession(dataList, from, to, sessionMode, sessionCount) {
     const groups = new Map();
     for (let i = from; i < to; i++) {
       const d = dataList[i]; if (!d || !d.timestamp) continue;
@@ -1602,7 +1594,8 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
       if (!groups.has(key)) groups.set(key, { start: i, end: i + 1 });
       else groups.get(key).end = i + 1;
     }
-    return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-10); // Cho phép xem lại lịch sử 10 phiên
+    // 🚀 Lọc đúng số lượng phiên (sessionCount)
+    return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-sessionCount); 
   }
 
   function _waDrawGradientBar(ctx, clrHex, x0, x1, rectY, rectH) {
@@ -1614,7 +1607,6 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
     ctx.fillRect(Math.min(x0, x1), rectY, Math.abs(x1 - x0), rectH);
   }
 
-  // 🚀 Logic render độc lập vị trí X (X-Agnostic Render)
   function _waRenderBins(ctx, profile, maxW, anchorX, dir, yAxis, C, showDelta) {
     profile.bins.forEach(bin => {
       if (bin.total <= 0) return;
@@ -1640,18 +1632,21 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
       const totalW = wUp + wDn;
       const edgeX = anchorX + totalW * dir;
 
-      if (bin.total > profile.maxVol * 0.80) { // HVN
-        ctx.save();
-        ctx.strokeStyle = _waHex2Rgba(C.clrHvn, 0.40); ctx.lineWidth = 1;
-        ctx.strokeRect(Math.min(anchorX, edgeX), rectY, totalW, rectH);
-        ctx.restore();
-      }
+      // 🚀 BOX BACKGROUND: Chỉ hiển thị nếu bật (showBoxes = true)
+      if (C.showBoxes) {
+        if (bin.total > profile.maxVol * 0.80) { // HVN
+          ctx.save();
+          ctx.strokeStyle = _waHex2Rgba(C.clrHvn, 0.40); ctx.lineWidth = 1;
+          ctx.strokeRect(Math.min(anchorX, edgeX), rectY, totalW, rectH);
+          ctx.restore();
+        }
 
-      if (bin.total > 0 && bin.total < profile.maxVol * 0.10) { // LVN
-        ctx.save();
-        ctx.fillStyle = _waHex2Rgba(C.clrLvn, 0.10); 
-        ctx.fillRect(Math.min(anchorX, anchorX + maxW * dir), rectY, maxW, rectH);
-        ctx.restore();
+        if (bin.total > 0 && bin.total < profile.maxVol * 0.10) { // LVN
+          ctx.save();
+          ctx.fillStyle = _waHex2Rgba(C.clrLvn, 0.10); 
+          ctx.fillRect(Math.min(anchorX, anchorX + maxW * dir), rectY, maxW, rectH);
+          ctx.restore();
+        }
       }
 
       if (showDelta && bin.inVA && (bin.upVol + bin.downVol > 0)) {
@@ -1683,14 +1678,12 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
       }
     }
 
-    const endOfProfileX = anchorX + (maxW + 20) * dir; // Kéo dài viền n POC thêm 20px cho đẹp
+    const endOfProfileX = anchorX + (maxW + 20) * dir; 
 
     ctx.save();
     ctx.shadowColor = _waHex2Rgba(C.clrPoc, 0.60); ctx.shadowBlur = 5;
     ctx.strokeStyle = _waHex2Rgba(C.clrPoc, 0.95); ctx.lineWidth = C.pocLineWidth;
-    ctx.beginPath();
-    ctx.moveTo(anchorX, pocY); 
-    ctx.lineTo(endOfProfileX, pocY);
+    ctx.beginPath(); ctx.moveTo(anchorX, pocY); ctx.lineTo(endOfProfileX, pocY);
     ctx.stroke(); ctx.shadowBlur = 0;
 
     if (isNaked) {
@@ -1698,8 +1691,7 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
       ctx.setLineDash(_waGetDash(C.npocStyle, 'npoc')); ctx.beginPath();
       ctx.moveTo(endOfProfileX, pocY);
       
-      // 🚀 nPOC Tự tìm tới hiện tại hoặc rìa bên kia màn hình
-      const currentPriceX = bounding.width; // Mặc định vút ra sát lề phải màn hình
+      const currentPriceX = bounding.width;
       ctx.lineTo(dir === 1 ? currentPriceX : 0, pocY); 
       
       ctx.stroke(); ctx.setLineDash([]);
@@ -1760,14 +1752,15 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
   kc.registerIndicator({
     name: 'WAVE_VPVR',
     shortName: 'VPVR',
-    description: 'Volume Profile Visible Range ULTIMATE v3.3',
+    description: 'Volume Profile Visible Range ULTIMATE v3.4',
     category: 'wave_alpha',
     series: 'price',
     isStack: true,
     createTooltipDataSource: function() { return { name: 'VPVR', calcParamsText: ' ', values: [] }; },
     
+    // Tương thích đồng bộ với mảng defaultParams ở Block 1
     calcParams: [
-      60, 70, 30, 0, 0, 0,
+      60, 70, 30, 0, 0, 10, 0, 1,
       "#26A69A", "#EF5350", "#F0B90B", "#9575CD",
       "#FFFFFF", "#FF9800", "#F0B90B", "#26A69A",
       80, 25, 2, 1, 0, 0, 10, 1,
@@ -1779,7 +1772,7 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
     draw: function(args) {
       const dataList = args.kLineDataList || args.dataList || [];
       const visibleRange = args.visibleRange || { from: 0, to: dataList.length };
-      const { ctx, bounding, xAxis, yAxis, indicator } = args; // Lấy xAxis
+      const { ctx, bounding, xAxis, yAxis, indicator } = args;
 
       if (!dataList || dataList.length === 0 || !bounding) return false;
 
@@ -1789,19 +1782,22 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
       const widthPct = Math.max(10, Math.min(80, +(p[2] ?? 30)));
       const isLeft = +(p[3] ?? 0) === 1;
       const sessionMode = +(p[4] ?? 0);
-      const compositeMode = +(p[5] ?? 0);
+      const sessionCount = Math.max(1, Math.min(50, +(p[5] ?? 10))); // <-- Bổ sung Số Phiên
+      const compositeMode = +(p[6] ?? 0); // <-- VPVR Tổng Toàn Chart
+      const showBoxes = +(p[7] ?? 1) === 1; // <-- Bật/Tắt nền LVN/HVN
 
       const C = {
-        clrUp: p[6] || "#26A69A", clrDn: p[7] || "#EF5350", clrPoc: p[8] || "#F0B90B",
-        clrVa: p[9] || "#9575CD", clrHvn: p[10] || "#FFFFFF", clrLvn: p[11] || "#FF9800",
-        clrNpoc: p[12] || "#F0B90B", clrDeltaUp: p[13] || "#26A69A",
-        opacityVA: Math.max(0, Math.min(100, +(p[14] ?? 80))) / 100,
-        opacityOut: Math.max(0, Math.min(100, +(p[15] ?? 25))) / 100,
-        pocLineWidth: Math.max(1, Math.min(5, +(p[16] ?? 2))),
-        vaLineWidth: Math.max(1, Math.min(4, +(p[17] ?? 1))),
-        vaStyle: Math.round(+(p[18] ?? 0)), npocStyle: Math.round(+(p[19] ?? 0)),
-        fontSize: Math.max(8, Math.min(16, +(p[20] ?? 10))),
-        showLabels: +(p[21] ?? 1) === 1,
+        clrUp: p[8] || "#26A69A", clrDn: p[9] || "#EF5350", clrPoc: p[10] || "#F0B90B",
+        clrVa: p[11] || "#9575CD", clrHvn: p[12] || "#FFFFFF", clrLvn: p[13] || "#FF9800",
+        clrNpoc: p[14] || "#F0B90B", clrDeltaUp: p[15] || "#26A69A",
+        opacityVA: Math.max(0, Math.min(100, +(p[16] ?? 80))) / 100,
+        opacityOut: Math.max(0, Math.min(100, +(p[17] ?? 25))) / 100,
+        pocLineWidth: Math.max(1, Math.min(5, +(p[18] ?? 2))),
+        vaLineWidth: Math.max(1, Math.min(4, +(p[19] ?? 1))),
+        vaStyle: Math.round(+(p[20] ?? 0)), npocStyle: Math.round(+(p[21] ?? 0)),
+        fontSize: Math.max(8, Math.min(16, +(p[22] ?? 10))),
+        showLabels: +(p[23] ?? 1) === 1,
+        showBoxes: showBoxes, // Gửi biến xuống hàm render
       };
 
       const { from, to } = visibleRange;
@@ -1810,7 +1806,7 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
       const maxWidthPx = bounding.width * (widthPct / 100);
       const liveVolume = dataList[to - 1] ? (dataList[to - 1].volume || 0) : 0;
       
-      const cacheKey = `${from}_${to}_${rowCount}_${vaPercent}_${sessionMode}_${compositeMode}_${liveVolume}`;
+      const cacheKey = `${from}_${to}_${rowCount}_${vaPercent}_${sessionMode}_${sessionCount}_${compositeMode}_${liveVolume}`;
       let cached = window._waVpvrCache.get(cacheKey);
 
       if (!cached) {
@@ -1818,9 +1814,8 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
         if (sessionMode === 0) {
           mainProfile = _waCalcVpvrProfile(dataList, from, to, rowCount, vaPercent);
         } else {
-          sessions = _waGroupBySession(dataList, from, to, sessionMode).map((g, idx, arr) => ({
-            profile: _waCalcVpvrProfile(dataList, g.start, g.end, rowCount, vaPercent),
-            layerIdx: idx, total: arr.length
+          sessions = _waGroupBySession(dataList, from, to, sessionMode, sessionCount).map((g, idx, arr) => ({
+            profile: _waCalcVpvrProfile(dataList, g.start, g.end, rowCount, vaPercent)
           })).filter(s => s.profile !== null);
         }
         if (compositeMode === 1) compProfile = _waCalcVpvrProfile(dataList, 0, dataList.length, rowCount, vaPercent);
@@ -1832,30 +1827,39 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
       ctx.save();
       ctx.globalCompositeOperation = 'source-over';
 
+      // 1. VẼ LỚP NỀN VPVR TOÀN CHART (CHỈ KHI BẬT COMPOSITE MODE)
       if (compositeMode === 1 && cached.compProfile) {
-        ctx.save(); ctx.globalAlpha = 0.25;
-        const anchorX = isLeft ? 0 : bounding.width;
-        const dir = isLeft ? 1 : -1;
-        _waRenderBins(ctx, cached.compProfile, maxWidthPx, anchorX, dir, yAxis, C, false);
+        ctx.save(); 
+        ctx.globalAlpha = 0.20; // Mờ đi để nhường chỗ cho Nến và Session
+        const compAnchorX = isLeft ? 0 : bounding.width;
+        const compDir = isLeft ? 1 : -1;
+        _waRenderBins(ctx, cached.compProfile, maxWidthPx, compAnchorX, compDir, yAxis, C, false);
         ctx.restore();
       }
 
+      // 2. VẼ VPVR THEO TỪNG PHIÊN (NGÀY / TUẦN)
       if (sessionMode > 0 && cached.sessions.length > 0) {
-        // 🚀 SMART SESSION ANCHORING
-        cached.sessions.forEach(({ profile, layerIdx, total }) => {
+        cached.sessions.forEach(({ profile }) => {
           if (!profile) return;
           ctx.save(); 
-          ctx.globalAlpha = total <= 1 ? 0.85 : 0.20 + (layerIdx / (total - 1)) * 0.65;
+          // 🚀 Đã xóa logic làm mờ ép buộc. Bây giờ mọi phiên đều rõ nét
+          ctx.globalAlpha = 1; 
           
-          // Tính toán vị trí X và chiều rộng cho từng phiên
           const startX = _waGetXPixel(xAxis, profile.startIdx);
-          const endX = _waGetXPixel(xAxis, profile.endIdx - 1);
-          const sessionWidth = Math.max(10, Math.abs(endX - startX));
+          let endX = _waGetXPixel(xAxis, profile.endIdx - 1);
           
-          // Hồ sơ phiên chỉ được phép chiếm 80% chiều rộng của cây nến thuộc phiên đó
+          // Fix lỗi phiên hiện tại chỉ mới có 1 cây nến
+          const pxPerCandle = xAxis.convertToPixel(1) - xAxis.convertToPixel(0);
+          if (endX <= startX) endX = startX + Math.max(pxPerCandle, 5);
+          
+          const sessionWidth = Math.abs(endX - startX);
           const sessionMaxW = sessionWidth * 0.8; 
-          const anchorX = startX;
-          const dir = 1; // Mặc định Session vẽ từ Trái qua Phải
+          
+          // 🚀 SMART ANCHORING CHO TỪNG PHIÊN ĐỂ GHÉP VỚI TPO
+          // Nếu chọn Trái -> bám vào startX và vẽ sang phải
+          // Nếu chọn Phải -> bám vào endX và vẽ ngược sang trái
+          const anchorX = isLeft ? startX : endX;
+          const dir = isLeft ? 1 : -1;
 
           _waRenderBins(ctx, profile, sessionMaxW, anchorX, dir, yAxis, C, true);
           ctx.restore();
@@ -1863,8 +1867,9 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
           _waRenderPOCLine(ctx, profile, sessionMaxW, anchorX, dir, bounding, yAxis, dataList, C);
           _waRenderVALines(ctx, profile, sessionMaxW, anchorX, dir, yAxis, C);
         });
-      } else if (cached.mainProfile) {
-        // 🚀 FULL SCREEN MODE
+      } 
+      // 3. VẼ VPVR TOÀN MÀN HÌNH CHÍNH (NẾU KHÔNG DÙNG CHẾ ĐỘ PHIÊN)
+      else if (cached.mainProfile) {
         const anchorX = isLeft ? 0 : bounding.width;
         const dir = isLeft ? 1 : -1;
         _waRenderBins(ctx, cached.mainProfile, maxWidthPx, anchorX, dir, yAxis, C, true);
