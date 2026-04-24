@@ -49,52 +49,59 @@ window.WaveChartEngine = {
         window.__wa_onChartReady = () => this.applyNow();
     },
 
-    // 🚀 CHẾ TẠO CỌ VẼ CUSTOM CHO BIỂU ĐỒ CỘT & ĐỈNH-ĐÁY (FIX API 'draw' CỦA V9)
-    _registerCustomFigures: function() {
-        if (!window.klinecharts || !window.klinecharts.registerFigure) return;
-        try {
-            // Cọ vẽ số 1: Cột (Columns)
-            window.klinecharts.registerFigure({
-                name: 'wave_columns',
-                draw: ({ ctx, coordinate, bounding, barSpace, data }) => {
-                    const c = this.config;
-                    const isUp = data.close >= data.open; 
-                    ctx.fillStyle = isUp ? c.upColor : c.downColor;
-                    const width = Math.max(1, barSpace * 0.6); // Độ mập của cột
-                    const x = coordinate.x - width / 2;
-                    const y = coordinate.close;
-                    const h = Math.max(1, bounding.height - y); // Kéo dài xuống tận đáy màn hình
-                    ctx.fillRect(x, y, width, h);
-                }
-            });
+   // 🚀 CHẾ TẠO CỌ VẼ CUSTOM CHO BIỂU ĐỒ CỘT & ĐỈNH-ĐÁY (CHUẨN DECLARATIVE V9)
+   _registerCustomFigures: function() {
+    if (!window.klinecharts || !window.klinecharts.registerFigure) return;
+    try {
+        // Cọ vẽ số 1: Cột (Columns)
+        window.klinecharts.registerFigure({
+            name: 'wave_columns',
+            draw: ({ coordinate, bounding, barSpace, data }) => {
+                const c = window.WaveChartEngine.config;
+                const isUp = data.close >= data.open; 
+                const color = isUp ? c.upColor : c.downColor;
+                const width = Math.max(1, barSpace * 0.6); // Độ mập của cột
+                const x = coordinate.x - width / 2;
+                const y = coordinate.close;
+                const h = Math.max(1, bounding.height - y); // Cột mọc từ dưới đáy màn hình lên
+                
+                // 🚀 V9 Bắt buộc trả về Object hình khối
+                return {
+                    name: 'rect',
+                    attrs: { x: x, y: y, width: width, height: h },
+                    styles: { style: 'fill', color: color }
+                };
+            }
+        });
 
-            // Cọ vẽ số 2: Đỉnh - Đáy (High - Low)
-            window.klinecharts.registerFigure({
-                name: 'wave_high_low',
-                draw: ({ ctx, coordinate, barSpace, data }) => {
-                    const c = this.config;
-                    const isUp = data.close >= data.open;
-                    ctx.lineWidth = Math.max(1.5, barSpace * 0.15);
-                    ctx.lineCap = 'round';
-                    ctx.strokeStyle = isUp ? c.upColor : c.downColor;
-                    
-                    // Vẽ gạch dọc nối Đỉnh và Đáy
-                    ctx.beginPath();
-                    ctx.moveTo(coordinate.x, coordinate.high);
-                    ctx.lineTo(coordinate.x, coordinate.low);
-                    ctx.stroke();
+        // Cọ vẽ số 2: Đỉnh - Đáy (High - Low)
+        window.klinecharts.registerFigure({
+            name: 'wave_high_low',
+            draw: ({ coordinate, barSpace, data }) => {
+                const c = window.WaveChartEngine.config;
+                const isUp = data.close >= data.open;
+                const color = isUp ? c.upColor : c.downColor;
+                const lineWidth = Math.max(1.5, barSpace * 0.15);
+                const tickWidth = Math.max(3, barSpace * 0.4);
 
-                    // Vẽ râu ngang nhỏ chỉ giá Close
-                    const tickWidth = Math.max(3, barSpace * 0.4);
-                    ctx.beginPath();
-                    ctx.moveTo(coordinate.x, coordinate.close);
-                    ctx.lineTo(coordinate.x + tickWidth, coordinate.close);
-                    ctx.stroke();
-                }
-            });
-            console.log('[WaveChartEngine] Đã nạp Cọ vẽ Cấp 1 (Columns, High-Low) ✅');
-        } catch(e) { console.error("Lỗi nạp Cọ vẽ:", e); }
-    },
+                // 🚀 Trả về mảng chứa 2 đoạn thẳng (Cột dọc + Râu ngang)
+                return [
+                    {
+                        name: 'line',
+                        attrs: { coordinates: [{ x: coordinate.x, y: coordinate.high }, { x: coordinate.x, y: coordinate.low }] },
+                        styles: { style: 'stroke', color: color, size: lineWidth }
+                    },
+                    {
+                        name: 'line',
+                        attrs: { coordinates: [{ x: coordinate.x, y: coordinate.close }, { x: coordinate.x + tickWidth, y: coordinate.close }] },
+                        styles: { style: 'stroke', color: color, size: lineWidth }
+                    }
+                ];
+            }
+        });
+        console.log('[WaveChartEngine] Đã nạp Cọ vẽ Cấp 1 (Columns, High-Low) chuẩn v9 ✅');
+    } catch(e) { console.error("Lỗi nạp Cọ vẽ:", e); }
+},
 
     update: function (newProps, instant = false) {
         this.config = { ...this.config, ...newProps }; this.saveConfig();
