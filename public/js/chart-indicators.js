@@ -4009,9 +4009,18 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         #wa-global-settings ::-webkit-scrollbar { width: 4px; }
         #wa-global-settings ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
         .wa-gs-section { font-size: 11px; font-weight: 700; color: #848E9C; text-transform: uppercase; padding: 14px 16px 6px; letter-spacing: 0.5px; }
-        .wa-gs-item { padding: 12px 16px; min-height: 44px; display: flex; align-items: center; cursor: pointer; color: #EAECEF; font-size: 13px; font-weight: 500; border-left: 3px solid transparent; transition: 0.15s; }
+        
+        /* 🚀 CẬP NHẬT GIAO DIỆN HOVER CỦA ITEM */
+        .wa-gs-item { padding: 12px 16px; min-height: 44px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; color: #EAECEF; font-size: 13px; font-weight: 500; border-left: 3px solid transparent; transition: 0.15s; }
         .wa-gs-item:hover { background: rgba(255,255,255,0.04); }
         .wa-gs-item.active { background: rgba(0, 240, 255, 0.08); border-left-color: #00F0FF; color: #00F0FF; }
+        
+        /* 🚀 NÚT ẨN HIỆN/XÓA (Mặc định giấu đi, Hover mới hiện) */
+        .wa-gs-actions { display: none; gap: 4px; align-items: center; }
+        .wa-gs-item:hover .wa-gs-actions { display: flex; }
+        .wa-gs-btn { background: transparent; border: none; color: #848E9C; cursor: pointer; font-size: 14px; padding: 4px 6px; border-radius: 4px; transition: 0.15s; display: flex; align-items: center; justify-content: center; }
+        .wa-gs-btn:hover { background: rgba(255,255,255,0.1); color: #FFF; }
+        .wa-gs-btn.delete:hover { background: rgba(255,82,82,0.15); color: #FF5252; }
         
         .wa-group-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 16px; }
         .wa-group-title { color:#F0B90B; font-size:12px; font-weight:700; margin-bottom:16px; text-transform:uppercase; letter-spacing:0.5px; }
@@ -4094,38 +4103,91 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         try { global.tvChart.overrideIndicator({ name: currentActiveIndName, calcParams: newParams }, indState.paneId); } catch (e) {}
     };
 
-    // RENDER SIDEBAR TRÁI
+    // RENDER SIDEBAR TRÁI (Tích hợp Nút Mắt / Thùng Rác)
     function renderSidebar() {
-        sidebar.innerHTML = '';
-        const mains = global.scActiveIndicators.filter(i => i.isStack);
-        const subs = global.scActiveIndicators.filter(i => !i.isStack);
+      sidebar.innerHTML = '';
+      const mains = global.scActiveIndicators.filter(i => i.isStack);
+      const subs = global.scActiveIndicators.filter(i => !i.isStack);
 
-        const createSection = (title, items) => {
-            if (items.length === 0) return;
-            const sec = document.createElement('div');
-            sec.className = 'wa-gs-section';
-            sec.innerText = title;
-            sidebar.appendChild(sec);
+      const createSection = (title, items) => {
+          if (items.length === 0) return;
+          const sec = document.createElement('div');
+          sec.className = 'wa-gs-section';
+          sec.innerText = title;
+          sidebar.appendChild(sec);
 
-            items.forEach(ind => {
-                const meta = INDICATOR_REGISTRY.find(x => x.name === ind.name);
-                const item = document.createElement('div');
-                item.className = 'wa-gs-item';
-                item.innerText = meta ? (meta.shortName || meta.name) : ind.name;
-                item.dataset.name = ind.name;
-                
-                item.onclick = () => {
-                    sidebar.querySelectorAll('.wa-gs-item').forEach(el => el.classList.remove('active'));
-                    item.classList.add('active');
-                    renderContent(ind.name);
-                };
-                sidebar.appendChild(item);
-            });
-        };
+          items.forEach(ind => {
+              const meta = INDICATOR_REGISTRY.find(x => x.name === ind.name);
+              const item = document.createElement('div');
+              item.className = 'wa-gs-item';
+              
+              // Nếu đang mở tab này thì tô màu sáng lên
+              if (currentActiveIndName === ind.name) item.classList.add('active'); 
+              item.dataset.name = ind.name;
+              
+              const isVisible = ind.visible !== false; // Mặc định là true
+              const indNameStr = meta ? (meta.shortName || meta.name) : ind.name;
 
-        createSection('Main Chart', mains);
-        createSection('Sub Chart', subs);
-    }
+              item.innerHTML = `
+                  <span style="display:flex; align-items:center; gap:6px; ${!isVisible ? 'opacity:0.4; text-decoration:line-through;' : ''}">
+                      ${indNameStr}
+                  </span>
+                  <div class="wa-gs-actions">
+                      <button class="wa-gs-btn toggle-vis" title="${isVisible ? 'Ẩn chỉ báo' : 'Hiện chỉ báo'}">
+                          ${isVisible ? '👁️' : '🙈'}
+                      </button>
+                      <button class="wa-gs-btn delete" title="Xóa chỉ báo">🗑️</button>
+                  </div>
+              `;
+              
+              // Click vào VÙNG TRỐNG của Item -> Mở Cài Đặt bên phải
+              item.onclick = (e) => {
+                  if (e.target.closest('.wa-gs-actions')) return; // Ngăn không cho chạy đè khi bấm nút xóa/ẩn
+                  sidebar.querySelectorAll('.wa-gs-item').forEach(el => el.classList.remove('active'));
+                  item.classList.add('active');
+                  renderContent(ind.name);
+              };
+
+              // CLICK NÚT MẮT (Ẩn/Hiện)
+              const btnToggle = item.querySelector('.toggle-vis');
+              btnToggle.onclick = (e) => {
+                  e.stopPropagation();
+                  ind.visible = !isVisible;
+                  if (window.tvChart) window.tvChart.overrideIndicator({ name: ind.name, visible: ind.visible }, ind.paneId);
+                  if (typeof global.saveIndicatorState === 'function') global.saveIndicatorState();
+                  // Cập nhật lại UI Sidebar
+                  renderSidebar();
+              };
+
+              // CLICK NÚT THÙNG RÁC (Xóa)
+              const btnDelete = item.querySelector('.delete');
+              btnDelete.onclick = (e) => {
+                  e.stopPropagation();
+                  if (typeof global.removeIndicatorFromChart === 'function') {
+                      global.removeIndicatorFromChart(ind.name);
+                  }
+                  
+                  // Nếu xóa đúng cái đang mở, thì xóa trắng bảng Content bên phải
+                  if (currentActiveIndName === ind.name) {
+                      currentActiveIndName = null;
+                      content.innerHTML = '<div style="display:flex; height:100%; align-items:center; justify-content:center; color:#848E9C; font-size:13px;">Hãy chọn một chỉ báo để thiết lập</div>';
+                  }
+                  
+                  // Đóng luôn bảng cài đặt nếu đã xóa hết mọi chỉ báo
+                  if (global.scActiveIndicators.length === 0) {
+                      document.getElementById('wa-gs-close').click();
+                  } else {
+                      renderSidebar(); // Vẽ lại menu nếu vẫn còn chỉ báo khác
+                  }
+              };
+
+              sidebar.appendChild(item);
+          });
+      };
+
+      createSection('Main Chart', mains);
+      createSection('Sub Chart', subs);
+  }
 
     // RENDER CONTENT PHẢI
     function renderContent(indName) {
