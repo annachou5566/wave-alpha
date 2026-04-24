@@ -3759,7 +3759,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
           } 
       } 
       // =========================================================================
-      // NÚT TAM GIÁC ẨN/HIỆN TEXT CHỈ BÁO (AUTO-TRACKING DYNAMIC Y-AXIS - V4 FIX)
+      // NÚT TAM GIÁC ẨN/HIỆN TEXT CHỈ BÁO (AUTO-TRACKING V5 - ZERO LAG)
       // =========================================================================
       setTimeout(() => {
         const chartDom = document.getElementById('sc-chart-container') || 
@@ -3771,7 +3771,6 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 chartDom.style.position = 'relative';
             }
 
-            // Khôi phục lề chuẩn của KLineCharts
             if (window.tvChart) {
                 window.tvChart.setStyles({
                     indicator: { tooltip: { text: { marginLeft: 8 } } }
@@ -3781,12 +3780,12 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
             const toggleBtn = document.createElement('div');
             toggleBtn.id = 'wa-legend-toggle';
             toggleBtn.title = "Thu gọn/Mở rộng danh sách chỉ báo";
-            toggleBtn.dataset.hidden = "false"; // Khởi tạo trạng thái
+            toggleBtn.dataset.hidden = "false"; 
             
             toggleBtn.style.cssText = `
                 position: absolute;
                 left: 12px;
-                top: 32px; 
+                top: 36px; /* Đẩy lùi xuống một chút so với giá OHLC */
                 z-index: 999;
                 width: 20px;
                 height: 20px;
@@ -3799,11 +3798,11 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 cursor: pointer;
                 border-radius: 4px;
                 backdrop-filter: blur(4px);
-                transition: top 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.2s, transform 0.2s;
+                transition: top 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.2s, transform 0.2s; /* Nhanh & nảy hơn */
             `;
             
             toggleBtn.innerHTML = `
-                <svg id="wa-legend-icon" style="transition: transform 0.3s ease;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg id="wa-legend-icon" style="transition: transform 0.25s ease;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="18 15 12 9 6 15"></polyline>
                 </svg>
             `;
@@ -3815,7 +3814,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
             toggleBtn.onclick = (e) => {
                 e.stopPropagation();
                 isLegendVisible = !isLegendVisible;
-                toggleBtn.dataset.hidden = (!isLegendVisible).toString(); // Cập nhật state cho Engine
+                toggleBtn.dataset.hidden = (!isLegendVisible).toString(); 
                 
                 document.getElementById('wa-legend-icon').style.transform = isLegendVisible ? 'rotate(0deg)' : 'rotate(180deg)';
                 
@@ -3828,7 +3827,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
 
             chartDom.appendChild(toggleBtn);
 
-            // 🚀 AUTO-TRACKING ENGINE: Đã Fix lỗi đếm Map của KLineCharts
+            // 🚀 AUTO-TRACKING V5: Quét tốc độ cao & Căn lề chuẩn
             let lastState = null; 
             
             setInterval(() => {
@@ -3836,7 +3835,6 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 
                 let count = 0;
                 try {
-                    // Sửa lỗi: Nhận diện cấu trúc dữ liệu Map()
                     const inds = window.tvChart.getIndicatorByPaneId('candle_pane');
                     if (inds) {
                         if (inds instanceof Map) count = inds.size;
@@ -3844,7 +3842,6 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                     }
                 } catch(e) {}
 
-                // Fallback an toàn lấy từ mảng hệ thống nếu API thất bại
                 if (count === 0 && global.scActiveIndicators) {
                     count = global.scActiveIndicators.filter(i => i.isStack).length;
                 }
@@ -3852,17 +3849,17 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 const isHidden = toggleBtn.dataset.hidden === 'true';
                 const currentState = count + "_" + isHidden;
                 
-                // Chỉ thay đổi CSS khi người dùng thực sự thêm/xóa chỉ báo (Zero-lag)
                 if (lastState !== currentState) {
-                    const baseTop = 32; // Vị trí nằm ngay dưới dòng OHLC
-                    const lineHeight = 20; // Chiều cao mỗi dòng chỉ báo (20px)
+                    // 🚀 FIX LỖI ĐÈ CHỮ: Chỉnh lineHeight lên 26px để bù hao margin/padding của KLineCharts
+                    const baseTop = 36; 
+                    const lineHeight = 26; 
                     
                     const targetTop = isHidden ? baseTop : baseTop + (count * lineHeight);
                     toggleBtn.style.top = targetTop + 'px';
                     
                     lastState = currentState; 
                 }
-            }, 400); 
+            }, 150); 
         }
     }, 800);
     };
