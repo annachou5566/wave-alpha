@@ -334,27 +334,30 @@
     {
       name: 'WAVE_TPO',
       shortName: 'TPO',
-      description: 'Hồ Sơ Thời Gian SMART v4.9 (Tùy chỉnh số phiên)',
+      description: 'Hồ Sơ Thời Giá SMART v5.1 (Khớp nối hoàn hảo)',
       category: 'wave_alpha',
       isStack: true,
       builtIn: false,
-      // 31 Thông số: Thuật Toán [0-7, 27-30] | Màu Sắc [8-19] | Kiểu Dáng [20-26]
+      // Đã bổ sung tham số thứ 32 (Độ Rộng Khối %) ở cuối cùng mảng
       defaultParams: [
         60, 70, 1, 0, 1, 0, 1, 1, 
         "#9C27B0", "#7B1FA2", "#F0B90B", "#FF9800", "#F0B90B",
         "#BA68C8", "#FFD600", "#FFD600", "#26A69A", "#EF5350",
         "#42A5F5", "#FF7043",
-        85, 20, 2, 1, 0, 10, 1, 70, 8, 1, 30
+        85, 20, 2, 1, 0, 10, 1, 70, 8, 1, 30,
+        50 // <-- (Param 31) Độ Rộng Khối % (10-100)
       ],
       paramLabels: [
-        'Số Bins (10–200)', 'Value Area % (10–100)', 'Chế Độ Gộp (0=Cả Chart, 1=Ngày, 2=Tuần)', 'Vị Trí Cả Chart (0=Trái, 1=Phải)', 
+        'Số Bins (10–200)', 'Value Area % (10–100)', 'Chế Độ Gộp (0=Cả Chart, 1=Ngày, 2=Tuần)', 
+        'Vị Trí Neo (0=Trái, 1=Phải)', // Đổi tên nhãn vì giờ nó áp dụng cho cả chế độ Phiên
         'Hiển Thị (0=Block, 1=Letter)', 'Màu Phiên (0=Đơn,1=Đa,2=Nhiệt)', 'Mật Độ (0=Gọn,1=Cân Bằng)', 'Smart Labels (0=Tắt,1=Bật)',
         'Màu Block Trong VA', 'Màu Block Ngoài VA', 'Màu TPO POC', 'Màu Naked POC', 'Màu Super POC', 
         'Màu VAH / VAL', 'Màu IB High', 'Màu IB Low', 'Màu Lực Mua Áp Đảo', 'Màu Lực Bán Áp Đảo', 
         'Màu Acceptance', 'Màu Rejection',
         'Độ Mờ Trong VA (0-100)', 'Độ Mờ Ngoài VA (0-100)', 'Độ Dày POC (1-5)', 'Độ Dày VA (1-4)', 
         'Kiểu Nét VA (0=Đứt,1=Chấm,2=Liền)', 'Cỡ Chữ (8-16)', 'Hiện Nhãn TPO (0=Tắt,1=Bật)', 
-        'Độ Mờ Phiên Cũ (0-100)', 'Kích Thước Chữ Min (6-12px)', 'Độ Chi Tiết Nhãn (0-2)', 'Số Phiên Tối Đa (1-100)'
+        'Độ Mờ Phiên Cũ (0-100)', 'Kích Thước Chữ Min (6-12px)', 'Độ Chi Tiết Nhãn (0-2)', 'Số Phiên Tối Đa (1-100)',
+        'Độ Rộng Khối % (10-100)' // <-- Nhãn cho tham số mới
       ],
     },
 
@@ -1876,8 +1879,9 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
   });
 })();
 
+// ════════ BƯỚC 2: Thay thế toàn bộ cụm WAVE_TPO ULTIMATE cũ bằng v5.1 này ════════
 // ════════════════════════════════════════════════════════════════════════════════
-//  WAVE_TPO ULTIMATE v5.0 — SMART ENGINE (PATH2D BATCHING & VIEWPORT CULLING)
+//  WAVE_TPO ULTIMATE v5.1 — SMART ENGINE (ANCHORING FIX & WIDTH SYNC)
 // ════════════════════════════════════════════════════════════════════════════════
 (function initWaveTpoSmart() {
   'use strict';
@@ -2073,7 +2077,7 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
   }
 
   kc.registerIndicator({
-      name: 'WAVE_TPO', shortName: 'TPO', description: 'Time Price Opportunity SMART v5.0',
+      name: 'WAVE_TPO', shortName: 'TPO', description: 'Time Price Opportunity SMART v5.1',
       category: 'wave_alpha', series: 'price', isStack: true,
       createTooltipDataSource: function() { return { name: 'TPO', calcParamsText: ' ', values: [] }; },
       
@@ -2082,7 +2086,7 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
           "#9C27B0", "#7B1FA2", "#F0B90B", "#FF9800", "#F0B90B",
           "#BA68C8", "#FFD600", "#FFD600", "#26A69A", "#EF5350",
           "#42A5F5", "#FF7043",
-          85, 20, 2, 1, 0, 10, 1, 70, 8, 1, 30
+          85, 20, 2, 1, 0, 10, 1, 70, 8, 1, 30, 50
       ],
       figures: [],
       calc: function(dataList) { return dataList.map(() => ({})); },
@@ -2095,13 +2099,14 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
           if (!dataList || dataList.length === 0 || !bounding) return false;
 
           const p = indicator.calcParams;
-          if (p && p.length < 31) { 
+          // Fallback array length check (lên 32 tham số)
+          if (p && p.length < 32) { 
               const defaults = [
                   60, 70, 1, 0, 1, 0, 1, 1, "#9C27B0", "#7B1FA2", "#F0B90B", "#FF9800", "#F0B90B",
                   "#BA68C8", "#FFD600", "#FFD600", "#26A69A", "#EF5350", "#42A5F5", "#FF7043",
-                  85, 20, 2, 1, 0, 10, 1, 70, 8, 1, 30
+                  85, 20, 2, 1, 0, 10, 1, 70, 8, 1, 30, 50
               ];
-              for (let i = 0; i < 31; i++) {
+              for (let i = 0; i < 32; i++) {
                   if (p[i] === undefined || (i >= 8 && i <= 19 && typeof p[i] !== 'string')) p[i] = defaults[i];
               }
           }
@@ -2117,6 +2122,7 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
               fontSize: Math.max(8, +(p[25] ?? 10)), showLabels: +(p[26] ?? 1) === 1,
               fade: Math.max(0, +(p[27] ?? 70)) / 100, minLtrPx: Math.max(6, +(p[28] ?? 8)), verbosity: Math.round(+(p[29] ?? 1)),
               maxProfiles: Math.max(1, Math.min(100, +(p[30] ?? 30))), 
+              widthPct: Math.max(10, Math.min(100, +(p[31] ?? 50))) // 🚀 Tích hợp biến Độ Rộng Mới
           };
 
           const { from, to } = visibleRange;
@@ -2250,13 +2256,25 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
               const isHeatmap = C.colorMode === 2;
 
               profiles.forEach((prof) => {
-                  let anchorX, dir;
+                  let anchorX, dir, sessionWidth;
+                  
+                  // 🚀 Lấy tọa độ an toàn cho Start và End của phiên
+                  const startX = _getXPixel(xAxis, prof.startIdx);
+                  let endX = _getXPixel(xAxis, prof.endIdx - 1);
+                  let pxPerCandle = 5;
+                  try { pxPerCandle = xAxis.convertToPixel(1) - xAxis.convertToPixel(0); } catch(e){}
+                  if (isNaN(pxPerCandle) || pxPerCandle <= 0) pxPerCandle = 5;
+                  if (endX <= startX) endX = startX + pxPerCandle;
+
+                  // 🚀 CHỐT CHẶN ANCHORING MỚI: Tôn trọng tuyệt đối Vị Trí Trái/Phải
                   if (C.groupMode === 0) {
+                      sessionWidth = bounding.width;
                       anchorX = C.isLeft ? 0 : bounding.width;
                       dir     = C.isLeft ? 1 : -1;
                   } else {
-                      anchorX = _getXPixel(xAxis, prof.startIdx);
-                      dir     = 1;
+                      sessionWidth = Math.abs(endX - startX);
+                      anchorX = C.isLeft ? startX : endX; // Nếu Trái neo vào Start, Nếu Phải neo vào End
+                      dir     = C.isLeft ? 1 : -1;
                   }
 
                   let baseClr = C.clrVA, outClr = C.clrOut, alphaMul = 1;
@@ -2268,11 +2286,11 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
                       alphaMul = prof.sessionTotal <= 1 ? 1 : (1 - C.fade) + (prof.sessionIdx / (prof.sessionTotal - 1)) * C.fade;
                   }
 
-                  const maxBlocksPx = C.groupMode === 0 ? bounding.width * (compactMode ? 0.28 : 0.35) : bounding.width * (compactMode ? 0.16 : 0.22);
+                  // 🚀 ĐỘ RỘNG MỚI ĐÃ ĐƯỢC LINK VÀO BIẾN %
+                  const maxBlocksPx = sessionWidth * (C.widthPct / 100);
                   const unitW    = maxBlocksPx / Math.max(1, prof.maxTPO);
                   const stepDraw = (compactMode && !C.useLetter) ? 2 : 1;
 
-                  // 🚀 STATE HOISTING: Tính toán Font Size một lần duy nhất cho toàn bộ Profile
                   const rH_global = Math.max(1, Math.abs(_getYPixel(yAxis, prof.bins[0].pLow) - _getYPixel(yAxis, prof.bins[0].pHigh)));
                   const safeFontSize = Math.floor(Math.min(unitW, rH_global, C.fontSize)) || 1;
                   const canLetterGlobal = C.useLetter && rH_global >= 6 && unitW >= C.minLtrPx;
@@ -2283,7 +2301,6 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
                       ctx.textAlign = 'center';
                   }
 
-                  // 🚀 PATH2D BATCHING: Chuẩn bị 2 giỏ chứa (Trong VA và Ngoài VA)
                   const pathInVA = typeof Path2D !== 'undefined' ? new Path2D() : null;
                   const pathOutVA = typeof Path2D !== 'undefined' ? new Path2D() : null;
 
@@ -2296,7 +2313,6 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
 
                       const rY = Math.min(yT, yB), rH = Math.max(1, Math.abs(yB - yT)), blockW = Math.max(1, Math.min(rH, unitW));
                       
-                      // 🚀 Y-AXIS CULLING: Loại bỏ nét vẽ bị lọt ra ngoài mép trên/dưới của màn hình
                       if (rY > bounding.height || rY + rH < 0) return;
 
                       let fAlpha = (bin.inVA ? C.opVA : C.opOut) * alphaMul;
@@ -2309,7 +2325,6 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
                           bin.letters.forEach((lIdx, pos) => {
                               if (pos % stepDraw === 0) {
                                   const lx = dir > 0 ? anchorX + pos * blockW + blockW / 2 : anchorX - pos * blockW - blockW / 2;
-                                  // 🚀 X-AXIS CULLING: Không vẽ chữ nếu bị khuất khỏi mép Trái/Phải
                                   if (lx > 0 && lx < bounding.width) {
                                       ctx.fillText(_waTpoGetLetter(lIdx), lx, rY + rH / 2);
                                   }
@@ -2317,7 +2332,6 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
                           });
                       } else {
                           if (isHeatmap || !pathInVA) {
-                              // Heatmap không Batch được vì mỗi ô vuông 1 màu khác nhau
                               ctx.fillStyle = fillStyle;
                               ctx.beginPath();
                               bin.letters.forEach((lIdx, pos) => {
@@ -2330,7 +2344,6 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
                               });
                               ctx.fill();
                           } else {
-                              // 🚀 GOM NHÓM VÀO PATH2D (Chế độ màu chuẩn)
                               const targetPath = bin.inVA ? pathInVA : pathOutVA;
                               bin.letters.forEach((lIdx, pos) => {
                                   if (pos % stepDraw === 0) {
@@ -2344,7 +2357,6 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
                       }
                   });
 
-                  // 🚀 ĐỔ MÀU MỘT LẦN CHO TOÀN BỘ KHỐI PATH2D (Siêu tốc độ)
                   if (!canLetterGlobal && !isHeatmap && pathInVA) {
                       if (C.opVA > 0) {
                           ctx.fillStyle = _waTpoHex2Rgba(baseClr, Math.min(1, Math.max(0, C.opVA * alphaMul)));
@@ -2356,20 +2368,20 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
                       }
                   }
 
-                  const endSessionX = _getXPixel(xAxis, prof.endIdx);
+                  // 🚀 CÂN CHỈNH LẠI DRAW LINES CHO KHỚP VỚI HƯỚNG VẼ
+                  const lineStart = C.groupMode === 0 ? 0 : startX;
+                  const lineEnd   = C.groupMode === 0 ? bounding.width : endX;
                   
                   const drawLvl = (price, clr, w, dash, txt, isIB = false) => {
                       const y = _getYPixel(yAxis, price); if (y === 0) return;
-                      ctx.strokeStyle = _waTpoHex2Rgba(clr, isIB ? 0.6 : 0.85); ctx.lineWidth   = w; ctx.setLineDash(dash);
+                      ctx.strokeStyle = _waTpoHex2Rgba(clr, isIB ? 0.6 : 0.85); ctx.lineWidth = w; ctx.setLineDash(dash);
                       ctx.beginPath();
-                      const lineStart = C.groupMode === 0 ? 0 : anchorX;
-                      const lineEnd   = C.groupMode === 0 ? bounding.width : endSessionX;
                       ctx.moveTo(lineStart, y); ctx.lineTo(lineEnd, y); ctx.stroke(); ctx.setLineDash([]);
 
                       if (C.showLabels && !compactMode) {
                           ctx.fillStyle  = _waTpoHex2Rgba(clr, 0.95); ctx.font = `bold ${Math.max(8, C.fontSize - 1)}px sans-serif`;
-                          ctx.textAlign  = (C.groupMode === 0 && C.isLeft) ? 'left' : 'right';
-                          const textX    = (C.groupMode === 0 && C.isLeft) ? 4 : (C.groupMode === 0 ? bounding.width - 4 : lineEnd);
+                          ctx.textAlign  = C.isLeft ? 'left' : 'right';
+                          const textX    = C.isLeft ? lineStart + 4 : lineEnd - 4;
                           ctx.fillText(`${txt} ${price.toFixed(2)}`, textX, y - 4);
                       }
                   };
@@ -2388,16 +2400,20 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
                       if (prof.isNaked && !isSuper) ctx.setLineDash([5, 4]);
 
                       ctx.beginPath();
-                      const pocStart = C.groupMode === 0 ? 0 : anchorX;
-                      const pocEnd   = C.groupMode === 0 ? bounding.width : endSessionX;
-                      ctx.moveTo(pocStart, pocY); ctx.lineTo(pocEnd, pocY);
-                      if (prof.isNaked && C.groupMode !== 0) ctx.lineTo(bounding.width, pocY);
+                      ctx.moveTo(lineStart, pocY); ctx.lineTo(lineEnd, pocY);
+                      
+                      // 🚀 FIX LỖI TRÀN VIỀN NAKED POC: Kéo về đúng cạnh màn hình theo hướng neo
+                      if (prof.isNaked && C.groupMode !== 0) {
+                          const screenEdge = dir === 1 ? bounding.width : 0;
+                          ctx.lineTo(screenEdge, pocY);
+                      }
+                      
                       ctx.stroke(); ctx.setLineDash([]);
 
                       if (C.showLabels && !compactMode) {
                           ctx.fillStyle = _waTpoHex2Rgba(clrPoc, 0.95); ctx.font = `bold ${C.fontSize}px sans-serif`;
-                          ctx.textAlign = (C.groupMode === 0 && C.isLeft) ? 'left' : 'right';
-                          const textX   = (C.groupMode === 0 && C.isLeft) ? 4 : (C.groupMode === 0 ? bounding.width - 4 : pocEnd);
+                          ctx.textAlign = C.isLeft ? 'left' : 'right';
+                          const textX   = C.isLeft ? lineStart + 4 : lineEnd - 4;
                           ctx.fillText(`POC ${prof.pocMid.toFixed(2)}`, textX, pocY - 4);
                       }
                   }
@@ -2406,23 +2422,28 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
                       const lblY = _getYPixel(yAxis, prof.maxP);
                       if (lblY !== 0) {
                           const ly = lblY - 15;
-                          ctx.textAlign = 'left'; ctx.font = `bold ${Math.max(8, C.fontSize - 1)}px sans-serif`;
+                          ctx.textAlign = C.isLeft ? 'left' : 'right'; 
+                          ctx.font = `bold ${Math.max(8, C.fontSize - 1)}px sans-serif`;
+                          const lblAnchor = C.isLeft ? anchorX : anchorX; // Anchor cho text
+                          
                           ctx.fillStyle = _waTpoHex2Rgba('#FFFFFF', 0.8);
-                          ctx.fillText(`[${prof.shape}]`, anchorX, ly);
+                          ctx.fillText(`[${prof.shape}]`, lblAnchor, ly);
 
                           if (C.verbosity > 0) {
                               const imbClr = prof.imbalance === 'BUYING'  ? C.clrImbalBuy : prof.imbalance === 'SELLING' ? C.clrImbalSell : '#888888';
-                              ctx.fillStyle = _waTpoHex2Rgba(imbClr, 0.8); ctx.fillText(` Imb: ${prof.imbalance}`, anchorX + 60, ly);
+                              ctx.fillStyle = _waTpoHex2Rgba(imbClr, 0.8); 
+                              const imbX = C.isLeft ? lblAnchor + 60 : lblAnchor - 60;
+                              ctx.fillText(` Imb: ${prof.imbalance}`, imbX, ly);
                           }
                           if (C.verbosity > 1) {
                               const aucClr = prof.auctionState === 'ACCEPTANCE' ? C.clrAccept : prof.auctionState === 'REJECTION'  ? C.clrReject : '#888888';
-                              ctx.fillStyle = _waTpoHex2Rgba(aucClr, 0.8); ctx.fillText(` | ${prof.auctionState}`, anchorX, ly - 14);
+                              ctx.fillStyle = _waTpoHex2Rgba(aucClr, 0.8); ctx.fillText(` | ${prof.auctionState}`, lblAnchor, ly - 14);
                           }
                       }
                   }
               });
           } catch (e) {
-              console.error('[WAVE_TPO v5.0]', e);
+              console.error('[WAVE_TPO v5.1]', e);
           } finally {
               ctx.restore();
           }
