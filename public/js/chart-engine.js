@@ -22,12 +22,12 @@ window.bookmapHistory = [];
 window.isHeatmapOn = true; 
 
 // =========================================================================
-// 🧠 BƯỚC 1: WAVE CHART ENGINE (FIX MÀU VIỀN & BÓNG NẾN ĐỘC LẬP)
+// 🧠 BƯỚC 1 + 7: WAVE CHART ENGINE & CUSTOM FIGURES (MỞ KHÓA CẤP 1)
 // =========================================================================
 const DEFAULT_CHART_CONFIG = {
     chartType: 1, upColor: '#0ECB81', downColor: '#F6465D',
     showWick: true, wickIndependent: false, wickUpColor: '#0ECB81', wickDownColor: '#F6465D',
-    showBorder: true, borderIndependent: false, borderUpColor: '#0ECB81', borderDownColor: '#F6465D', // 🚀 Bổ sung Viền độc lập
+    showBorder: true, borderIndependent: false, borderUpColor: '#0ECB81', borderDownColor: '#F6465D',
     abnormalVolColoring: false, yAxisMode: 'normal',
     showOHLC: true, showCountdown: true, showLastPriceLine: true, showHighLowTags: true, showWatermark: true, watermarkOpacity: 0.05,
     bgType: 'solid', bgColor: '#131722', bgColor2: '#000000',
@@ -42,8 +42,58 @@ window.WaveChartEngine = {
     chartInstance: null, config: { ...DEFAULT_CHART_CONFIG }, _debounceTimer: null,
 
     init: function (chart) {
-        this.chartInstance = chart; this.loadConfig(); this.applyNow();
+        this.chartInstance = chart; 
+        this._registerCustomFigures(); // 🚀 Bơm Cọ vẽ Cấp 1 vào lõi KLineChart
+        this.loadConfig(); 
+        this.applyNow();
         window.__wa_onChartReady = () => this.applyNow();
+    },
+
+    // 🚀 CHẾ TẠO CỌ VẼ CUSTOM CHO BIỂU ĐỒ CỘT & ĐỈNH-ĐÁY
+    _registerCustomFigures: function() {
+        if (!window.klinecharts || !window.klinecharts.registerFigure) return;
+        try {
+            // Cọ vẽ số 1: Cột (Columns)
+            window.klinecharts.registerFigure({
+                name: 'wave_columns',
+                render: ({ ctx, coordinate, bounding, barSpace, data }) => {
+                    const c = this.config;
+                    const isUp = data.close >= data.open; 
+                    ctx.fillStyle = isUp ? c.upColor : c.downColor;
+                    const width = Math.max(1, barSpace * 0.6); // Độ mập của cột
+                    const x = coordinate.x - width / 2;
+                    const y = coordinate.close;
+                    const h = Math.max(1, bounding.height - y); // Kéo dài xuống tận đáy màn hình
+                    ctx.fillRect(x, y, width, h);
+                }
+            });
+
+            // Cọ vẽ số 2: Đỉnh - Đáy (High - Low)
+            window.klinecharts.registerFigure({
+                name: 'wave_high_low',
+                render: ({ ctx, coordinate, barSpace, data }) => {
+                    const c = this.config;
+                    const isUp = data.close >= data.open;
+                    ctx.lineWidth = Math.max(1.5, barSpace * 0.15);
+                    ctx.lineCap = 'round';
+                    ctx.strokeStyle = isUp ? c.upColor : c.downColor;
+                    
+                    // Vẽ gạch dọc
+                    ctx.beginPath();
+                    ctx.moveTo(coordinate.x, coordinate.high);
+                    ctx.lineTo(coordinate.x, coordinate.low);
+                    ctx.stroke();
+
+                    // Vẽ râu ngang chỉ giá Close
+                    const tickWidth = Math.max(3, barSpace * 0.4);
+                    ctx.beginPath();
+                    ctx.moveTo(coordinate.x, coordinate.close);
+                    ctx.lineTo(coordinate.x + tickWidth, coordinate.close);
+                    ctx.stroke();
+                }
+            });
+            console.log('[WaveChartEngine] Đã nạp Cọ vẽ Cấp 1 (Columns, High-Low) ✅');
+        } catch(e) { console.error("Lỗi nạp Cọ vẽ:", e); }
     },
 
     update: function (newProps, instant = false) {
@@ -61,12 +111,15 @@ window.WaveChartEngine = {
         const c = this.config;
 
         let kcChartType = 'candle_solid'; let isLine = false;
+        
+        // 🚀 BỘ CHIA ĐƯỜNG (ROUTER) ÁNH XẠ BIỂU ĐỒ CẤP 1
         if (c.chartType === 2) kcChartType = 'candle_stroke';
         else if (c.chartType === 3) kcChartType = 'ohlc';     
-        else if (c.chartType === 6) { kcChartType = 'area'; isLine = true; } 
-        else if (c.chartType === 9) { kcChartType = 'area'; isLine = false; } 
+        else if (c.chartType === 4) kcChartType = 'wave_columns';  // Trỏ vào cọ vẽ Columns
+        else if (c.chartType === 5) kcChartType = 'wave_high_low'; // Trỏ vào cọ vẽ High-Low
+        else if (c.chartType === 6 || c.chartType === 7 || c.chartType === 8) { kcChartType = 'area'; isLine = true; } // Tạm mượn Đường Line
+        else if (c.chartType === 9 || c.chartType === 10 || c.chartType === 11) { kcChartType = 'area'; isLine = false; } // Tạm mượn Vùng Area
 
-        // 🚀 TÍNH TOÁN MÀU VIỀN & BÓNG NẾN (Bảo vệ nến rỗng không bị tàng hình)
         const isHollow = (c.chartType === 2);
         const finalUpBorder = c.showBorder ? (c.borderIndependent ? c.borderUpColor : c.upColor) : (isHollow ? c.upColor : 'transparent');
         const finalDownBorder = c.showBorder ? (c.borderIndependent ? c.borderDownColor : c.downColor) : (isHollow ? c.downColor : 'transparent');
@@ -77,7 +130,7 @@ window.WaveChartEngine = {
             grid: { horizontal: { show: c.gridHorizontal, color: c.gridColor, style: 'dashed' }, vertical: { show: c.gridVertical, color: c.gridColor, style: 'dashed' } },
             candle: {
                 type: kcChartType,
-                tooltip: { showRule: c.showOHLC ? 'always' : 'none' }, // Liên kết OHLC
+                tooltip: { showRule: c.showOHLC ? 'always' : 'none' },
                 bar: {
                     upColor: c.upColor, downColor: c.downColor, noChangeColor: '#787b86',
                     upBorderColor: finalUpBorder, downBorderColor: finalDownBorder,
