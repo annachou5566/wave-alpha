@@ -267,20 +267,39 @@
     {
       name: 'WAVE_COB',
       shortName: 'COB',
-      description: 'Tháp Thanh Khoản DOM (Dữ liệu Sổ lệnh theo thời gian thực)',
+      description: 'Tháp Thanh Khoản DOM v9.0 — Smart Liquidity (Cluster, Void, CVD)',
       category: 'wave_alpha',
-      isStack: true, 
-      // Mặc định: [Rộng 120, Auto 0 (hoặc 50000), Dày 4, Lỳ 9995, Tốc độ 500ms]
-      // Khuyên dùng mặc định là 0 để tính năng Tự Động làm việc!
-      defaultParams: [120, 0, 4, 9995, 500], 
-      paramLabels: [
-        'Độ Rộng Cột COB (px)', 
-        'Lọc Rác (USD) [Nhập 0 để Tự động]',
-        'Độ Dày 1 Nấc Giá (px)',
-        'Độ Lỳ Của Khung (x/10000)',
-        'Tốc Độ Vẽ - FPS (ms)'
-      ],
+      isStack: true,
       builtIn: false,
+      // 19 Params: [Core 0-4], [UI/UX 5-9], [Colors 10-18]
+      defaultParams: [
+        120, 0, 4, 9995, 500,
+        1, 1, 1, 2, 1,
+        "#26A69A", "#EF5350",
+        60, 75,
+        "#FFF176", "#FF7043", "#26A69A", "#EF5350", "#FFD600"
+      ],
+      paramLabels: [
+        'Độ Rộng Cột (px)',
+        'Lọc Rác USD (0=Auto AI)',
+        'Cao 1 Nấc Giá (px)',
+        'Độ Lỳ (x/10000)',
+        'Tốc Độ Vẽ (ms)',
+        'Hiện CVD (0=Tắt,1=Bật)',
+        'Highlight Cụm (0=Tắt,1=Bật)',
+        'Highlight Vùng Void (0=Tắt,1=Bật)',
+        'Vị Trí Panel (0=Trên,1=Dưới,2=Auto)',
+        'Độ Chi Tiết (0=Gọn,1=Vừa,2=Đầy)',
+        'Màu Lực Mua (Bid)',
+        'Màu Lực Bán (Ask)',
+        'Độ Mờ Nền Panel (0–90)',
+        'Độ Mờ Glow S-Tier (60–100)',
+        'Màu Highlight Cụm Tường',
+        'Màu Vùng Trống (Void)',
+        'Màu CVD Bull',
+        'Màu CVD Bear',
+        'Màu Absorption (Hấp thụ)',
+      ],
     },
     
     {
@@ -806,112 +825,223 @@ kc.registerIndicator({
 });
 
 
+// ── Global State (Khởi tạo 1 lần duy nhất) ──
+if (!window._waCob9) {
+  window._waCob9 = {
+    // Data layer
+    snapshot: { asks: new Map(), bids: new Map(), ts: 0 },
+    barCache: new Map(), 
+    
+    // Memory Pools (Tránh GC Pause)
+    pools: {
+      yMapAsks: new Map(),
+      yMapBids: new Map(),
+      animAsks: new Map(),
+      animBids: new Map(),
+      toDelete: []
+    },
 
-// ─────────────────────────────────────────────────
-// INDICATOR: WAVE_COB (Version 7.1 - Tiếng Việt & Auto Filter)
-// ─────────────────────────────────────────────────
+    // Analytics
+    scale: { maxVol: 0 },
+    stats: { bidTotal: 0, askTotal: 0, ratio: 1 },
+    absorption: new Map(),
+    cvd: 0,
+    cvdHistory: [],
+    clusters: { bid: [], ask: [] },
+    voids: { bid: [], ask: [] },
+
+    // UX State
+    hover: { y: -1 },
+    _cleanup: null
+  };
+}
+
+// ── Helpers nội bộ (Pure Functions) ──
+const _waCobUtils = {
+  roundRect: function(ctx, x, y, w, h, r) {
+    if (typeof ctx.roundRect === 'function') {
+      ctx.beginPath(); ctx.roundRect(x, y, w, h, r);
+    } else {
+      r = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + r, r);
+      ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+      ctx.arcTo(x, y + h, x, y + h - r, r); ctx.arcTo(x, y, x + r, y, r);
+      ctx.closePath();
+    }
+  },
+  parseColor: function(val, alpha) {
+    if (val === 'transparent') return 'rgba(0,0,0,0)';
+    let hex = String(val).replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    const r = parseInt(hex.substring(0, 2), 16) || 0;
+    const g = parseInt(hex.substring(2, 4), 16) || 0;
+    const b = parseInt(hex.substring(4, 6), 16) || 0;
+    return `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
+  },
+  fmt: function(v) {
+    if (v >= 1e9) return (v / 1e9).toFixed(2) + 'B';
+    if (v >= 1e6) return (v / 1e6).toFixed(2) + 'M';
+    if (v >= 1e3) return Math.round(v / 1e3) + 'K';
+    return Math.round(v).toString();
+  },
+  clamp: function(v, mn, mx) { return Math.max(mn, Math.min(mx, v)); },
+  
+  detectClusters: function(map, barH, minVal) {
+    const sorted = [];
+    map.forEach((v, y) => { if (v >= minVal * 2) sorted.push({ y, v }); });
+    sorted.sort((a, b) => a.y - b.y);
+    const clusters = [];
+    let cur = null;
+    for (let i = 0; i < sorted.length; i++) {
+      const bar = sorted[i];
+      if (cur && bar.y - cur.yEnd <= barH * 2) {
+        cur.yEnd = bar.y + barH; cur.total += bar.v; cur.count++;
+      } else {
+        if (cur) clusters.push(cur);
+        cur = { yStart: bar.y, yEnd: bar.y + barH, total: bar.v, count: 1 };
+      }
+    }
+    if (cur) clusters.push(cur);
+    return clusters.filter(c => c.count >= 2);
+  },
+
+  detectVoids: function(map, barH, yMin, yMax) {
+    const occupied = new Set();
+    map.forEach((v, y) => occupied.add(Math.floor(y / barH)));
+    const voids = [];
+    let start = null;
+    const binMin = Math.floor(yMin / barH);
+    const binMax = Math.ceil(yMax / barH);
+    for (let b = binMin; b <= binMax; b++) {
+      if (!occupied.has(b)) { if (start == null) start = b; } 
+      else {
+        if (start != null && b - start >= 3) voids.push({ yStart: start * barH, yEnd: b * barH });
+        start = null;
+      }
+    }
+    return voids;
+  },
+
+  getTopTiers: function(map) {
+    const arr = [];
+    map.forEach((v, y) => arr.push([y, v]));
+    arr.sort((a, b) => b[1] - a[1]);
+    return {
+      s: new Set(arr.slice(0, 1).map(x => x[0])),
+      a: new Set(arr.slice(1, 3).map(x => x[0])),
+      b: new Set(arr.slice(3, 6).map(x => x[0])),
+    };
+  }
+};
+
+// ── Bind Mouse Event (Chỉ gắn 1 lần) ──
+(function _waCobBindMouse() {
+  if (window._waCob9 && window._waCob9._cleanup) return; 
+  const handler = (e) => {
+    const canvas = document.querySelector('#tv-chart-container canvas') || document.querySelector('canvas');
+    if (!canvas || !window._waCob9) return;
+    const rect = canvas.getBoundingClientRect();
+    const scaleY = canvas.height / rect.height;
+    window._waCob9.hover.y = (e.clientY - rect.top) * scaleY;
+  };
+  window.addEventListener('mousemove', handler, { passive: true });
+  if (window._waCob9) window._waCob9._cleanup = () => window.removeEventListener('mousemove', handler);
+})();
+
+// ── Đăng Ký Indicator ──
 kc.registerIndicator({
-  name:        'WAVE_COB',
-  shortName:   'COB',
-  description: 'Tháp Thanh Khoản DOM',
-  category:    'wave_alpha',
-  series:      'price',
-  isStack:     true,    
+  name: 'WAVE_COB',
+  shortName: 'COB',
+  description: 'Tháp Thanh Khoản DOM v9.0',
+  category: 'wave_alpha',
+  series: 'price',
+  isStack: true,
 
-  calcParams:  [120, 0, 4, 9995, 500],
-  paramLabels: [
-    'Độ Rộng Cột COB (px)',
-    'Lọc Rác (USD) [Nhập 0 để Auto]',
-    'Độ Dày 1 Nấc Giá (px)',
-    'Độ Lỳ Của Khung (x/10000)',
-    'Tốc Độ Vẽ - FPS (ms)'
+  calcParams: [
+    120, 0, 4, 9995, 500,
+    1, 1, 1, 2, 1,
+    "#26A69A", "#EF5350",
+    60, 75,
+    "#FFF176", "#FF7043", "#26A69A", "#EF5350", "#FFD600"
   ],
-
   figures: [],
 
   calc: function(dataList) { return dataList.map(() => ({})); },
 
   draw: function({ ctx, bounding, yAxis, indicator }) {
-    if (!window.scLocalOrderBook)              return false;
-    if (!bounding || bounding.width < 10)      return false;
+    if (!window.scLocalOrderBook) return false;
+    if (!bounding || bounding.width < 10) return false;
 
     const p = indicator.calcParams;
-    const colWidth   = Math.max(60,   Math.min(300,   +p[0] || 120));
-    let   minVal     = +p[1]; // Cho phép lấy số 0
-    if (isNaN(minVal) || minVal < 0) minVal = 0; // Guard lỗi nhập
-    
-    const barH       = Math.max(3,    Math.min(8,     +p[2] || 4));
-    const decayRaw   = Math.max(9900, Math.min(9999,  +p[3] || 9995));
-    const decay      = decayRaw / 10000;
-    const refreshMs  = Math.max(50,   Math.min(2000,  +p[4] || 500)); // Mặc định 500ms
-
-    if (!window._waCob) {
-      window._waCob = {
-        snapshot: { asks: new Map(), bids: new Map(), ts: 0 },
-        scale:    { maxVol: 0, floor: 0 },
-        stats:    { bidTotal: 0, askTotal: 0, ratio: 1 },
-        barCache: new Map(), 
-        hover:    { y: -1, side: null },
-        debug:    false
-      };
-
-      window._waCob._onMouseMove = function(e) {
-        const canvas = ctx.canvas;
-        if (!canvas) return;
-        const rect  = canvas.getBoundingClientRect();
-        const scaleY = canvas.height / rect.height;
-        window._waCob.hover.y = (e.clientY - rect.top) * scaleY;
-      };
-      window.addEventListener('mousemove', window._waCob._onMouseMove, { passive: true });
-    }
-
-    const cob = window._waCob;
+    const cob = window._waCob9;
+    const U = _waCobUtils;
     const now = Date.now();
-    
-    // 🚀 CHẾ ĐỘ AUTO FILTER (Nếu User nhập 0)
-    // Tự động tìm ngưỡng lọc: Lọc bỏ các lệnh rác có Volume bé hơn 1.5% so với tường to nhất
-    if (minVal === 0) {
-        minVal = cob.scale.maxVol * 0.015; 
-        if (minVal < 500) minVal = 500; // Sàn tối thiểu là 500$
-    }
 
+    // 1. Parsing Params
+    const colWidth = U.clamp(+(p[0] ?? 120), 60, 400);
+    let minValRaw = +(p[1] ?? 0); if (isNaN(minValRaw) || minValRaw < 0) minValRaw = 0;
+    const barH = U.clamp(+(p[2] ?? 4), 2, 10);
+    const decay = U.clamp(+(p[3] ?? 9995), 9900, 9999) / 10000;
+    const refreshMs = U.clamp(+(p[4] ?? 500), 50, 2000);
+    const showCVD = +(p[5] ?? 1) === 1;
+    const showClusters = +(p[6] ?? 1) === 1;
+    const showVoids = +(p[7] ?? 1) === 1;
+    const panelPos = Math.round(U.clamp(+(p[8] ?? 2), 0, 2));
+    const verbosity = Math.round(U.clamp(+(p[9] ?? 1), 0, 2));
+
+    const bidClr = p[10] || "#26A69A";
+    const askClr = p[11] || "#EF5350";
+    const panelAlpha = U.clamp(+(p[12] ?? 60), 0, 90) / 100;
+    const glowAlpha = U.clamp(+(p[13] ?? 75), 60, 100) / 100;
+    const clusterClr = p[14] || "#FFF176";
+    const voidClr = p[15] || "#FF7043";
+    const cvdBullClr = p[16] || "#26A69A";
+    const cvdBearClr = p[17] || "#EF5350";
+    const absorpClr = p[18] || "#FFD600";
+
+    // 2. Data Fetching & Throttling
     if (now - cob.snapshot.ts >= refreshMs) {
       const rawAsks = window.scLocalOrderBook.asks;
       const rawBids = window.scLocalOrderBook.bids;
       if ((rawAsks && rawAsks.size > 0) || (rawBids && rawBids.size > 0)) {
         cob.snapshot.asks = new Map(rawAsks || []);
         cob.snapshot.bids = new Map(rawBids || []);
-        cob.snapshot.ts   = now;
+        cob.snapshot.ts = now;
       } else if (now - cob.snapshot.ts > 2000) {
-        cob.snapshot.ts = now; 
+        cob.snapshot.ts = now;
       }
     }
 
     const asks = cob.snapshot.asks;
     const bids = cob.snapshot.bids;
-    const yMapAsks = new Map(); 
-    const yMapBids = new Map();
-    let currentFrameMax = 0;
-    let bidTotal = 0;
-    let askTotal = 0;
+
+    // 3. Geometry & Reset Pools
     const H = bounding.height;
-    const OVERFLOW = 20;
+    const W = bounding.width;
+    const startX = W - colWidth;
+    const OVERFLOW = Math.max(barH * 2, 20);
+
+    const yMapAsks = cob.pools.yMapAsks; yMapAsks.clear();
+    const yMapBids = cob.pools.yMapBids; yMapBids.clear();
+    let currentMax = 0, bidTotal = 0, askTotal = 0;
+    
+    // Auto Filter
+    const effectiveMin = minValRaw === 0 ? Math.max(500, cob.scale.maxVol * 0.015) : minValRaw;
 
     const processBook = (source, target, isAsk) => {
       source.forEach((vol, priceStr) => {
-        const price  = parseFloat(priceStr);
+        const price = parseFloat(priceStr);
         const valUSD = price * vol;
-        if (valUSD < minVal) return; // Đã áp dụng Auto Filter hoặc số User nhập
+        if (valUSD < effectiveMin) return;
 
         const exactY = yAxis.convertToPixel(price);
-        if (exactY == null || isNaN(exactY) || exactY < -OVERFLOW || exactY > H + OVERFLOW) return; 
+        if (exactY == null || isNaN(exactY) || exactY < -OVERFLOW || exactY > H + OVERFLOW) return;
 
-        const snappedY = Math.floor(exactY / barH) * barH;
-        const existing = target.get(snappedY) || 0;
-        const merged   = existing + valUSD;
-        
-        target.set(snappedY, merged);
-        if (merged > currentFrameMax) currentFrameMax = merged;
+        const snapY = Math.floor(exactY / barH) * barH;
+        const merged = (target.get(snapY) || 0) + valUSD;
+        target.set(snapY, merged);
+        if (merged > currentMax) currentMax = merged;
         if (isAsk) askTotal += valUSD; else bidTotal += valUSD;
       });
     };
@@ -921,245 +1051,381 @@ kc.registerIndicator({
 
     if (yMapAsks.size === 0 && yMapBids.size === 0 && cob.scale.maxVol === 0) return false;
 
-    // SCALE RATCHET
-    if (currentFrameMax > 0) {
-      if (currentFrameMax > cob.scale.maxVol) cob.scale.maxVol = currentFrameMax; 
-      else cob.scale.maxVol = cob.scale.maxVol * decay + currentFrameMax * (1 - decay);
-      cob.scale.floor = cob.scale.maxVol * 0.10;
+    // 4. Scale Ratchet
+    if (currentMax > 0) {
+      if (currentMax > cob.scale.maxVol) cob.scale.maxVol = currentMax;
+      else cob.scale.maxVol = cob.scale.maxVol * decay + currentMax * (1 - decay);
     }
-    const renderMax = Math.max(cob.scale.maxVol || 10000, cob.scale.floor || 1000, 10000);
+    const renderMax = Math.max(cob.scale.maxVol || 10000, 10000);
 
-    cob.barCache.forEach(b => b.target = 0);
+    // 5. Animation Lerp
+    cob.barCache.forEach(b => { b.tgt = 0; });
+    
+    const applyTgt = (val, y, type) => {
+      const b = cob.barCache.get(y);
+      if (!b) cob.barCache.set(y, { cur: 0, tgt: val, type: type });
+      else { b.tgt = val; b.type = type; }
+    };
+    yMapAsks.forEach((v, y) => applyTgt(v, y, 'ask'));
+    yMapBids.forEach((v, y) => applyTgt(v, y, 'bid'));
 
-    yMapAsks.forEach((val, y) => {
-        if (!cob.barCache.has(y)) cob.barCache.set(y, { current: 0, target: val, type: 'ask' });
-        else cob.barCache.get(y).target = val;
-    });
-    yMapBids.forEach((val, y) => {
-        if (!cob.barCache.has(y)) cob.barCache.set(y, { current: 0, target: val, type: 'bid' });
-        else cob.barCache.get(y).target = val;
-    });
-
-    const animAsks = new Map();
-    const animBids = new Map();
+    const animAsks = cob.pools.animAsks; animAsks.clear();
+    const animBids = cob.pools.animBids; animBids.clear();
+    const toDel = cob.pools.toDelete; toDel.length = 0;
 
     cob.barCache.forEach((b, y) => {
-        b.current += (b.target - b.current) * 0.25;
-        if (b.target === 0 && b.current < minVal) {
-            cob.barCache.delete(y);
-            return;
-        }
-        if (b.type === 'ask') animAsks.set(y, b.current);
-        else animBids.set(y, b.current);
+      b.cur += (b.tgt - b.cur) * 0.22; // Lerp mượt
+      if (b.tgt === 0 && b.cur < effectiveMin * 0.5) { toDel.push(y); return; }
+      (b.type === 'ask' ? animAsks : animBids).set(y, b.cur);
     });
+    for(let i = 0; i < toDel.length; i++) cob.barCache.delete(toDel[i]);
 
+    // 6. Analytics (Stats, Absorption, Clusters)
     cob.stats.bidTotal = bidTotal;
     cob.stats.askTotal = askTotal;
-    cob.stats.ratio    = askTotal > 0 ? bidTotal / askTotal : 1;
+    cob.stats.ratio = askTotal > 0 ? bidTotal / askTotal : 1;
 
+    const delta = bidTotal - askTotal;
+    cob.cvd = (cob.cvd || 0) * 0.95 + delta * 0.05;
+    if (cob.cvdHistory.length > 60) cob.cvdHistory.shift();
+    cob.cvdHistory.push(delta);
+
+    if (showClusters) {
+      cob.clusters.ask = U.detectClusters(yMapAsks, barH, effectiveMin);
+      cob.clusters.bid = U.detectClusters(yMapBids, barH, effectiveMin);
+    }
+    if (showVoids && H > 0) {
+      cob.voids.ask = U.detectVoids(yMapAsks, barH, 0, H);
+      cob.voids.bid = U.detectVoids(yMapBids, barH, 0, H);
+    }
+
+    // Absorption Detection
+    const processAbs = (map, type) => {
+      map.forEach((vol, y) => {
+        const key = type + '_' + y;
+        const prev = cob.absorption.get(key);
+        if (!prev) cob.absorption.set(key, { peak: vol, cur: vol, absorbing: false });
+        else {
+          prev.cur = vol;
+          if (vol < prev.peak * 0.55 && vol >= effectiveMin) prev.absorbing = true;
+          if (vol > prev.peak) prev.peak = vol;
+        }
+      });
+    };
+    processAbs(yMapAsks, 'ask');
+    processAbs(yMapBids, 'bid');
+    
+    const absDel = [];
+    cob.absorption.forEach((v, k) => { if (v.cur < effectiveMin) absDel.push(k); });
+    for(let i=0; i<absDel.length; i++) cob.absorption.delete(absDel[i]);
+
+    const imbalScore = (bidTotal + askTotal) === 0 ? 0 : ((bidTotal - askTotal) / (bidTotal + askTotal));
+    const tiersAsk = U.getTopTiers(animAsks);
+    const tiersBid = U.getTopTiers(animBids);
+
+    // ==========================================
+    // 7. RENDER LAYER
+    // ==========================================
     try {
       ctx.save();
-      const startX = Math.round(bounding.width - colWidth); 
-      const ASK_BASE_RGB  = '239, 83, 80';   
-      const BID_BASE_RGB  = '38, 166, 154';  
-      const ASK_GLOW      = `rgba(${ASK_BASE_RGB}, 0.85)`;
-      const BID_GLOW      = `rgba(${BID_BASE_RGB}, 0.85)`;
-      const ASK_TEXT      = '#FF8A80';
-      const BID_TEXT      = '#80CBC4';
-      const GAP           = 1;  
-
+      
+      // Separator
       const sep = ctx.createLinearGradient(startX, 0, startX + 1, H);
-      sep.addColorStop(0,   'rgba(255,255,255,0.04)');
-      sep.addColorStop(0.5, 'rgba(255,255,255,0.08)');
-      sep.addColorStop(1,   'rgba(255,255,255,0.04)');
+      sep.addColorStop(0, 'rgba(255,255,255,0.03)');
+      sep.addColorStop(0.5, 'rgba(255,255,255,0.07)');
+      sep.addColorStop(1, 'rgba(255,255,255,0.03)');
       ctx.fillStyle = sep;
       ctx.fillRect(startX, 0, 1, H);
 
-      const getTop3 = (map) => {
-        const arr = [];
-        map.forEach((v, y) => arr.push({ y, v }));
-        arr.sort((a, b) => b.v - a.v);
-        return arr.slice(0, 3);
-      };
-      
-      const top3Asks = getTop3(yMapAsks);
-      const top3Bids = getTop3(yMapBids);
-      const top3AskSet = new Set(top3Asks.map(x => x.y));
-      const top3BidSet = new Set(top3Bids.map(x => x.y));
+      // Voids
+      if (showVoids) {
+        const drawVoids = (voids) => {
+          voids.forEach(v => {
+            ctx.fillStyle = U.parseColor(voidClr, 0.06);
+            ctx.fillRect(startX, v.yStart, colWidth, v.yEnd - v.yStart);
+            ctx.setLineDash([2, 4]);
+            ctx.strokeStyle = U.parseColor(voidClr, 0.35);
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(startX, v.yStart); ctx.lineTo(W, v.yStart); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(startX, v.yEnd); ctx.lineTo(W, v.yEnd); ctx.stroke();
+            ctx.setLineDash([]);
+          });
+        };
+        drawVoids(cob.voids.ask); drawVoids(cob.voids.bid);
+      }
 
+      // Clusters
+      if (showClusters) {
+        const drawClusters = (clusters) => {
+          clusters.forEach(c => {
+            ctx.fillStyle = U.parseColor(clusterClr, 0.06);
+            ctx.fillRect(startX, c.yStart, colWidth, c.yEnd - c.yStart);
+          });
+        };
+        drawClusters(cob.clusters.ask); drawClusters(cob.clusters.bid);
+      }
+
+      // Bars
       const hoverY = cob.hover.y;
-      const MAX_BARS = 500; 
-
-      const renderBars = (map, baseRgb, glowColor, topSet) => {
+      const MAX_BARS = 600;
+      
+      const renderBars = (map, baseClr, tiers) => {
         let count = 0;
         map.forEach((valUSD, y) => {
           if (count++ >= MAX_BARS) return;
-
-          const w    = Math.round((valUSD / renderMax) * colWidth);
+          const pct = valUSD / renderMax;
+          const w = Math.round(pct * colWidth);
           if (w < 1) return;
 
-          const x    = bounding.width - w;
-          const barY = y;
+          const x = W - w;
+          const isS = tiers.s.has(y); const isA = tiers.a.has(y);
+          const isHov = hoverY >= y && hoverY < y + barH;
 
-          let opacity = 0.20 + (valUSD / renderMax) * 0.65;
-          opacity = Math.min(0.85, opacity);
+          let alpha = 0.18 + pct * 0.67;
+          if (isS) alpha = Math.min(1, glowAlpha + 0.08);
+          else if (isA) alpha = Math.min(0.92, alpha + 0.10);
+          if (isHov) alpha = Math.min(1, alpha + 0.18);
 
-          const isHovered = hoverY >= barY && hoverY < barY + barH;
-          if (isHovered) opacity = Math.min(1.0, opacity + 0.25);
+          if (w > 3) {
+            const grad = ctx.createLinearGradient(x, 0, x + w, 0);
+            grad.addColorStop(0, U.parseColor(baseClr, alpha * 0.3));
+            grad.addColorStop(1, U.parseColor(baseClr, alpha));
+            ctx.fillStyle = grad;
+          } else {
+            ctx.fillStyle = U.parseColor(baseClr, alpha);
+          }
+          ctx.fillRect(x, y, w, barH - 1);
 
-          ctx.fillStyle = `rgba(${baseRgb}, ${opacity.toFixed(3)})`;
-          ctx.fillRect(x, barY, w, barH - GAP);
+          if (isS) {
+            const gx = ctx.createLinearGradient(W - 3, y, W, y + barH);
+            gx.addColorStop(0, U.parseColor(baseClr, 0));
+            gx.addColorStop(1, U.parseColor(baseClr, glowAlpha));
+            ctx.fillStyle = gx;
+            ctx.fillRect(W - 3, y, 3, barH - 1);
+          }
 
-          if (topSet.has(y)) {
-            ctx.fillStyle = glowColor;
-            ctx.fillRect(bounding.width - 1, barY, 1, barH - GAP);
+          const absKey = (tiers === tiersAsk ? 'ask' : 'bid') + '_' + y;
+          const absState = cob.absorption.get(absKey);
+          if (absState && absState.absorbing) {
+            ctx.fillStyle = U.parseColor(absorpClr, 0.65);
+            ctx.fillRect(W - 4, y, 4, barH - 1);
           }
         });
       };
 
-      renderBars(animAsks, ASK_BASE_RGB, ASK_GLOW, top3AskSet);
-      renderBars(animBids, BID_BASE_RGB, BID_GLOW, top3BidSet);
+      renderBars(animAsks, askClr, tiersAsk);
+      renderBars(animBids, bidClr, tiersBid);
 
-      ctx.font         = "bold 9px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      ctx.textAlign    = 'right';
-      ctx.textBaseline = 'middle';
-      ctx.shadowColor  = 'rgba(0,0,0,0.95)';
-      ctx.shadowBlur   = 3;
-      ctx.shadowOffsetX = 1;
-      ctx.shadowOffsetY = 1;
+      // Labels & Data
+      if (verbosity >= 1) {
+        ctx.font = `bold ${Math.max(8, barH + 2)}px system-ui,sans-serif`;
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0,0,0,0.95)';
+        ctx.shadowBlur = 3; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
 
-      const fmtVol = (v) => {
-        if (v >= 1_000_000) return (v / 1_000_000).toFixed(2) + 'M';
-        if (v >= 1_000)     return Math.round(v / 1_000) + 'K';
-        return Math.round(v).toString();
-      };
+        const threshold = verbosity === 2 ? 0.18 : 0.30;
+        const drawLabels = (map, baseClr, tiers) => {
+          ctx.textAlign = 'right';
+          map.forEach((valUSD, y) => {
+            const pct = valUSD / renderMax;
+            if (pct < threshold) return;
+            const w = Math.round(pct * colWidth);
+            ctx.fillStyle = tiers.s.has(y) ? '#FFFFFF' : U.parseColor(baseClr, 0.95);
+            ctx.fillText(U.fmt(valUSD), W - w - 3, y + barH / 2);
+          });
+        };
 
-      const drawLabels = (map, textColor, topSet) => {
-        map.forEach((valUSD, y) => {
-          const w = Math.round((valUSD / renderMax) * colWidth);
-          if (w < colWidth * 0.30) return; 
-
-          const isTop = topSet.has(y);
-          ctx.fillStyle = isTop ? '#FFFFFF' : textColor;
-
-          const label = fmtVol(valUSD);
-          ctx.fillText(label, bounding.width - w - 4, y + barH / 2);
-        });
-      };
-
-      drawLabels(animAsks, ASK_TEXT, top3AskSet);
-      drawLabels(animBids, BID_TEXT, top3BidSet);
-
-      ctx.shadowColor   = 'transparent';
-      ctx.shadowBlur    = 0;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 0;
-
-      // KHUNG TỔNG QUAN (ĐÃ VIỆT HÓA)
-      {
-        const panelW  = colWidth - 4;
-        const panelH  = 46;
-        const panelX  = startX + 2;
-        const panelY  = 6;
-        const padX    = 5;
-        const lineH   = 13;
-
-        const ratio   = cob.stats.ratio;
-        const ratioColor = ratio > 1.2 ? '#26A69A' : ratio < 0.8 ? '#EF5350' : '#9E9E9E';
-        const ratioIcon  = ratio > 1.2 ? '▲' : ratio < 0.8 ? '▼' : '─';
-
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.60)';
-        roundRect(ctx, panelX, panelY, panelW, panelH, 3);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-        ctx.lineWidth   = 1;
-        roundRect(ctx, panelX, panelY, panelW, panelH, 3);
-        ctx.stroke();
-
-        ctx.font      = "9px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-        ctx.textAlign = 'left';
+        drawLabels(animAsks, askClr, tiersAsk);
+        drawLabels(animBids, bidClr, tiersBid);
+        ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
         
-        ctx.fillStyle = BID_TEXT;
-        ctx.fillText('LỰC MUA', panelX + padX, panelY + lineH * 1 - 1);
-        ctx.fillStyle = '#E0E0E0';
-        ctx.fillText('$' + fmtVol(cob.stats.bidTotal), panelX + padX + 42, panelY + lineH * 1 - 1); // Xích qua phải 1 tí
-        
-        ctx.fillStyle = ASK_TEXT;
-        ctx.fillText('LỰC BÁN', panelX + padX, panelY + lineH * 2 - 1);
-        ctx.fillStyle = '#E0E0E0';
-        ctx.fillText('$' + fmtVol(cob.stats.askTotal), panelX + padX + 42, panelY + lineH * 2 - 1);
-        
-        ctx.fillStyle = '#757575';
-        ctx.fillText('TỶ LỆ', panelX + padX, panelY + lineH * 3 - 1);
-        ctx.fillStyle = ratioColor;
-        ctx.fillText(ratio.toFixed(2) + ' ' + ratioIcon, panelX + padX + 42, panelY + lineH * 3 - 1);
+        if (showClusters) {
+          ctx.textAlign = 'left';
+          ctx.font = `bold ${Math.max(8, barH + 1)}px system-ui,sans-serif`;
+          const drawClusterLabels = (clusters, clr) => {
+            clusters.forEach(c => {
+              ctx.fillStyle = U.parseColor(clusterClr, 0.9);
+              ctx.fillText('▌' + U.fmt(c.total), startX + 2, (c.yStart + c.yEnd) / 2);
+            });
+          };
+          drawClusterLabels(cob.clusters.ask, askClr);
+          drawClusterLabels(cob.clusters.bid, bidClr);
+        }
       }
 
-      // TOOLTIP KHI RÀ CHUỘT (ĐÃ VIỆT HÓA)
+      // 8. Info Panel
       {
-        const hy = cob.hover.y;
-        if (hy >= 0 && hy <= H) {
-          const snapY = Math.floor(hy / barH) * barH;
-          const askVol = yMapAsks.get(snapY);
-          const bidVol = yMapBids.get(snapY);
-          const vol    = askVol || bidVol;
-          const side   = askVol ? 'TƯỜNG BÁN' : bidVol ? 'TƯỜNG MUA' : null;
+        const panelW = colWidth - 4;
+        const baseH = verbosity === 0 ? 36 : verbosity === 1 ? 52 : 68;
+        const cvdH = showCVD ? 28 : 0;
+        const panelH = baseH + cvdH;
+        const panelX = startX + 2;
 
-          if (vol && side) {
-            const price = yAxis.convertFromPixel ? yAxis.convertFromPixel(snapY) : null;
-            const tipW  = 135;
-            const tipH  = 38;
-            const tipX  = startX - tipW - 6;
-            const tipY  = Math.min(snapY - 4, H - tipH - 4);
+        let panelY = panelPos === 0 ? 6 : (panelPos === 1 ? H - panelH - 6 : ((H / 2 > panelH + 12) ? 6 : H - panelH - 6));
 
-            ctx.fillStyle = 'rgba(0,0,0,0.80)';
-            roundRect(ctx, tipX, tipY, tipW, tipH, 4);
-            ctx.fill();
-            ctx.strokeStyle = side === 'TƯỜNG BÁN' ? ASK_GLOW : BID_GLOW;
-            ctx.lineWidth = 1;
-            roundRect(ctx, tipX, tipY, tipW, tipH, 4);
-            ctx.stroke();
+        ctx.fillStyle = `rgba(8,8,12,${panelAlpha})`;
+        U.roundRect(ctx, panelX, panelY, panelW, panelH, 4);
+        ctx.fill();
 
-            ctx.font      = "bold 9px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-            ctx.textAlign = 'left';
-            ctx.fillStyle = side === 'TƯỜNG BÁN' ? ASK_TEXT : BID_TEXT;
-            ctx.fillText(side, tipX + 5, tipY + 11);
+        const borderClr = imbalScore > 0.08 ? bidClr : imbalScore < -0.08 ? askClr : "#787878";
+        ctx.strokeStyle = U.parseColor(borderClr, 0.25);
+        ctx.lineWidth = 1;
+        U.roundRect(ctx, panelX, panelY, panelW, panelH, 4);
+        ctx.stroke();
 
-            if (price !== null && !isNaN(price)) {
-              ctx.fillStyle = '#BDBDBD';
-              ctx.fillText('Giá: ' + price.toFixed(2), tipX + 5, tipY + 22);
-            }
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillText('$' + fmtVol(vol) + '  (' + ((vol / renderMax) * 100).toFixed(1) + '%)', tipX + 5, tipY + 33);
+        const lx = panelX + 5, lx2 = panelX + panelW * 0.52;
+        const lh = verbosity === 0 ? 15 : 13;
+        let ly = panelY + lh - 1;
+
+        ctx.textBaseline = 'middle';
+        ctx.font = `9px system-ui,sans-serif`;
+
+        const ratio = cob.stats.ratio;
+        const ratioClr = ratio > 1.2 ? U.parseColor(bidClr, 1) : ratio < 0.8 ? U.parseColor(askClr, 1) : '#9E9E9E';
+        const ratioIcon = ratio > 1.2 ? '▲' : ratio < 0.8 ? '▼' : '─';
+
+        if (verbosity >= 1) {
+          ctx.textAlign = 'left';
+          ctx.fillStyle = U.parseColor(bidClr, 0.9); ctx.fillText('LỰC MUA', lx, ly);
+          ctx.fillStyle = '#E0E0E0'; ctx.fillText('$' + U.fmt(cob.stats.bidTotal), lx2, ly); ly += lh;
+          ctx.fillStyle = U.parseColor(askClr, 0.9); ctx.fillText('LỰC BÁN', lx, ly);
+          ctx.fillStyle = '#E0E0E0'; ctx.fillText('$' + U.fmt(cob.stats.askTotal), lx2, ly); ly += lh;
+        }
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#757575'; ctx.fillText('TỶ LỆ', lx, ly);
+        ctx.fillStyle = ratioClr; ctx.fillText(ratio.toFixed(2) + ' ' + ratioIcon, lx2, ly); ly += lh;
+
+        if (verbosity >= 2) {
+          ctx.fillStyle = '#616161'; ctx.fillText('IMBLN', lx, ly);
+          const scoreW = Math.round(Math.abs(imbalScore) * (panelW - 60));
+          ctx.fillStyle = U.parseColor(imbalScore >= 0 ? bidClr : askClr, 0.75);
+          ctx.fillRect(lx2, ly - 4, scoreW, 8); ly += lh;
+
+          let absorpCount = 0;
+          cob.absorption.forEach(v => { if (v.absorbing) absorpCount++; });
+          if (absorpCount > 0) {
+            ctx.fillStyle = U.parseColor(absorpClr, 0.9);
+            ctx.fillText(`⟳ ABSORB ×${absorpCount}`, lx, ly); ly += lh;
+          }
+        }
+
+        // CVD Sparkline
+        if (showCVD && cob.cvdHistory.length > 1) {
+          const cvdY0 = ly + 4, cvdH2 = cvdH - 6, cvdW = panelW - 10, cvdX0 = panelX + 5;
+          ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+          ctx.lineWidth = 1; ctx.setLineDash([2, 3]);
+          ctx.beginPath(); ctx.moveTo(cvdX0, cvdY0 + cvdH2 / 2); ctx.lineTo(cvdX0 + cvdW, cvdY0 + cvdH2 / 2); ctx.stroke();
+          ctx.setLineDash([]);
+
+          const hist = cob.cvdHistory;
+          const maxAbs = Math.max(...hist.map(Math.abs), 1);
+          ctx.beginPath();
+          hist.forEach((v, i) => {
+            const hx = cvdX0 + (i / (hist.length - 1)) * cvdW;
+            const hy = cvdY0 + cvdH2 / 2 - (v / maxAbs) * (cvdH2 / 2);
+            if (i === 0) ctx.moveTo(hx, hy); else ctx.lineTo(hx, hy);
+          });
+          const lastDelta = hist[hist.length - 1];
+          ctx.strokeStyle = lastDelta >= 0 ? U.parseColor(cvdBullClr, 0.8) : U.parseColor(cvdBearClr, 0.8);
+          ctx.lineWidth = 1.5; ctx.stroke();
+
+          if (verbosity >= 1) {
+            ctx.font = `8px system-ui,sans-serif`; ctx.textAlign = 'right';
+            ctx.fillStyle = lastDelta >= 0 ? U.parseColor(cvdBullClr, 0.9) : U.parseColor(cvdBearClr, 0.9);
+            ctx.fillText('CVD ' + (lastDelta >= 0 ? '+' : '') + U.fmt(lastDelta), cvdX0 + cvdW, cvdY0 + 8);
+          }
+        }
+      }
+
+      // 9. Tooltip Hover
+      if (hoverY >= 0 && hoverY <= H) {
+        const snapY = Math.floor(hoverY / barH) * barH;
+        const askVol = yMapAsks.get(snapY), bidVol = yMapBids.get(snapY);
+        const vol = askVol || bidVol;
+        
+        if (vol) {
+          const side = askVol ? 'TƯỜNG BÁN' : 'TƯỜNG MUA';
+          const baseClr = askVol ? askClr : bidClr;
+          const price = yAxis.convertFromPixel ? yAxis.convertFromPixel(snapY) : null;
+          const pct = ((vol / renderMax) * 100).toFixed(1);
+          const absState = cob.absorption.get((askVol ? 'ask' : 'bid') + '_' + snapY);
+
+          const tipW = verbosity >= 2 ? 155 : 135;
+          const tipH = verbosity >= 2 ? 56 : (verbosity === 1 ? 44 : 32);
+          const tipX = startX - tipW - 8;
+          const tipY = U.clamp(snapY - tipH / 2, 4, H - tipH - 4);
+
+          ctx.fillStyle = 'rgba(0,0,0,0.82)';
+          U.roundRect(ctx, tipX, tipY, tipW, tipH, 5); ctx.fill();
+          ctx.strokeStyle = U.parseColor(baseClr, 0.55);
+          ctx.lineWidth = 1;
+          U.roundRect(ctx, tipX, tipY, tipW, tipH, 5); ctx.stroke();
+
+          ctx.font = `bold 9px system-ui,sans-serif`;
+          ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+          let ty = tipY + 11; const lh = 11;
+
+          ctx.fillStyle = U.parseColor(baseClr, 1);
+          ctx.fillText(side, tipX + 6, ty); ty += lh;
+
+          if (verbosity >= 1 && price != null && !isNaN(price)) {
+            ctx.fillStyle = '#BDBDBD';
+            ctx.fillText('Giá: ' + price.toLocaleString('en-US', { maximumFractionDigits: 2 }), tipX + 6, ty); ty += lh;
+          }
+
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillText('$' + U.fmt(vol) + ' (' + pct + '%)', tipX + 6, ty);
+
+          if (verbosity >= 2 && absState && absState.absorbing) {
+            ty += lh;
+            ctx.fillStyle = U.parseColor(absorpClr, 0.92);
+            ctx.fillText('⟳ Đang bị hấp thụ', tipX + 6, ty);
           }
         }
       }
 
     } catch (err) {
-      if (window._waCob && window._waCob.debug) console.error('[WAVE_COB] draw error:', err);
+      console.error('[WAVE_COB v9]', err);
     } finally {
       ctx.restore();
     }
-    return false; 
+    return false;
   },
 
   destroy: function() {
-    if (window._waCob && window._waCob._onMouseMove) {
-      window.removeEventListener('mousemove', window._waCob._onMouseMove);
-      delete window._waCob._onMouseMove;
+    if (window._waCob9 && window._waCob9._cleanup) {
+      window._waCob9._cleanup();
+      window._waCob9._cleanup = null;
     }
-    window._waCob = null;
+    window._waCob9 = null;
   }
 });
 
-function roundRect(ctx, x, y, w, h, r) {
-  if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); } else {
-    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.arcTo(x + w, y, x + w, y + r, r);
-    ctx.lineTo(x + w, y + h - r); ctx.arcTo(x + w, y + h, x + w - r, y + h, r); ctx.lineTo(x + r, y + h);
-    ctx.arcTo(x, y + h, x, y + h - r, r); ctx.lineTo(x, y + r); ctx.arcTo(x, y, x + r, y, r); ctx.closePath();
+// ── Preset API ──
+window.WA_COB_PRESET = function(preset, chartInstance, paneId) {
+  const PRESETS = {
+    dark: [120,0,4,9995,500,1,1,1,2,1,"#26A69A","#EF5350",60,75,"#FFF176","#FF7043","#26A69A","#EF5350","#FFD600"],
+    classic: [120,0,4,9995,500,1,1,1,2,1,"#1976D2","#F44336",65,80,"#FFEB3B","#FF5722","#1976D2","#F44336","#FFC107"],
+    bookmap: [140,0,5,9990,250,1,1,1,0,2,"#00BFA5","#E53935",55,90,"#F9A825","#DD2C00","#00BFA5","#E53935","#FFEA00"],
+    mono: [100,0,3,9998,500,0,0,0,2,0,"#90A4AE","#78909C",50,70,"#EEEEEE","#BDBDBD","#90A4AE","#78909C","#E0E0E0"],
+  };
+  const params = PRESETS[preset];
+  if (!params) { console.warn('[WAVE_COB] Invalid preset. Use: dark | classic | bookmap | mono'); return; }
+  
+  if (window._waCob9) {
+    window._waCob9.scale.maxVol = 0; window._waCob9.barCache.clear();
+    window._waCob9.absorption.clear(); window._waCob9.cvdHistory = [];
   }
-}
-;
+  
+  if (chartInstance && paneId !== undefined) {
+    try { chartInstance.overrideIndicator({ name: 'WAVE_COB', calcParams: params }, paneId); } 
+    catch (e) { console.error(e); }
+  }
+};
+console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;font-weight:bold', 'color:#ccc');
+
+
 // ════════════════════════════════════════════════════════════════════════════════
 //  WAVE_VPVR ULTIMATE v3.2 — CORE ENGINE (Fix Color & Clean UI)
 // ════════════════════════════════════════════════════════════════════════════════
