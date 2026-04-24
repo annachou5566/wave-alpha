@@ -338,18 +338,18 @@
       category: 'wave_alpha',
       isStack: true,
       builtIn: false,
-      // Đã bổ sung tham số thứ 32 (Độ Rộng Khối %) ở cuối cùng mảng
+      // Đã nới rộng mảng thành 32 tham số (thêm số 50 ở cuối)
       defaultParams: [
         60, 70, 1, 0, 1, 0, 1, 1, 
         "#9C27B0", "#7B1FA2", "#F0B90B", "#FF9800", "#F0B90B",
         "#BA68C8", "#FFD600", "#FFD600", "#26A69A", "#EF5350",
         "#42A5F5", "#FF7043",
         85, 20, 2, 1, 0, 10, 1, 70, 8, 1, 30,
-        50 // <-- (Param 31) Độ Rộng Khối % (10-100)
+        50 
       ],
       paramLabels: [
         'Số Bins (10–200)', 'Value Area % (10–100)', 'Chế Độ Gộp (0=Cả Chart, 1=Ngày, 2=Tuần)', 
-        'Vị Trí Neo (0=Trái, 1=Phải)', // Đổi tên nhãn vì giờ nó áp dụng cho cả chế độ Phiên
+        'Vị Trí Neo (0=Trái, 1=Phải)', 
         'Hiển Thị (0=Block, 1=Letter)', 'Màu Phiên (0=Đơn,1=Đa,2=Nhiệt)', 'Mật Độ (0=Gọn,1=Cân Bằng)', 'Smart Labels (0=Tắt,1=Bật)',
         'Màu Block Trong VA', 'Màu Block Ngoài VA', 'Màu TPO POC', 'Màu Naked POC', 'Màu Super POC', 
         'Màu VAH / VAL', 'Màu IB High', 'Màu IB Low', 'Màu Lực Mua Áp Đảo', 'Màu Lực Bán Áp Đảo', 
@@ -357,7 +357,7 @@
         'Độ Mờ Trong VA (0-100)', 'Độ Mờ Ngoài VA (0-100)', 'Độ Dày POC (1-5)', 'Độ Dày VA (1-4)', 
         'Kiểu Nét VA (0=Đứt,1=Chấm,2=Liền)', 'Cỡ Chữ (8-16)', 'Hiện Nhãn TPO (0=Tắt,1=Bật)', 
         'Độ Mờ Phiên Cũ (0-100)', 'Kích Thước Chữ Min (6-12px)', 'Độ Chi Tiết Nhãn (0-2)', 'Số Phiên Tối Đa (1-100)',
-        'Độ Rộng Khối % (10-100)' // <-- Nhãn cho tham số mới
+        'Độ Rộng Khối % (10-100)' 
       ],
     },
 
