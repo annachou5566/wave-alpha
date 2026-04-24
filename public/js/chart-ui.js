@@ -1332,14 +1332,14 @@ window.closeProChart = function() {
     // Hàm bọc SVG để đồng bộ style
     const _svg = (paths) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
 
-    // 1. Data 21 loại biểu đồ với Custom SVG Icons
+    // 1. Data 21 loại biểu đồ với Custom SVG Icons (ĐÃ MỞ KHÓA CỘT, ĐỈNH-ĐÁY, HEIKIN ASHI)
     const CHART_TYPES = [
         // Nhóm 1: Cơ bản
         { grp: 'CƠ BẢN', id: 1, name: 'Nến Nhật', icon: _svg('<path d="M9 4v16M15 4v16M7 8h4v8H7zM13 10h4v6h-4z"/>'), phase: 1, desc: 'Nến Open-High-Low-Close chuẩn' },
         { grp: 'CƠ BẢN', id: 2, name: 'Nến Rỗng', icon: _svg('<path d="M9 4v16M15 4v16"/><rect x="7" y="8" width="4" height="8"/><rect x="13" y="10" width="4" height="6"/>'), phase: 1, desc: 'Nến tăng rỗng ruột giúp giảm mỏi mắt' },
         { grp: 'CƠ BẢN', id: 3, name: 'Thanh (Bars)', icon: _svg('<path d="M9 4v16M6 8h3M9 16h3M15 4v16M12 10h3M15 18h3"/>'), phase: 1, desc: 'Thanh OHLC chuẩn thị trường Mỹ' },
-        { grp: 'CƠ BẢN', id: 4, name: 'Cột (Columns)', icon: _svg('<path d="M18 20V10M12 20V4M6 20v-4"/>'), phase: 2, desc: 'Cột hiển thị theo giá Close' },
-        { grp: 'CƠ BẢN', id: 5, name: 'Đỉnh - Đáy', icon: _svg('<path d="M12 4v16M8 8l4-4 4 4M8 16l4 4 4-4"/>'), phase: 2, desc: 'Bỏ qua Open/Close, chỉ xem biên độ' },
+        { grp: 'CƠ BẢN', id: 4, name: 'Cột (Columns)', icon: _svg('<path d="M18 20V10M12 20V4M6 20v-4"/>'), phase: 1, desc: 'Cột hiển thị theo giá Close' }, // 🚀 Đổi thành phase 1
+        { grp: 'CƠ BẢN', id: 5, name: 'Đỉnh - Đáy', icon: _svg('<path d="M12 4v16M8 8l4-4 4 4M8 16l4 4 4-4"/>'), phase: 1, desc: 'Bỏ qua Open/Close, chỉ xem biên độ' }, // 🚀 Đổi thành phase 1
         
         // Nhóm 2: Đường & Vùng
         { grp: 'ĐƯỜNG & VÙNG', id: 6, name: 'Đường (Line)', icon: _svg('<polyline points="3 17 9 11 15 15 21 5"/>'), phase: 1, desc: 'Đường nối các giá đóng cửa' },
@@ -1350,7 +1350,7 @@ window.closeProChart = function() {
         { grp: 'ĐƯỜNG & VÙNG', id: 11, name: 'Đường Cơ Sở', icon: _svg('<line x1="3" y1="12" x2="21" y2="12" stroke-dasharray="2 2"/><polyline points="3 12 7 8 13 15 21 6"/>'), phase: 2, desc: 'Baseline: Trên xanh, dưới đỏ' },
         
         // Nhóm 3: Khử Nhiễu
-        { grp: 'KHỬ NHIỄU (PRO)', id: 12, name: 'Heikin Ashi', icon: _svg('<path d="M9 4v16M15 4v16M7 10h4v6H7zM13 8h4v8h-4z"/>'), phase: 1, desc: 'Nến trung bình lọc nhiễu sóng' }, 
+        { grp: 'KHỬ NHIỄU (PRO)', id: 12, name: 'Heikin Ashi', icon: _svg('<path d="M9 4v16M15 4v16M7 10h4v6H7zM13 8h4v8h-4z"/>'), phase: 1, desc: 'Nến trung bình lọc nhiễu sóng' }, // 🚀 Đổi thành phase 1
         { grp: 'KHỬ NHIỄU (PRO)', id: 13, name: 'Nến Khối Lượng', icon: _svg('<path d="M9 4v16M15 4v16M5 10h8v6H5zM14 8h2v8h-2z"/>'), phase: 2, desc: 'Bề ngang nến tỷ lệ với Volume' },
         { grp: 'KHỬ NHIỄU (PRO)', id: 14, name: 'Renko', icon: _svg('<rect x="5" y="14" width="6" height="6"/><rect x="11" y="8" width="6" height="6"/>'), phase: 2, desc: 'Gạch giá trị, loại bỏ thời gian' },
         { grp: 'KHỬ NHIỄU (PRO)', id: 15, name: 'Line Break', icon: _svg('<path d="M7 16h4v4H7zM13 8h4v12h-4zM7 4h4v10H7z"/>'), phase: 2, desc: 'Chỉ vẽ nến khi có Breakout' },
