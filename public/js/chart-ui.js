@@ -1321,12 +1321,12 @@ window.closeProChart = function() {
 };
 
 // =========================================================================
-// 🧩 BƯỚC 2: CHART TYPE SELECTOR (21 LOẠI BIỂU ĐỒ - VÁ LỖI TỌA ĐỘ)
+// 🧩 BƯỚC 2: CHART TYPE SELECTOR (21 LOẠI BIỂU ĐỒ - LAYOUT LƯỚI 2x2 TỐI ƯU)
 // =========================================================================
 (function initChartTypeSelector() {
     'use strict';
 
-    // Hàm bọc SVG để đồng bộ style (Nét thanh 2px, tự động nhận màu currentColor)
+    // Hàm bọc SVG để đồng bộ style
     const _svg = (paths) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
 
     // 1. Data 21 loại biểu đồ với Custom SVG Icons
@@ -1364,13 +1364,12 @@ window.closeProChart = function() {
     // 2. CSS cho Menu
     const style = document.createElement('style');
     style.textContent = `
-        /* 🚀 Đổi từ position: absolute sang FIXED để tránh lỗi bay lên trời */
         #wa-chart-type-menu {
             display: none; position: fixed; background: #1e222d; border: 1px solid rgba(255,255,255,0.1); 
-            border-radius: 8px; width: 380px; max-height: 85vh; overflow-y: auto; z-index: 999999; box-shadow: 0 16px 40px rgba(0,0,0,0.8);
-            padding: 16px; grid-template-columns: 1fr 1fr; gap: 20px 16px; align-items: start; user-select: none;
+            /* 🚀 FIX: Tăng chiều rộng lên 440px để 2 cột không bị chật chội */
+            border-radius: 8px; width: 440px; max-height: 85vh; overflow-y: auto; z-index: 999999; box-shadow: 0 16px 40px rgba(0,0,0,0.8);
+            padding: 16px; grid-template-columns: 1fr 1fr; gap: 16px 24px; align-items: start; user-select: none;
         }
-        /* Custom Scrollbar cho Menu để nhìn gọn gàng */
         #wa-chart-type-menu::-webkit-scrollbar { width: 4px; }
         #wa-chart-type-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
         #wa-chart-type-menu::-webkit-scrollbar-track { background: transparent; }
@@ -1387,7 +1386,7 @@ window.closeProChart = function() {
         .wa-ct-item:hover .wa-ct-icon, .wa-ct-item.active .wa-ct-icon { opacity: 1; }
         .wa-ct-text { font-size: 12px; font-weight: 500; flex: 1; }
         .wa-ct-item.active .wa-ct-text { font-weight: 700; }
-        .wa-ct-pro { font-size: 8px; background: rgba(240,185,11,0.15); color: #F0B90B; padding: 2px 5px; border-radius: 4px; font-weight: 800; letter-spacing: 0.5px; border: 1px solid rgba(240,185,11,0.3); }
+        .wa-ct-pro { font-size: 8px; background: rgba(240,185,11,0.15); color: #F0B90B; padding: 2px 5px; border-radius: 4px; font-weight: 800; letter-spacing: 0.5px; border: 1px solid rgba(240,185,11,0.3); margin-left: auto; }
         #btn-wa-chart-type {
             background: rgba(255,255,255,0.03); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); 
             border-radius: 4px; padding: 4px 10px; height: 26px; display: inline-flex; align-items: center; 
@@ -1418,12 +1417,11 @@ window.closeProChart = function() {
             const menu = document.createElement('div');
             menu.id = 'wa-chart-type-menu';
 
+            // 🚀 BỎ LOGIC ÉP DÀI CHIỀU NGANG -> MẶC ĐỊNH LÀ GRID 2x2 CÂN ĐỐI
             const groups = [...new Set(CHART_TYPES.map(t => t.grp))];
-            groups.forEach((gName, idx) => {
+            groups.forEach((gName) => {
                 const grpDiv = document.createElement('div');
                 grpDiv.className = 'wa-ct-grp';
-                if (idx === 2) grpDiv.style.gridColumn = '1 / -1'; 
-                
                 grpDiv.innerHTML = `<div class="wa-ct-title">${gName}</div>`;
                 
                 CHART_TYPES.filter(t => t.grp === gName).forEach(item => {
@@ -1464,26 +1462,22 @@ window.closeProChart = function() {
 
             document.body.appendChild(menu);
 
-            // 🚀 BẬT TẮT & TÍNH TỌA ĐỘ THÔNG MINH
             const btn = document.getElementById('btn-wa-chart-type');
             btn.onclick = (e) => {
                 e.stopPropagation();
                 const isHidden = menu.style.display === 'none' || menu.style.display === '';
                 if (isHidden) {
                     const rect = btn.getBoundingClientRect();
-                    
-                    // Tính tọa độ Top: Ngay dưới nút bấm
                     menu.style.top = (rect.bottom + 6) + 'px';
                     
-                    // Tính tọa độ Left: Đảm bảo không bị tràn mép phải màn hình
-                    const menuWidth = 380;
+                    const menuWidth = 440; // Độ rộng mới
                     if (rect.left + menuWidth > window.innerWidth) {
                         menu.style.left = (window.innerWidth - menuWidth - 10) + 'px';
                     } else {
                         menu.style.left = rect.left + 'px';
                     }
 
-                    menu.style.display = 'grid';
+                    menu.style.display = 'grid'; // Grid tự động chia 2 cột đều đặn
                     
                     const currentType = window.WaveChartEngine ? window.WaveChartEngine.config.chartType : 1;
                     menu.querySelectorAll('.wa-ct-item').forEach(el => {
