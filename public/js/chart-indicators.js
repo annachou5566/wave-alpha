@@ -3759,7 +3759,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
           } 
       } 
       // =========================================================================
-      // NÚT TAM GIÁC ẨN/HIỆN TEXT CHỈ BÁO TRÊN CHART (COLLAPSE LEGEND)
+      // NÚT TAM GIÁC ẨN/HIỆN TEXT CHỈ BÁO TRÊN CHART (CHUẨN TRADINGVIEW)
       // =========================================================================
       setTimeout(() => {
         const chartDom = document.getElementById('sc-chart-container') || 
@@ -3767,31 +3767,37 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                          document.querySelector('.klinecharts-pro');
                          
         if (chartDom && !document.getElementById('wa-legend-toggle')) {
-            // Ép relative để chứa nút absolute
             if (window.getComputedStyle(chartDom).position === 'static') {
                 chartDom.style.position = 'relative';
             }
 
+            // 🚀 ẢO THUẬT: Đẩy toàn bộ chữ của Chỉ báo sang phải 28px để chừa chỗ cho mũi tên
+            // (Chữ của Nến OHLC dòng đầu tiên vẫn giữ nguyên không bị ảnh hưởng)
+            if (window.tvChart) {
+                window.tvChart.setStyles({
+                    indicator: { tooltip: { text: { marginLeft: 28 } } }
+                });
+            }
+
             const toggleBtn = document.createElement('div');
             toggleBtn.id = 'wa-legend-toggle';
-            toggleBtn.title = "Ẩn/Hiện thông số chỉ báo";
+            toggleBtn.title = "Ẩn/Hiện danh sách chỉ báo";
             
+            // 🚀 Nút trong suốt, đặt đúng vị trí thụt lề ở dòng thứ 2
             toggleBtn.style.cssText = `
                 position: absolute;
-                top: 12px; 
-                right: 70px;
+                top: 36px;  /* Nằm ngay dưới hàng chữ Giá Nến (OHLC) */
+                left: 4px;  /* Đứng chốt chặn ngay đầu dòng chữ chỉ báo */
                 z-index: 999;
-                width: 24px;
-                height: 24px;
-                border-radius: 4px;
-                background: rgba(30, 35, 41, 0.6);
-                border: 1px solid rgba(255,255,255,0.05);
+                width: 20px;
+                height: 20px;
+                background: transparent; /* Không màu nền để chìm hoàn toàn vào chart */
                 color: #848e9c;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 cursor: pointer;
-                backdrop-filter: blur(4px);
+                border-radius: 4px;
                 transition: all 0.2s ease;
             `;
             
@@ -3801,27 +3807,27 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 </svg>
             `;
 
-            toggleBtn.onmouseover = () => { toggleBtn.style.background = 'rgba(255,255,255,0.1)'; toggleBtn.style.color = '#fff'; };
-            toggleBtn.onmouseout = () => { toggleBtn.style.background = 'rgba(30, 35, 41, 0.6)'; toggleBtn.style.color = '#848e9c'; };
+            // Hiệu ứng rê chuột: sáng nhẹ lên
+            toggleBtn.onmouseover = () => { toggleBtn.style.background = 'rgba(255,255,255,0.08)'; toggleBtn.style.color = '#fff'; };
+            toggleBtn.onmouseout = () => { toggleBtn.style.background = 'transparent'; toggleBtn.style.color = '#848e9c'; };
 
             let isLegendVisible = true;
             toggleBtn.onclick = (e) => {
                 e.stopPropagation();
                 isLegendVisible = !isLegendVisible;
                 
-                // Xoay icon
+                // Xoay icon mượt mà
                 document.getElementById('wa-legend-icon').style.transform = isLegendVisible ? 'rotate(0deg)' : 'rotate(-90deg)';
                 
                 if (window.tvChart) {
                     window.tvChart.setStyles({
                         indicator: {
-                            tooltip: {
-                                showRule: isLegendVisible ? 'always' : 'none'
-                            }
+                            tooltip: { showRule: isLegendVisible ? 'always' : 'none' }
                         }
                     });
                 }
             };
+
             chartDom.appendChild(toggleBtn);
         }
     }, 800);
