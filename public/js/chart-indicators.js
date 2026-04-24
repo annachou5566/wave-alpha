@@ -4536,14 +4536,14 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         const isVPVR = indName === 'WAVE_VPVR', isTPO = indName === 'WAVE_TPO';
 
         let groups = isVPVR ? [
-            { title: 'Cấu Hình Lõi', keys: [0, 1, 2, 3, 4, 5, 21] },
-            { title: 'Bảng Màu', keys: [6, 7, 8, 9, 10, 11, 12, 13] },
-            { title: 'Nét Vẽ', keys: [14, 15, 16, 17, 18, 19, 20] }
-        ] : isTPO ? [
-            { title: 'Thuật Toán', keys: [0, 1, 2, 3, 4, 5, 6, 7, 27, 28, 29, 30] },
-            { title: 'Màu Sắc', keys: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] },
-            { title: 'Đồ Họa', keys: [20, 21, 22, 23, 24, 25, 26] }
-        ] : [{ title: 'Thông Số', keys: currentParams.map((_, i) => i) }];
+          { title: 'Cấu Hình Lõi', keys: [0, 1, 2, 3, 4, 5, 21, 22, 23] },
+          { title: 'Bảng Màu', keys: [6, 7, 8, 9, 10, 11, 12, 13] },
+          { title: 'Nét Vẽ', keys: [14, 15, 16, 17, 18, 19, 20] }
+      ] : isTPO ? [
+          { title: 'Thuật Toán', keys: [0, 1, 2, 3, 4, 5, 6, 7, 27, 28, 29, 30, 31] },
+          { title: 'Màu Sắc', keys: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] },
+          { title: 'Đồ Họa', keys: [20, 21, 22, 23, 24, 25, 26] }
+      ] : [{ title: 'Thông Số', keys: currentParams.map((_, i) => i) }];
 
         groups.forEach(g => {
             const box = document.createElement('div');
