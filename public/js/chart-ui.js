@@ -1484,3 +1484,329 @@ window.closeProChart = function() {
         }
     }, 200);
 })();
+
+// =========================================================================
+// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (4 TABS) - TRADINGVIEW STYLE
+// =========================================================================
+(function initChartSettingsModal() {
+    'use strict';
+
+    // 1. CSS CHO SETTINGS MODAL
+    const style = document.createElement('style');
+    style.textContent = `
+        /* Modal Overlay */
+        #wa-chart-settings-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 9999999;
+            align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s ease;
+        }
+        #wa-chart-settings-modal.show { display: flex; opacity: 1; }
+        
+        /* Modal Box */
+        .wa-csm-box {
+            background: #1e222d; width: 680px; max-width: 95vw; height: 500px; max-height: 90vh;
+            border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            display: flex; flex-direction: row; overflow: hidden; font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        /* Sidebar Tabs */
+        .wa-csm-sidebar {
+            width: 200px; background: #131722; border-right: 1px solid rgba(255,255,255,0.05);
+            display: flex; flex-direction: column; padding: 20px 0;
+        }
+        .wa-csm-tab {
+            padding: 12px 24px; color: #848e9c; font-size: 13px; font-weight: 600; cursor: pointer;
+            border-left: 3px solid transparent; transition: all 0.2s; display: flex; align-items: center; gap: 10px;
+        }
+        .wa-csm-tab:hover { background: rgba(255,255,255,0.03); color: #EAECEF; }
+        .wa-csm-tab.active { background: rgba(38,166,154,0.1); color: #26a69a; border-left-color: #26a69a; }
+
+        /* Main Content Area */
+        .wa-csm-content { flex: 1; display: flex; flex-direction: column; background: #1e222d; }
+        .wa-csm-header {
+            padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .wa-csm-title { font-size: 16px; font-weight: 700; color: #EAECEF; }
+        .wa-csm-close { color: #848e9c; cursor: pointer; font-size: 18px; transition: 0.2s; }
+        .wa-csm-close:hover { color: #F6465D; }
+
+        /* Tab Panels */
+        .wa-csm-panels { flex: 1; overflow-y: auto; padding: 20px 24px; }
+        .wa-csm-panel { display: none; flex-direction: column; gap: 20px; }
+        .wa-csm-panel.active { display: flex; }
+
+        /* Form Controls */
+        .wa-csm-row { display: flex; justify-content: space-between; align-items: center; }
+        .wa-csm-label { font-size: 13px; color: #b7bdc6; display: flex; align-items: center; gap: 8px; }
+        .wa-csm-control { display: flex; align-items: center; gap: 10px; }
+        
+        /* Custom Inputs */
+        .wa-csm-select { 
+            background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1);
+            padding: 6px 12px; border-radius: 4px; font-size: 12px; outline: none; cursor: pointer; width: 140px;
+        }
+        .wa-csm-color {
+            width: 28px; height: 28px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;
+            cursor: pointer; padding: 0; background: transparent; outline: none;
+        }
+        .wa-csm-color::-webkit-color-swatch-wrapper { padding: 0; }
+        .wa-csm-color::-webkit-color-swatch { border: none; border-radius: 3px; }
+        .wa-csm-slider { width: 100px; accent-color: #26a69a; }
+        
+        /* Toggle Switch */
+        .wa-switch { position: relative; display: inline-block; width: 36px; height: 20px; }
+        .wa-switch input { opacity: 0; width: 0; height: 0; }
+        .wa-slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(255,255,255,0.1); transition: .2s; border-radius: 20px;
+        }
+        .wa-slider:before {
+            position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
+            background-color: #848e9c; transition: .2s; border-radius: 50%;
+        }
+        input:checked + .wa-slider { background-color: rgba(38,166,154,0.3); }
+        input:checked + .wa-slider:before { transform: translateX(16px); background-color: #26a69a; }
+
+        /* Section Title */
+        .wa-csm-divider { 
+            font-size: 11px; font-weight: 800; color: #527c82; text-transform: uppercase; 
+            margin-top: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; 
+        }
+    `;
+    document.head.appendChild(style);
+
+    // 2. HTML STRUCTURE CHO MODAL
+    const modalHTML = `
+        <div id="wa-chart-settings-modal">
+            <div class="wa-csm-box">
+                <div class="wa-csm-sidebar">
+                    <div class="wa-csm-tab active" data-tab="csm-symbol">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Mã giao dịch
+                    </div>
+                    <div class="wa-csm-tab" data-tab="csm-status">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Dòng trạng thái
+                    </div>
+                    <div class="wa-csm-tab" data-tab="csm-appearance">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/></svg> Giao diện
+                    </div>
+                    <div class="wa-csm-tab" data-tab="csm-pro">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Công cụ Pro
+                    </div>
+                </div>
+
+                <div class="wa-csm-content">
+                    <div class="wa-csm-header">
+                        <div class="wa-csm-title">Cài đặt Biểu đồ</div>
+                        <div class="wa-csm-close" id="btn-wa-csm-close">✖</div>
+                    </div>
+                    <div class="wa-csm-panels">
+                        
+                        <div id="csm-symbol" class="wa-csm-panel active">
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">Loại biểu đồ</div>
+                                <select class="wa-csm-select" data-bind="chartType" data-type="number">
+                                    <option value="1">Nến Nhật (Candles)</option><option value="2">Nến Rỗng (Hollow)</option>
+                                    <option value="3">Thanh (Bars)</option><option value="6">Đường (Line)</option>
+                                    <option value="9">Vùng (Area)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="wa-csm-divider">Màu sắc Nến</div>
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">Thân nến (Body)</div>
+                                <div class="wa-csm-control">
+                                    <input type="color" class="wa-csm-color" data-bind="upColor">
+                                    <input type="color" class="wa-csm-color" data-bind="downColor">
+                                </div>
+                            </div>
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">
+                                    <label class="wa-switch"><input type="checkbox" data-bind="showBorder"><span class="wa-slider"></span></label> Viền (Borders)
+                                </div>
+                            </div>
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">
+                                    <label class="wa-switch"><input type="checkbox" data-bind="showWick"><span class="wa-slider"></span></label> Bóng nến (Wicks)
+                                </div>
+                                <div class="wa-csm-control" id="csm-wick-colors" style="opacity: 0.5; pointer-events: none;">
+                                    <label class="wa-switch" title="Màu râu độc lập"><input type="checkbox" data-bind="wickIndependent"><span class="wa-slider"></span></label>
+                                    <input type="color" class="wa-csm-color" data-bind="wickUpColor">
+                                    <input type="color" class="wa-csm-color" data-bind="wickDownColor">
+                                </div>
+                            </div>
+
+                            <div class="wa-csm-divider">Tùy chỉnh Trục Y</div>
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">Thang đo giá (Scale)</div>
+                                <select class="wa-csm-select" data-bind="yAxisMode">
+                                    <option value="normal">Bình thường (Normal)</option>
+                                    <option value="percentage">Phần trăm (%)</option>
+                                    <option value="log">Logarit (Log)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="csm-status" class="wa-csm-panel">
+                            <div class="wa-csm-row"><div class="wa-csm-label">Tiêu đề (Mã giao dịch)</div><label class="wa-switch"><input type="checkbox" checked disabled><span class="wa-slider"></span></label></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Giá Mở/Cao/Thấp/Đóng (OHLC)</div><label class="wa-switch"><input type="checkbox" data-bind="showOHLC"><span class="wa-slider"></span></label></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Đếm ngược đóng nến (Countdown)</div><label class="wa-switch"><input type="checkbox" data-bind="showCountdown"><span class="wa-slider"></span></label></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Đường giá hiện tại (Last Price)</div><label class="wa-switch"><input type="checkbox" data-bind="showLastPriceLine"><span class="wa-slider"></span></label></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Nhãn Đỉnh/Đáy màn hình (High/Low)</div><label class="wa-switch"><input type="checkbox" data-bind="showHighLowTags"><span class="wa-slider"></span></label></div>
+                            <div class="wa-csm-divider">Watermark Background</div>
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">Hiển thị Dấu chìm</div>
+                                <div class="wa-csm-control">
+                                    <input type="range" class="wa-csm-slider" min="0" max="0.3" step="0.01" data-bind="watermarkOpacity">
+                                    <label class="wa-switch"><input type="checkbox" data-bind="showWatermark"><span class="wa-slider"></span></label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="csm-appearance" class="wa-csm-panel">
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">Kiểu nền (Background)</div>
+                                <div class="wa-csm-control">
+                                    <select class="wa-csm-select" data-bind="bgType" style="width: 100px;">
+                                        <option value="solid">Đơn sắc</option><option value="gradient">Gradient</option>
+                                    </select>
+                                    <input type="color" class="wa-csm-color" data-bind="bgColor">
+                                </div>
+                            </div>
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">Lưới dọc (Vert Grid)</div>
+                                <label class="wa-switch"><input type="checkbox" data-bind="gridVertical"><span class="wa-slider"></span></label>
+                            </div>
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">Lưới ngang (Horz Grid)</div>
+                                <label class="wa-switch"><input type="checkbox" data-bind="gridHorizontal"><span class="wa-slider"></span></label>
+                            </div>
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">Đường phân chia phiên (Session Breaks)</div>
+                                <label class="wa-switch"><input type="checkbox" data-bind="sessionBreaks"><span class="wa-slider"></span></label>
+                            </div>
+                            <div class="wa-csm-divider">Trục & Không gian</div>
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">Tâm ngắm (Crosshair)</div>
+                                <select class="wa-csm-select" data-bind="crosshairMode">
+                                    <option value="normal">Bình thường</option>
+                                    <option value="hidden">Ẩn</option>
+                                </select>
+                            </div>
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">Khoảng trống lề phải (Right Margin)</div>
+                                <input type="range" class="wa-csm-slider" min="0" max="50" step="1" data-bind="rightMargin" data-type="number">
+                            </div>
+                        </div>
+
+                        <div id="csm-pro" class="wa-csm-panel">
+                            <div style="background: rgba(240,185,11,0.1); border: 1px dashed rgba(240,185,11,0.3); padding: 10px; border-radius: 6px; font-size: 11px; color: #F0B90B; margin-bottom: 10px;">
+                                🚀 Các tính năng dưới đây yêu cầu tính toán nâng cao (Phase 4). Một số tính năng sẽ được kích hoạt ở bản cập nhật tiếp theo.
+                            </div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">PAC Coloring (Tô màu theo Moving Avg)</div><label class="wa-switch"><input type="checkbox" data-bind="pacColoring"><span class="wa-slider"></span></label></div>
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">Wick Dimmer (Làm mờ râu nến)</div>
+                                <label class="wa-switch"><input type="checkbox" data-bind="wickDimmer"><span class="wa-slider"></span></label>
+                            </div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Volume Overlay (Chồng Vol vào nền)</div><label class="wa-switch"><input type="checkbox" data-bind="volumeOverlay"><span class="wa-slider"></span></label></div>
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">Range Bars Ticks (Size)</div>
+                                <input type="number" class="wa-csm-select" style="width: 80px;" data-bind="rangeTicks" data-type="number" min="1">
+                            </div>
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">Renko Block Size</div>
+                                <input type="number" class="wa-csm-select" style="width: 80px;" data-bind="renkoSize" data-type="number" min="1">
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = modalHTML;
+    document.body.appendChild(wrapper.firstElementChild);
+
+    // 3. LOGIC & DATA BINDING
+    const modal = document.getElementById('wa-chart-settings-modal');
+    
+    // Xử lý chuyển Tab
+    const tabs = modal.querySelectorAll('.wa-csm-tab');
+    const panels = modal.querySelectorAll('.wa-csm-panel');
+    tabs.forEach(tab => {
+        tab.onclick = () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            panels.forEach(p => p.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById(tab.dataset.tab).classList.add('active');
+        };
+    });
+
+    // Mở / Đóng Modal
+    window.openChartSettings = function() {
+        if (!window.WaveChartEngine) return;
+        const config = window.WaveChartEngine.getConfig();
+        
+        // Đổ dữ liệu từ Config lên Giao diện (Populate UI)
+        modal.querySelectorAll('[data-bind]').forEach(el => {
+            const key = el.dataset.bind;
+            if (config[key] !== undefined) {
+                if (el.type === 'checkbox') el.checked = config[key];
+                else el.value = config[key];
+            }
+        });
+        
+        // Cập nhật trạng thái cụm màu râu nến (Disable nếu tắt WickIndependent)
+        document.getElementById('csm-wick-colors').style.opacity = config.wickIndependent ? '1' : '0.5';
+        document.getElementById('csm-wick-colors').style.pointerEvents = config.wickIndependent ? 'auto' : 'none';
+
+        modal.classList.add('show');
+    };
+
+    document.getElementById('btn-wa-csm-close').onclick = () => modal.classList.remove('show');
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('show'); };
+
+    // Lắng nghe thay đổi Input (2-way binding)
+    modal.querySelectorAll('[data-bind]').forEach(el => {
+        const eventType = (el.type === 'range' || el.type === 'color') ? 'input' : 'change';
+        el.addEventListener(eventType, (e) => {
+            const key = el.dataset.bind;
+            let value = el.type === 'checkbox' ? el.checked : el.value;
+            if (el.dataset.type === 'number') value = parseFloat(value);
+
+            // Xử lý UI vụn vặt ngay trong modal
+            if (key === 'wickIndependent') {
+                document.getElementById('csm-wick-colors').style.opacity = value ? '1' : '0.5';
+                document.getElementById('csm-wick-colors').style.pointerEvents = value ? 'auto' : 'none';
+            }
+
+            // Gửi dữ liệu về Trung tâm điều khiển (Engine Bước 1)
+            if (window.WaveChartEngine) {
+                window.WaveChartEngine.update({ [key]: value });
+            }
+        });
+    });
+
+    // 4. AUTO-INJECT NÚT CÀI ĐẶT (⚙️) VÀO TOOLBAR
+    const checkToolbar = setInterval(() => {
+        const toolbar = document.querySelector('.sc-tools-left') || document.querySelector('.sc-toolbar') || document.querySelector('.wa-topbar-container');
+        if (toolbar) {
+            clearInterval(checkToolbar);
+            const btnWrap = document.createElement('div');
+            btnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; margin-left: 8px;';
+            btnWrap.innerHTML = `
+                <button id="btn-wa-chart-settings" title="Cài đặt Biểu đồ" style="background: rgba(255,255,255,0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                </button>
+            `;
+            toolbar.appendChild(btnWrap);
+            
+            document.getElementById('btn-wa-chart-settings').onclick = (e) => {
+                e.stopPropagation();
+                window.openChartSettings();
+            };
+        }
+    }, 200);
+
+})();
