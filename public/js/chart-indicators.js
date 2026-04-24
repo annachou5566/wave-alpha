@@ -3850,9 +3850,8 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 const currentState = count + "_" + isHidden;
                 
                 if (lastState !== currentState) {
-                    // 🚀 FIX LỖI ĐÈ CHỮ: Chỉnh lineHeight lên 26px để bù hao margin/padding của KLineCharts
-                    const baseTop = 36; 
-                    const lineHeight = 22; 
+                    const baseTop = 34; 
+                    const lineHeight = 24; 
                     
                     const targetTop = isHidden ? baseTop : baseTop + (count * lineHeight);
                     toggleBtn.style.top = targetTop + 'px';
