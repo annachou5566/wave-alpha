@@ -71,6 +71,8 @@ window.WaveChartEngine = {
             grid: { horizontal: { show: c.gridHorizontal, color: c.gridColor, style: 'dashed' }, vertical: { show: c.gridVertical, color: c.gridColor, style: 'dashed' } },
             candle: {
                 type: kcChartType,
+                // 🚀 FIX LỖI OHLC: Nối thẻ cờ showOHLC vào hệ thống Tooltip của KLineChart
+                tooltip: { showRule: c.showOHLC ? 'always' : 'none' },
                 bar: {
                     upColor: c.upColor, downColor: c.downColor, noChangeColor: '#787b86',
                     upBorderColor: c.showBorder ? c.upColor : 'transparent', downBorderColor: c.showBorder ? c.downColor : 'transparent',

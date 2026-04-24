@@ -922,14 +922,17 @@ window.openProChart = function(t, isTimeSwitch = false) {
 
         const container = document.getElementById('sc-chart-container');
 
-    // ═══════════════════════════════════════════════════════════
-    // ĐỔI TIMEFRAME: Thoát SỚM trước khi dispose/init
-    // Overlay sống trong chart instance — không được phép dispose
-    // ═══════════════════════════════════════════════════════════
     // Trong đoạn isTimeSwitch của openProChart
 if (isTimeSwitch && window.tvChart) {
     let isTick = window.currentChartInterval === 'tick';
-    window.tvChart.setStyles({ candle: { type: isTick ? 'area' : 'candle_solid' } });
+    
+    // 🚀 FIX LỖI TIME-SWITCH: Tôn trọng WaveChartEngine, không tự ép nến đặc nữa!
+    if (window.WaveChartEngine) {
+        if (isTick) window.WaveChartEngine.update({ chartType: 9 }, true);
+        else window.WaveChartEngine.applyNow(); // Vẽ lại nến Rỗng/Line/Bar y như cũ
+    } else {
+        window.tvChart.setStyles({ candle: { type: isTick ? 'area' : 'candle_solid' } });
+    }
 
     // ✅ THÊM: Reset waterfall ngay lập tức để không render nến zombie
     window._waTargetCandle = null;
@@ -940,6 +943,8 @@ if (isTimeSwitch && window.tvChart) {
         if (histData && histData.length > 0) {
             window.tvChart.applyNewData(histData);
         }
+        // 🚀 BẮT BUỘC KÍCH HOẠT LẠI ENGINE SAU KHI ĐỔ DATA ĐỂ ÁP DỤNG MÀU SẮC
+        if (typeof window.__wa_onChartReady === 'function') window.__wa_onChartReady();
         if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, true);
     });
     return;
@@ -1764,4 +1769,107 @@ window.closeProChart = function() {
         }
     }, 200);
 
+})();
+
+// =========================================================================
+// ⏱️ BƯỚC 5: CHART OVERLAYS (WATERMARK, COUNTDOWN TIMER)
+// =========================================================================
+(function initChartOverlays() {
+    'use strict';
+
+    let countdownInterval = null;
+
+    // Lắng nghe sự kiện đổi Cài Đặt từ WaveChartEngine
+    window.addEventListener('wa_chart_config_updated', (e) => {
+        const config = e.detail;
+        const container = document.getElementById('sc-chart-container');
+        if (!container) return;
+
+        // ─── 1. XỬ LÝ WATERMARK (Dấu chìm biểu đồ) ───
+        let wm = document.getElementById('wa-overlay-watermark');
+        if (config.showWatermark) {
+            if (!wm) {
+                wm = document.createElement('div');
+                wm.id = 'wa-overlay-watermark';
+                wm.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: "Inter", sans-serif; font-weight: 800; font-size: clamp(40px, 8vw, 120px); letter-spacing: 2px; pointer-events: none; z-index: 1; white-space: nowrap; transition: opacity 0.2s;';
+                container.appendChild(wm);
+            }
+            // Lấy thông tin Symbol & Timeframe hiện tại
+            const sym = window.currentChartToken ? window.currentChartToken.symbol : 'WAVE ALPHA';
+            const tf = (window.currentChartInterval || '1D').toUpperCase();
+            wm.innerText = `${sym} • ${tf}`;
+            wm.style.color = `rgba(255,255,255, ${config.watermarkOpacity})`;
+        } else if (wm) {
+            wm.remove();
+        }
+
+        // ─── 2. XỬ LÝ ĐẾM NGƯỢC (COUNTDOWN TIMER) ───
+        let cd = document.getElementById('wa-overlay-countdown');
+        if (config.showCountdown) {
+            if (!cd) {
+                cd = document.createElement('div');
+                cd.id = 'wa-overlay-countdown';
+                cd.style.cssText = 'position: absolute; right: 65px; bottom: 20px; font-family: monospace; font-size: 14px; font-weight: bold; padding: 4px 8px; background: rgba(38,166,154,0.15); color: #26a69a; border: 1px solid rgba(38,166,154,0.3); border-radius: 4px; pointer-events: none; z-index: 99; backdrop-filter: blur(2px); transition: all 0.2s;';
+                container.appendChild(cd);
+                
+                // Khởi động đồng hồ đếm ngược
+                if (countdownInterval) clearInterval(countdownInterval);
+                countdownInterval = setInterval(updateCountdown, 1000);
+            }
+        } else {
+            if (cd) cd.remove();
+            if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
+        }
+    });
+
+    // Hàm tính toán và cập nhật thời gian
+    function updateCountdown() {
+        const cd = document.getElementById('wa-overlay-countdown');
+        if (!cd) return;
+
+        const interval = window.currentChartInterval || '1d';
+        const now = new Date();
+        let nextTime = new Date(now.getTime());
+
+        // Thuật toán tìm mốc thời gian đóng nến tiếp theo
+        if (interval.includes('m')) {
+            const m = parseInt(interval);
+            nextTime.setMinutes(Math.ceil(now.getMinutes() / m) * m);
+            nextTime.setSeconds(0);
+        } else if (interval.includes('h')) {
+            const h = parseInt(interval);
+            nextTime.setHours(Math.ceil(now.getHours() / h) * h);
+            nextTime.setMinutes(0); nextTime.setSeconds(0);
+        } else if (interval === '1d') {
+            nextTime.setUTCDate(now.getUTCDate() + 1);
+            nextTime.setUTCHours(0, 0, 0, 0); // Đóng nến ngày lúc 0h UTC
+        } else {
+            cd.style.display = 'none'; return; // Tick chart hoặc 1W không đếm ngược
+        }
+
+        let diff = nextTime.getTime() - now.getTime();
+        if (diff < 0) diff = 0;
+
+        const h = Math.floor(diff / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+        let timeStr = '';
+        if (h > 0) timeStr += String(h).padStart(2, '0') + ':';
+        timeStr += String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+
+        cd.innerText = timeStr;
+        cd.style.display = 'block';
+
+        // Cảnh báo đỏ khi còn dưới 10 giây
+        if (diff <= 10000) {
+            cd.style.color = '#F6465D';
+            cd.style.borderColor = 'rgba(246,70,93,0.5)';
+            cd.style.background = 'rgba(246,70,93,0.15)';
+        } else {
+            cd.style.color = '#26a69a';
+            cd.style.borderColor = 'rgba(38,166,154,0.3)';
+            cd.style.background = 'rgba(38,166,154,0.15)';
+        }
+    }
 })();
