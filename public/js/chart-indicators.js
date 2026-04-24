@@ -3759,6 +3759,82 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
           } 
       } 
     };
+
+    // =========================================================================
+      // NÚT TAM GIÁC ẨN/HIỆN TEXT CHỈ BÁO TRÊN CHART (COLLAPSE LEGEND)
+      // =========================================================================
+      // Dùng setTimeout để đảm bảo DOM của Chart đã được tạo xong hoàn toàn
+      setTimeout(() => {
+        // Tìm khung chứa biểu đồ (Tùy theo class/id bạn đang dùng ở HTML)
+        const chartDom = document.getElementById('sc-chart-container') || 
+                         document.getElementById('tv-chart-container') || 
+                         document.querySelector('.klinecharts-pro');
+                         
+        if (chartDom && !document.getElementById('wa-legend-toggle')) {
+            // Bắt buộc khung cha phải là relative để chứa nút absolute
+            if (window.getComputedStyle(chartDom).position === 'static') {
+                chartDom.style.position = 'relative';
+            }
+
+            const toggleBtn = document.createElement('div');
+            toggleBtn.id = 'wa-legend-toggle';
+            toggleBtn.title = "Ẩn/Hiện thông số chỉ báo";
+            
+            // CSS: Cục nút nhỏ gọn 24x24, kính mờ (glassmorphism), nằm lơ lửng góc trái
+            toggleBtn.style.cssText = `
+                position: absolute;
+                top: 12px; 
+                left: 12px;
+                z-index: 999;
+                width: 24px;
+                height: 24px;
+                border-radius: 4px;
+                background: rgba(30, 35, 41, 0.6);
+                border: 1px solid rgba(255,255,255,0.05);
+                color: #848e9c;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                backdrop-filter: blur(4px);
+                transition: all 0.2s ease;
+            `;
+            
+            // Icon Mũi tên (Chevron Down SVG) Minimalist
+            toggleBtn.innerHTML = `
+                <svg id="wa-legend-icon" style="transition: transform 0.3s ease;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            `;
+
+            // Hiệu ứng Hover
+            toggleBtn.onmouseover = () => { toggleBtn.style.background = 'rgba(255,255,255,0.1)'; toggleBtn.style.color = '#fff'; };
+            toggleBtn.onmouseout = () => { toggleBtn.style.background = 'rgba(30, 35, 41, 0.6)'; toggleBtn.style.color = '#848e9c'; };
+
+            let isLegendVisible = true;
+            toggleBtn.onclick = (e) => {
+                e.stopPropagation();
+                isLegendVisible = !isLegendVisible;
+                
+                // Xoay mũi tên: Mở = chĩa xuống (0deg), Đóng = chĩa sang phải (-90deg)
+                document.getElementById('wa-legend-icon').style.transform = isLegendVisible ? 'rotate(0deg)' : 'rotate(-90deg)';
+                
+                // Can thiệp vào Core KLineCharts để tắt Tooltip của Indicator
+                if (window.tvChart) {
+                    window.tvChart.setStyles({
+                        indicator: {
+                            tooltip: {
+                                // 'none' sẽ ẩn sạch text chỉ báo, 'always' sẽ hiện lại
+                                showRule: isLegendVisible ? 'always' : 'none'
+                            }
+                        }
+                    });
+                }
+            };
+
+            chartDom.appendChild(toggleBtn);
+        }
+    }, 800);
   // ══════════════════════════════════════════════════════
   // SECTION 6: EVENT HANDLERS & STATE MANAGEMENT
   // ══════════════════════════════════════════════════════
