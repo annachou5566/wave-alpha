@@ -1871,7 +1871,9 @@ window.closeProChart = function() {
 (function initTimeframeSelector() {
     'use strict';
 
+    // Danh sách các Timeframe phổ biến cho Crypto
     const TIMEFRAMES = [
+        { id: 'tick', name: 'Tick' },
         { id: '1s', name: '1 Giây' },
         { id: '1m', name: '1 Phút' },
         { id: '5m', name: '5 Phút' },
@@ -1884,76 +1886,68 @@ window.closeProChart = function() {
     ];
 
     const checkToolbar = setInterval(() => {
+        // Tìm Group chứa các nút Chart Type/Settings đã làm trước đó
         const targetGroup = document.getElementById('wa-chart-controls-group');
+        
         if (targetGroup) {
             clearInterval(checkToolbar);
 
-            // 1. Nút Master (Hiển thị TF hiện tại)
+            // 1. Tạo Nút Master hiển thị Timeframe hiện tại
             const tfBtnWrap = document.createElement('div');
             tfBtnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; margin-right: 8px;';
             tfBtnWrap.innerHTML = `
                 <button id="btn-wa-timeframe-master" style="background: rgba(255,255,255,0.03); color: #00F0FF; border: 1px solid rgba(0,240,255,0.2); border-radius: 4px; padding: 4px 8px; height: 26px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; font-family: var(--font-num); font-weight: 800; font-size: 12px;">
-                    <span id="wa-current-tf-label">${(window.currentChartInterval || '1D').toUpperCase()}</span>
+                    <span id="wa-current-tf-label">1D</span>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"></polyline></svg>
                 </button>
             `;
+            
+            // Chèn vào đầu Group để nó nằm bên trái nút Chart Type
             targetGroup.prepend(tfBtnWrap);
 
-            // 2. Menu Dropdown
+            // 2. Tạo Menu Dropdown
             const menu = document.createElement('div');
             menu.id = 'wa-timeframe-menu';
             menu.style.cssText = `
                 display: none; position: fixed; background: #1e222d; border: 1px solid rgba(255,255,255,0.1); 
-                border-radius: 8px; width: 150px; z-index: 999999; box-shadow: 0 16px 40px rgba(0,0,0,0.8);
-                padding: 6px; flex-direction: column; gap: 2px;
+                border-radius: 8px; width: 140px; z-index: 999999; box-shadow: 0 16px 40px rgba(0,0,0,0.8);
+                padding: 8px; flex-direction: column; gap: 2px;
             `;
 
-            // Hàm vẽ lại danh sách items để cập nhật dấu Tick
-            const renderMenuItems = () => {
-                menu.innerHTML = '';
-                const currentTF = (window.currentChartInterval || '1d').toLowerCase();
+            TIMEFRAMES.forEach(tf => {
+                const item = document.createElement('div');
+                item.className = 'wa-tf-item';
+                item.style.cssText = `
+                    display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; 
+                    border-radius: 4px; cursor: pointer; color: #EAECEF; font-size: 12px; font-weight: 500;
+                `;
+                item.innerHTML = `
+                    <span>${tf.name}</span>
+                    <span style="color: #848e9c; font-size: 10px; font-weight: 800;">${tf.id.toUpperCase()}</span>
+                `;
 
-                TIMEFRAMES.forEach(tf => {
-                    const isActive = tf.id.toLowerCase() === currentTF;
-                    const item = document.createElement('div');
-                    item.style.cssText = `
-                        display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; 
-                        border-radius: 4px; cursor: pointer; color: ${isActive ? '#00F0FF' : '#EAECEF'}; 
-                        background: ${isActive ? 'rgba(0, 240, 255, 0.05)' : 'transparent'};
-                        font-size: 12px; font-weight: ${isActive ? '700' : '500'}; transition: 0.2s;
-                    `;
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    // Gọi hàm chuyển timeframe hiện có của Wave Alpha
+                    window.changeChartInterval(tf.id); 
+                    menu.style.display = 'none';
+                };
 
-                    item.innerHTML = `
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="width: 12px; display: flex; align-items: center;">
-                                ${isActive ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00F0FF" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
-                            </span>
-                            <span>${tf.name}</span>
-                        </div>
-                        <span style="color: ${isActive ? '#00F0FF' : '#848e9c'}; font-size: 10px; opacity: 0.8;">${tf.id.toUpperCase()}</span>
-                    `;
+                // Hiệu ứng Hover
+                item.onmouseenter = () => item.style.background = 'rgba(255,255,255,0.05)';
+                item.onmouseleave = () => item.style.background = 'transparent';
 
-                    item.onclick = (e) => {
-                        e.stopPropagation();
-                        window.changeChartInterval(tf.id);
-                        menu.style.display = 'none';
-                    };
-
-                    item.onmouseenter = () => { if(!isActive) item.style.background = 'rgba(255,255,255,0.05)'; };
-                    item.onmouseleave = () => { if(!isActive) item.style.background = 'transparent'; };
-
-                    menu.appendChild(item);
-                });
-            };
+                menu.appendChild(item);
+            });
 
             document.body.appendChild(menu);
 
-            // 3. Logic Đóng/Mở
+            // 3. Logic đóng mở Menu
             const masterBtn = document.getElementById('btn-wa-timeframe-master');
             masterBtn.onclick = (e) => {
                 e.stopPropagation();
-                if (menu.style.display === 'none' || menu.style.display === '') {
-                    renderMenuItems(); // Vẽ lại menu để check đúng vị trí Tick hiện tại
+                const isHidden = menu.style.display === 'none';
+                if (isHidden) {
                     const rect = masterBtn.getBoundingClientRect();
                     menu.style.top = (rect.bottom + 6) + 'px';
                     menu.style.left = rect.left + 'px';
