@@ -9,7 +9,7 @@ window.isReconnecting = false;
 window.currentChartToken = null; 
 
 // Đổi Base URL về thẳng Render để không bị CSP chặn và không bị 404 Proxy
-const RENDER_BASE_URL = "https://alpha-realtime.onrender.com";
+const RENDER_BASE_URL = "";
 
 window.quantStats = {
     whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0,
