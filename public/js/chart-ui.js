@@ -1381,11 +1381,11 @@ window.closeProChart = function() {
         
         // Nhóm 2: Đường & Vùng
         { grp: 'ĐƯỜNG & VÙNG', id: 6, name: 'Đường (Line)', icon: _svg('<polyline points="3 17 9 11 15 15 21 5"/>'), phase: 1, desc: 'Đường nối các giá đóng cửa' },
-        { grp: 'ĐƯỜNG & VÙNG', id: 7, name: 'Đường + Điểm', icon: _svg('<polyline points="3 17 9 11 15 15 21 5"/><circle cx="9" cy="11" r="2"/><circle cx="15" cy="15" r="2"/><circle cx="21" cy="5" r="2"/>'), phase: 2, desc: 'Đường Line có đánh dấu đỉnh/đáy' },
-        { grp: 'ĐƯỜNG & VÙNG', id: 8, name: 'Bậc Thang', icon: _svg('<polyline points="3 17 9 17 9 11 15 11 15 5 21 5"/>'), phase: 2, desc: 'Step Line giúp nhìn rõ nền giá' },
+        { grp: 'ĐƯỜNG & VÙNG', id: 7, name: 'Đường + Điểm', icon: _svg('<polyline points="3 17 9 11 15 15 21 5"/><circle cx="9" cy="11" r="2"/><circle cx="15" cy="15" r="2"/><circle cx="21" cy="5" r="2"/>'), phase: 1, desc: 'Đường Line có đánh dấu đỉnh/đáy' },
+        { grp: 'ĐƯỜNG & VÙNG', id: 8, name: 'Bậc Thang', icon: _svg('<polyline points="3 17 9 17 9 11 15 11 15 5 21 5"/>'), phase: 1, desc: 'Step Line giúp nhìn rõ nền giá' },
         { grp: 'ĐƯỜNG & VÙNG', id: 9, name: 'Vùng (Area)', icon: _svg('<path d="M3 20h18V5l-6 10-6-4-6 9z" fill="currentColor" fill-opacity="0.2"/>'), phase: 1, desc: 'Đổ bóng Gradient dưới đường Line' },
-        { grp: 'ĐƯỜNG & VÙNG', id: 10, name: 'Vùng HLC', icon: _svg('<path d="M3 17l6-6 6 4 6-10v14H3z" fill="currentColor" fill-opacity="0.15"/><path d="M3 21l6-6 6 4 6-10" opacity="0.4"/>'), phase: 2, desc: 'Vùng dao động thực tế High-Low-Close' },
-        { grp: 'ĐƯỜNG & VÙNG', id: 11, name: 'Đường Cơ Sở', icon: _svg('<line x1="3" y1="12" x2="21" y2="12" stroke-dasharray="2 2"/><polyline points="3 12 7 8 13 15 21 6"/>'), phase: 2, desc: 'Baseline: Trên xanh, dưới đỏ' },
+        { grp: 'ĐƯỜNG & VÙNG', id: 10, name: 'Vùng HLC', icon: _svg('<path d="M3 17l6-6 6 4 6-10v14H3z" fill="currentColor" fill-opacity="0.15"/><path d="M3 21l6-6 6 4 6-10" opacity="0.4"/>'), phase: 1, desc: 'Vùng dao động thực tế High-Low-Close' },
+        { grp: 'ĐƯỜNG & VÙNG', id: 11, name: 'Đường Cơ Sở', icon: _svg('<line x1="3" y1="12" x2="21" y2="12" stroke-dasharray="2 2"/><polyline points="3 12 7 8 13 15 21 6"/>'), phase: 1, desc: 'Baseline: Trên xanh, dưới đỏ' },
         
         // Nhóm 3: Khử Nhiễu
         { grp: 'KHỬ NHIỄU (PRO)', id: 12, name: 'Heikin Ashi', icon: _svg('<path d="M9 4v16M15 4v16M7 10h4v6H7zM13 8h4v8h-4z"/>'), phase: 1, desc: 'Nến trung bình lọc nhiễu sóng' }, // 🚀 Đổi thành phase 1
@@ -1482,23 +1482,23 @@ window.closeProChart = function() {
 
                     div.onclick = (e) => {
                         e.stopPropagation();
-                        if (item.phase === 1) {
-                            if (window.WaveChartEngine) {
-                                window.WaveChartEngine.update({ chartType: item.id }, true);
-                            }
-                            document.getElementById('wa-ct-btn-icon').innerHTML = item.icon;
-                            
-                            menu.querySelectorAll('.wa-ct-item').forEach(el => el.classList.remove('active'));
-                            div.classList.add('active');
-                            menu.style.display = 'none';
-                        } else {
-                            if (typeof window.showToast === 'function') {
-                                window.showToast(`Loại biểu đồ "${item.name}" đang phát triển (Phase ${item.phase})`, "info");
-                            } else {
-                                alert(`🚀 Loại biểu đồ "${item.name}" thuộc tính năng Pro. Đang phát triển!`);
-                            }
+                        // 🚀 MỞ KHÓA TẤT CẢ: Không check phase nữa, bấm là chạy
+                        if (window.WaveChartEngine) {
+                            window.WaveChartEngine.update({ chartType: item.id }, true);
                         }
+                        
+                        // Cập nhật icon trên nút toolbar
+                        const btnIcon = document.getElementById('wa-ct-btn-icon');
+                        if (btnIcon) btnIcon.innerHTML = item.icon;
+                        
+                        // Cập nhật trạng thái active trong menu
+                        menu.querySelectorAll('.wa-ct-item').forEach(el => el.classList.remove('active'));
+                        div.classList.add('active');
+                        
+                        // Đóng menu
+                        menu.style.display = 'none';
                     };
+                    
                     grpDiv.appendChild(div);
                 });
                 menu.appendChild(grpDiv);
