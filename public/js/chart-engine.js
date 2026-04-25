@@ -979,7 +979,7 @@ window.startFuturesEngine = async function(symbol) {
     // Gọi lần đầu để lấy Funding/OI, sau đó lặp lại ngầm mỗi 15s
     fetchRestData().then(hasFutures => {
         if (hasFutures && window.activeFuturesSession === currentSession) {
-            window.futuresDataInterval = setInterval(() => { if (window.activeFuturesSession === currentSession) fetchRestData(); }, 15000);
+            window.futuresDataInterval = setInterval(() => { if (window.activeFuturesSession === currentSession) fetchRestData(); }, 120000);
         }
     });
 };
