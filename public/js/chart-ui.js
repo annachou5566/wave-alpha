@@ -1407,7 +1407,10 @@ window.closeProChart = function() {
             clearInterval(checkToolbar);
 
             const btnWrap = document.createElement('div');
-            btnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; margin-left: 8px;';
+            // Đặt ID cho cụm này để nút Settings có thể tìm thấy và chui vào
+            btnWrap.id = 'wa-chart-controls-group'; 
+            // Thêm gap: 6px để các nút cách nhau một chút cho đẹp
+            btnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; gap: 6px; margin-left: 8px;';
             btnWrap.innerHTML = `
                 <button id="btn-wa-chart-type" title="Chart Type">
                     <span id="wa-ct-btn-icon" style="display:flex; align-items:center;">${CHART_TYPES[0].icon}</span>
@@ -1739,17 +1742,18 @@ window.closeProChart = function() {
     });
 
     const checkToolbar = setInterval(() => {
-        const toolbar = document.querySelector('.sc-tools-left') || document.querySelector('.sc-toolbar') || document.querySelector('.wa-topbar-container');
-        if (toolbar) {
+        // Tìm thẳng cái Group chứa nút Chart Type vừa tạo ở trên
+        const targetGroup = document.getElementById('wa-chart-controls-group');
+        
+        if (targetGroup) {
             clearInterval(checkToolbar);
-            const btnWrap = document.createElement('div');
-            btnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; margin-left: 8px;';
-            btnWrap.innerHTML = `
+            // Bơm trực tiếp nút HTML vào trong Group đó (nằm cạnh nút Chart Type)
+            const btnHTML = `
                 <button id="btn-wa-chart-settings" title="Cài đặt Biểu đồ" style="background: rgba(255,255,255,0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 </button>
             `;
-            toolbar.appendChild(btnWrap);
+            targetGroup.insertAdjacentHTML('beforeend', btnHTML);
             document.getElementById('btn-wa-chart-settings').onclick = (e) => { e.stopPropagation(); window.openChartSettings(); };
         }
     }, 200);
