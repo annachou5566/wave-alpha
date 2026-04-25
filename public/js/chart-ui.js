@@ -1540,7 +1540,7 @@ window.closeProChart = function() {
 })();
 
 // =========================================================================
-// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (ĐÃ FIX LỖI MẤT BÁNH RĂNG + OPACITY)
+// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (ĐÃ FIX LỖI LỆCH TRÁI + RESET THÔNG MINH)
 // =========================================================================
 (function initChartSettingsModal() {
     'use strict';
@@ -1721,12 +1721,15 @@ window.closeProChart = function() {
     const header = modal.querySelector('.wa-csm-header');
     const colorPicker = document.getElementById('wa-color-picker');
 
+    // Drag logic - Đảm bảo modal mượt mà
     let isDragging = false, startX, startY, initLeft, initTop;
     header.addEventListener('mousedown', (e) => {
         isDragging = true; startX = e.clientX; startY = e.clientY;
         const rect = modalBox.getBoundingClientRect();
         initLeft = rect.left; initTop = rect.top;
-        modalBox.style.transform = 'none'; modalBox.style.left = initLeft + 'px'; modalBox.style.top = initTop + 'px';
+        modalBox.style.transform = 'none'; 
+        modalBox.style.left = initLeft + 'px'; 
+        modalBox.style.top = initTop + 'px';
         document.body.style.userSelect = 'none'; 
     });
     window.addEventListener('mousemove', (e) => { if (!isDragging) return; modalBox.style.left = (initLeft + e.clientX - startX) + 'px'; modalBox.style.top = (initTop + e.clientY - startY) + 'px'; });
@@ -1815,9 +1818,11 @@ window.closeProChart = function() {
         document.getElementById('csm-border-swatches').style.pointerEvents = config.borderIndependent ? 'auto' : 'none';
     }
 
+    // ✅ FIX VỊ TRÍ: Khởi tạo lại tâm màn hình mỗi khi click mở Modal
     window.openChartSettings = function() {
         if (!window.WaveChartEngine) return;
         const config = window.WaveChartEngine.getConfig();
+        
         modal.querySelectorAll('[data-bind]').forEach(el => {
             const key = el.dataset.bind;
             if (config[key] !== undefined) { if (el.type === 'checkbox') el.checked = config[key]; else el.value = config[key]; }
@@ -1825,14 +1830,18 @@ window.closeProChart = function() {
         modal.querySelectorAll('.wa-color-swatch').forEach(swatch => {
             const key = swatch.dataset.colorBind; if (config[key]) swatch.style.background = config[key];
         });
-        modalBox.style.transform = 'translate(-50%, -50%)'; modalBox.style.left = '50%'; modalBox.style.top = '50%';
+        
+        // Đặt lại tọa độ tâm hoàn hảo để không bị lật trái
+        modalBox.style.transform = 'translate(-50%, -50%)'; 
+        modalBox.style.left = '50%'; 
+        modalBox.style.top = '50%';
+        
         updateDynamicUI(config);
         modal.classList.add('show');
     };
 
     document.getElementById('btn-wa-csm-close').onclick = () => modal.classList.remove('show');
     
-    // GẮN SỰ KIỆN CHÍNH
     modal.querySelectorAll('[data-bind]').forEach(el => {
         const eventType = el.type === 'range' ? 'input' : 'change';
         el.addEventListener(eventType, (e) => {
@@ -1844,14 +1853,11 @@ window.closeProChart = function() {
         });
     });
 
-    // 🚀 TẠO VÀ GẮN BÁNH RĂNG VÀO ĐÚNG VỊ TRÍ GỐC
     const checkToolbar = setInterval(() => {
-        // Tìm nút Type Btn để gắn sát bên cạnh
         const typeBtn = document.getElementById('btn-wa-chart-type');
         if (typeBtn && typeBtn.parentNode) {
             clearInterval(checkToolbar);
             
-            // Đảm bảo không bị add trùng nếu hot reload
             if (!document.getElementById('btn-wa-chart-settings')) {
                 const btnHTML = `
                     <button id="btn-wa-chart-settings" data-wa-tip="Cài đặt Biểu đồ" style="background: rgba(255,255,255,0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; margin-left: 6px;">
@@ -1864,15 +1870,50 @@ window.closeProChart = function() {
         }
     }, 200);
 
-    // XỬ LÝ NÚT RESET
+    // ✅ FIX RESET: Cập nhật lại biểu đồ mà KHÔNG reload trang
     const btnReset = document.getElementById('wa-btn-reset-cfg');
     if (btnReset) {
         btnReset.onmouseenter = () => btnReset.style.background = 'rgba(246, 70, 93, 0.2)';
         btnReset.onmouseleave = () => btnReset.style.background = 'rgba(246, 70, 93, 0.1)';
         btnReset.onclick = () => {
-            if (confirm("Bạn có chắc chắn muốn khôi phục toàn bộ cài đặt biểu đồ về mặc định? Hành động này không thể hoàn tác.")) {
+            if (confirm("Bạn có chắc chắn muốn khôi phục toàn bộ cài đặt biểu đồ về mặc định?")) {
                 localStorage.removeItem('wave_alpha_chart_config');
-                window.location.reload();
+                if (window.WaveChartEngine) {
+                    const defaultCfg = {
+                        chartType: 1, upColor: '#0ECB81', downColor: '#F6465D',
+                        showWick: true, wickIndependent: false, wickUpColor: '#0ECB81', wickDownColor: '#F6465D',
+                        showBorder: true, borderIndependent: false, borderUpColor: '#0ECB81', borderDownColor: '#F6465D',
+                        abnormalVolColoring: false, yAxisMode: 'normal',
+                        showOHLC: true, showCountdown: true, showLastPriceLine: true, showHighLowTags: true, showWatermark: true, watermarkOpacity: 0.05,
+                        bgType: 'solid', bgColor: '#131722', bgColor2: '#000000',
+                        gridVertical: true, gridHorizontal: true, gridColor: 'rgba(255,255,255,0.06)',
+                        sessionBreaks: false, crosshairMode: 'normal', rightMargin: 10, timezone: 'Asia/Ho_Chi_Minh',
+                        stepLineSingleColor: false,
+                        hlcCloseColor: '#00F0FF', hlcHighColor: '#0ECB81', hlcLowColor: '#F6465D',
+                        hlcUpFillColor: '#0ECB81', hlcDownFillColor: '#F6465D',
+                        hlcHighLowOpacity: 0.35, hlcFillOpacity: 0.15, hlcShowHighLow: true,
+                        baselineUpColor: '#0ECB81', baselineDownColor: '#F6465D',
+                        baselineUpFill: '#0ECB81', baselineDownFill: '#F6465D',
+                        baselineFillOpacity: 0.2, baselineValue: 50, baselinePriceSource: 'close'
+                    };
+                    
+                    window.WaveChartEngine.config = { ...defaultCfg };
+                    window.WaveChartEngine.applyNow();
+                    
+                    // Đồng bộ lại UI trong bảng Cài đặt
+                    modal.querySelectorAll('[data-bind]').forEach(el => {
+                        const key = el.dataset.bind;
+                        if (defaultCfg[key] !== undefined) { 
+                            if (el.type === 'checkbox') el.checked = defaultCfg[key]; 
+                            else el.value = defaultCfg[key]; 
+                        }
+                    });
+                    modal.querySelectorAll('.wa-color-swatch').forEach(swatch => {
+                        const key = swatch.dataset.colorBind; 
+                        if (defaultCfg[key]) swatch.style.background = defaultCfg[key];
+                    });
+                    updateDynamicUI(defaultCfg);
+                }
             }
         };
     }
