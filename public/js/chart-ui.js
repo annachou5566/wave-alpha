@@ -1540,7 +1540,7 @@ window.closeProChart = function() {
 })();
 
 // =========================================================================
-// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (V9 - FULL PRODUCTION)
+// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (V9 - FULL PRODUCTION MASTER)
 // ✅ Animation mượt | Backdrop click | Escape key | Export/Import JSON
 // ✅ 8 Theme presets | Recent colors | Native color picker | Slider badges
 // ✅ Smart picker positioning | Drag | Linked sliders | Dynamic UI
@@ -1820,7 +1820,6 @@ window.closeProChart = function() {
         <div id="wa-chart-settings-modal">
         <div class="wa-csm-box" id="wa-csm-box">
 
-            <!-- SIDEBAR -->
             <div class="wa-csm-sidebar">
                 <div class="wa-csm-sidebar-lbl">Biểu đồ</div>
                 <div class="wa-csm-tab active" data-tab="csm-symbol">📊 Biểu Tượng</div>
@@ -1834,7 +1833,6 @@ window.closeProChart = function() {
                 <div class="wa-csm-tab" data-tab="csm-pro">⚡ Nâng Cao</div>
             </div>
 
-            <!-- CONTENT -->
             <div class="wa-csm-content">
                 <div class="wa-csm-header">
                     <div class="wa-csm-title">⚙️ Cài đặt Biểu đồ</div>
@@ -1842,7 +1840,6 @@ window.closeProChart = function() {
                 </div>
                 <div class="wa-csm-panels">
 
-                    <!-- ════ TAB 1: BIỂU TƯỢNG ════ -->
                     <div id="csm-symbol" class="wa-csm-panel active">
                         <div class="wa-csm-row">
                             <div class="wa-csm-label">Loại biểu đồ</div>
@@ -1861,7 +1858,6 @@ window.closeProChart = function() {
                             </select>
                         </div>
 
-                        <!-- UI: NẾN / CỘT -->
                         <div id="csm-ui-candles" style="display:flex; flex-direction:column; gap:13px;">
                             <div class="wa-csm-divider">Màu thân nến</div>
                             <div class="wa-csm-row">
@@ -1903,7 +1899,6 @@ window.closeProChart = function() {
                             </div>
                         </div>
 
-                        <!-- UI: ĐƯỜNG LINE / AREA -->
                         <div id="csm-ui-lines" style="display:none; flex-direction:column; gap:13px;">
                             <div class="wa-csm-divider">Màu đường</div>
                             <div class="wa-csm-row">
@@ -1924,7 +1919,6 @@ window.closeProChart = function() {
                             </div>
                         </div>
 
-                        <!-- UI: STEP LINE -->
                         <div id="csm-ui-step" style="display:none; flex-direction:column; gap:13px;">
                             <div class="wa-csm-divider">Cài đặt bậc thang</div>
                             <div class="wa-csm-row">
@@ -1952,7 +1946,6 @@ window.closeProChart = function() {
                             </div>
                         </div>
 
-                        <!-- UI: HLC AREA -->
                         <div id="csm-ui-hlc" style="display:none; flex-direction:column; gap:13px;">
                             <div class="wa-csm-divider">Đường Close</div>
                             <div class="wa-csm-row">
@@ -1994,7 +1987,6 @@ window.closeProChart = function() {
                             </div>
                         </div>
 
-                        <!-- UI: BASELINE -->
                         <div id="csm-ui-baseline" style="display:none; flex-direction:column; gap:13px;">
                             <div class="wa-csm-divider">Màu đường & nền</div>
                             <div class="wa-csm-row">
@@ -2012,7 +2004,7 @@ window.closeProChart = function() {
                                 </div>
                             </div>
                             <div class="wa-csm-row">
-                                <div class="wa-csm-label">Độ mờ nền</div>
+                                <div class="wa-csm-label">Độ mờ nền chung</div>
                                 <div class="wa-csm-control"><div class="wa-slider-wrap">
                                     <input type="range" class="wa-csm-slider" min="0" max="0.6" step="0.05" data-bind="baselineFillOpacity" data-type="number">
                                     <span class="wa-slider-badge" data-val-key="baselineFillOpacity">0.20</span>
@@ -2039,7 +2031,6 @@ window.closeProChart = function() {
                             </div>
                         </div>
 
-                        <!-- TRỤC Y -->
                         <div class="wa-csm-divider">Trục giá (Y-Axis)</div>
                         <div class="wa-csm-row">
                             <div class="wa-csm-label">Thang đo</div>
@@ -2051,7 +2042,6 @@ window.closeProChart = function() {
                         </div>
                     </div>
 
-                    <!-- ════ TAB 2: TRẠNG THÁI ════ -->
                     <div id="csm-status" class="wa-csm-panel">
                         <div class="wa-csm-divider">Thông tin trên biểu đồ</div>
                         <div class="wa-csm-row"><div class="wa-csm-label">Dữ liệu OHLCV</div><label class="wa-switch"><input type="checkbox" data-bind="showOHLC"><span class="wa-slider"></span></label></div>
@@ -2096,13 +2086,12 @@ window.closeProChart = function() {
                         </div>
                     </div>
 
-                    <!-- ════ TAB 3: GIAO DIỆN ════ -->
                     <div id="csm-appearance" class="wa-csm-panel">
                         <div class="wa-csm-divider">Nền biểu đồ</div>
                         <div class="wa-csm-row">
                             <div class="wa-csm-label">Kiểu nền</div>
                             <div class="wa-csm-control">
-                                <select class="wa-csm-select" data-bind="bgType" style="width:110px;">
+                                <select class="wa-csm-select" data-bind="bgType" id="csm-bg-type" style="width:110px;">
                                     <option value="solid">Đơn sắc</option>
                                     <option value="gradient">Gradient</option>
                                 </select>
@@ -2138,7 +2127,6 @@ window.closeProChart = function() {
                         </div>
                     </div>
 
-                    <!-- ════ TAB 4: CHỦ ĐỀ ════ -->
                     <div id="csm-themes" class="wa-csm-panel">
                         <div class="wa-csm-divider">Chủ đề nhanh (1 click)</div>
                         <div class="wa-preset-grid" id="csm-preset-grid"></div>
@@ -2169,7 +2157,6 @@ window.closeProChart = function() {
                         <input type="file" id="wa-import-file" accept=".json" style="display:none;">
                     </div>
 
-                    <!-- ════ TAB 5: NÂNG CAO ════ -->
                     <div id="csm-pro" class="wa-csm-panel">
                         <div class="wa-info-box">⚡ Tính năng thực nghiệm — dành cho người dùng chuyên nghiệp.</div>
                         <div class="wa-csm-divider">Màu sắc nâng cao</div>
@@ -2191,13 +2178,7 @@ window.closeProChart = function() {
                         </div>
                     </div>
 
-                </div><!-- end panels -->
-            </div><!-- end content -->
-        </div><!-- end box -->
-        </div><!-- end modal -->
-
-        <!-- COLOR PICKER -->
-        <div id="wa-color-picker">
+                </div></div></div></div><div id="wa-color-picker">
             <div class="wcp-preview" id="wcp-preview"></div>
             <div class="wcp-section-lbl">Palette</div>
             <div class="wcp-grid" id="wcp-palette"></div>
@@ -2427,7 +2408,7 @@ window.closeProChart = function() {
         modalBox.style.transform='translate(-50%,-50%)'; modalBox.style.left='50%'; modalBox.style.top='50%';
         backdrop.style.display = 'block';
         modal.style.display    = 'block';
-        // Double RAF — đảm bảo animation chạy sau display:block
+        // Double RAF — đảm bảo animation chạy mượt mà
         requestAnimationFrame(() => requestAnimationFrame(() => {
             backdrop.classList.add('show');
             modal.classList.add('show');
@@ -2453,7 +2434,7 @@ window.closeProChart = function() {
             if (el.dataset.type==='number') val = parseFloat(val);
             if (window.WaveChartEngine) window.WaveChartEngine.update({ [key]: val });
             syncBadges(key, val);
-            // Sync linked controls (e.g. slider + number input for baselineValue)
+            // Sync linked controls (VD: slider và input number đồng bộ)
             modal.querySelectorAll(`[data-bind="${key}"]`).forEach(linked => {
                 if (linked===el) return;
                 if (linked.type==='checkbox') linked.checked=el.checked;
@@ -2489,32 +2470,31 @@ window.closeProChart = function() {
         const a = Object.assign(document.createElement('a'), { href:URL.createObjectURL(blob), download:'wave-chart-config.json' });
         a.click(); URL.revokeObjectURL(a.href);
     };
+    
     document.getElementById('wa-btn-import-cfg').onclick = () => document.getElementById('wa-import-file').click();
     document.getElementById('wa-import-file').onchange = e => {
-        const f=e.target.files[0]; if(!f) return;
-        new FileReader().addEventListener('load', ev => {
+        const f = e.target.files[0]; 
+        if(!f) return;
+        const fr = new FileReader(); 
+        fr.onload = ev => {
             try {
                 const cfg = JSON.parse(ev.target.result);
-                if (window.WaveChartEngine) {
-                    window.WaveChartEngine.update(cfg, true);
-                    syncUI(window.WaveChartEngine.getConfig());
-                    updateDynamicUI(window.WaveChartEngine.getConfig());
+                if(window.WaveChartEngine){ 
+                    window.WaveChartEngine.update(cfg, true); 
+                    syncUI(window.WaveChartEngine.getConfig()); 
+                    updateDynamicUI(window.WaveChartEngine.getConfig()); 
                 }
-            } catch(err) { alert('❌ File JSON không hợp lệ:\n' + err.message); }
-        });
-        (new FileReader()).readAsText(f);
-        // Đọc đúng file
-        const fr=new FileReader(); fr.onload=ev=>{
-            try {
-                const cfg=JSON.parse(ev.target.result);
-                if(window.WaveChartEngine){ window.WaveChartEngine.update(cfg,true); syncUI(window.WaveChartEngine.getConfig()); updateDynamicUI(window.WaveChartEngine.getConfig()); }
-            } catch(err){ alert('❌ File JSON không hợp lệ:\n'+err.message); }
-        }; fr.readAsText(f); e.target.value='';
+            } catch(err){ 
+                alert('❌ File JSON không hợp lệ:\\n' + err.message); 
+            }
+        }; 
+        fr.readAsText(f); 
+        e.target.value = '';
     };
 
     // ─── RESET ───────────────────────────────────────────────────────────
     document.getElementById('wa-btn-reset-cfg').onclick = () => {
-        if (confirm('Bạn có chắc muốn khôi phục toàn bộ cài đặt biểu đồ về mặc định?\nHành động này không thể hoàn tác.')) {
+        if (confirm('Bạn có chắc muốn khôi phục toàn bộ cài đặt biểu đồ về mặc định?\\nHành động này không thể hoàn tác.')) {
             localStorage.removeItem('wave_alpha_chart_config');
             window.location.reload();
         }
