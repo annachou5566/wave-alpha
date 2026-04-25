@@ -3652,3 +3652,21 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     visibility: visible;
     transform: translateX(-50%) translateY(0);
 }
+
+/* 1. Mở khóa "chống cắt viền" cho toàn bộ thanh Toolbar */
+.sc-toolbar, 
+.sc-tools-left, 
+.wa-topbar-container,
+#wa-chart-controls-group {
+    overflow: visible !important;
+}
+
+/* 2. Đẩy cái nút lên layer cao nhất khi đưa chuột vào */
+[data-wa-tip]:hover {
+    z-index: 999999 !important;
+}
+
+/* 3. Tăng mức độ ưu tiên hiển thị của chính cái Tooltip lên Max */
+[data-wa-tip]::after {
+    z-index: 9999999 !important; 
+}
