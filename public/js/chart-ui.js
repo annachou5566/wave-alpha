@@ -41,6 +41,58 @@ window.currentTheme = localStorage.getItem('wave_theme') || 'cyber';
 
 window.isProSoundOn = true; 
 // ==========================================
+// 🚀 INIT CUSTOM TOOLTIP (MINIMALIST)
+// ==========================================
+(function initCustomTooltips() {
+    if (document.getElementById('wa-custom-tooltip-style')) return;
+    const style = document.createElement('style');
+    style.id = 'wa-custom-tooltip-style';
+    style.textContent = `
+        [data-wa-tip] {
+            position: relative;
+        }
+        [data-wa-tip]::after {
+            content: attr(data-wa-tip);
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%) translateY(4px);
+            background: #1e222d !important;
+            color: #EAECEF !important;
+            padding: 5px 10px !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            font-family: var(--font-main, sans-serif) !important;
+            border-radius: 4px !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+            white-space: nowrap !important;
+            opacity: 0;
+            visibility: hidden;
+            transition: 0.15s ease-in-out !important;
+            z-index: 9999999 !important;
+            pointer-events: none !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+        }
+        [data-wa-tip]:hover::after {
+            opacity: 1 !important;
+            visibility: visible !important;
+            transform: translateX(-50%) translateY(0) !important;
+        }
+        /* Mở khóa chống cắt viền */
+        .sc-toolbar, 
+        .sc-tools-left, 
+        .wa-topbar-container,
+        #wa-chart-controls-group {
+            overflow: visible !important;
+        }
+        /* Đẩy layer */
+        [data-wa-tip]:hover {
+            z-index: 999999 !important;
+        }
+    `;
+    document.head.appendChild(style);
+})();
+// ==========================================
 // 🌊 HFT TAPE ENGINE (DOM RECYCLING & BATCHING)
 // ==========================================
 
