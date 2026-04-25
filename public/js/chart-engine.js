@@ -313,7 +313,7 @@ window.klinecharts.registerIndicator({
     }
 });
 
-// 6. CHỈ BÁO VẼ ĐƯỜNG CƠ SỞ (BASELINE - ID 11) 🚀 [DÙNG KỸ THUẬT CLIPPING]
+// 6. CHỈ BÁO VẼ ĐƯỜNG CƠ SỞ (BASELINE - ID 11) 🚀 [CHUẨN TRADINGVIEW - 50% CHIỀU CAO]
 window.klinecharts.registerIndicator({
     name: 'WA_BASELINE',
     shortName: ' ',
@@ -326,21 +326,27 @@ window.klinecharts.registerIndicator({
         
         if (!dataList[from]) return true;
 
-        // 1. Xác định mức giá Cơ sở (Lấy giá Close của cây nến đầu tiên bên trái màn hình làm mốc)
-        const basePrice = dataList[from].close;
-        const baseY = yAxis.convertToPixel(basePrice);
+        // 🚀 ĐÚNG CHUẨN TRADINGVIEW: Tính mức cơ sở theo % chiều cao khung biểu đồ
+        // Mặc định là 50% (nằm chính giữa màn hình). 100% là trên cùng, 0% là dưới đáy.
+        const basePercent = c.baselineValue || 50; 
+        // Tọa độ Y trong Canvas bị ngược (0 ở trên đỉnh), nên ta lấy 100% trừ đi
+        const baseY = bounding.height * (1 - basePercent / 100);
+
+        // Nguồn giá (Price Source): Mặc định là giá Đóng cửa (Close)
+        // (Sau này bạn có thể làm UI cho phép user chọn (H+L)/2 hoặc (O+H+L+C)/4 ở đây)
+        const getPrice = (kd) => kd.close;
 
         ctx.save();
         ctx.setLineDash([]); 
 
-        // Hàm phụ: Vẽ đường Line nối giá Close và Khép góc để tô màu Area
+        // Hàm vẽ đường Line nối giá
         const drawPath = (isArea) => {
             ctx.beginPath();
             const start = Math.max(0, from - 1);
             for (let i = start; i < to; i++) {
                 const kd = dataList[i];
                 if (!kd || kd.close === undefined) continue;
-                const x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(kd.close);
+                const x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(getPrice(kd));
                 if (i === start) ctx.moveTo(x, y); else ctx.lineTo(x, y);
             }
             if (isArea) {
@@ -350,36 +356,37 @@ window.klinecharts.registerIndicator({
             }
         };
 
-        // 🚀 NỬA TRÊN: Cắt cúp màn hình và vẽ MÀU TĂNG (Xanh)
+        // 🚀 NỬA TRÊN ĐƯỜNG 50%: Màu Tăng (Xanh)
         ctx.save();
         ctx.beginPath();
-        ctx.rect(0, 0, bounding.width, baseY); // Chỉ cho phép vẽ từ mép trên xuống đến đường mốc
+        ctx.rect(0, 0, bounding.width, baseY); // Giới hạn vùng cắt từ mép trên xuống đường 50%
         ctx.clip();
         
-        drawPath(true); // Đổ màu vùng
+        drawPath(true); // Đổ màu vùng trên
         ctx.fillStyle = window.WaveChartEngine._dimColor(c.upColor, 0.2); ctx.fill();
         
-        drawPath(false); // Vẽ viền đậm
+        drawPath(false); // Vẽ viền trên
         ctx.lineWidth = 2; ctx.strokeStyle = c.upColor; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
         ctx.restore();
 
-        // 🚀 NỬA DƯỚI: Cắt cúp màn hình và vẽ MÀU GIẢM (Đỏ)
+        // 🚀 NỬA DƯỚI ĐƯỜNG 50%: Màu Giảm (Đỏ)
         ctx.save();
         ctx.beginPath();
-        ctx.rect(0, baseY, bounding.width, bounding.height - baseY); // Chỉ cho phép vẽ từ đường mốc xuống đáy
+        ctx.rect(0, baseY, bounding.width, bounding.height - baseY); // Giới hạn vùng cắt từ 50% xuống đáy
         ctx.clip();
         
-        drawPath(true); // Đổ màu vùng
+        drawPath(true); // Đổ màu vùng dưới
         ctx.fillStyle = window.WaveChartEngine._dimColor(c.downColor, 0.2); ctx.fill();
         
-        drawPath(false); // Vẽ viền đậm
+        drawPath(false); // Vẽ viền dưới
         ctx.lineWidth = 2; ctx.strokeStyle = c.downColor; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
         ctx.restore();
 
-        // 🚀 VẼ ĐƯỜNG CƠ SỞ (Đường đứt nét tàng hình đứt đoạn ở giữa)
+        // 🚀 VẼ ĐƯỜNG RANH GIỚI CƠ SỞ (Đường đứt nét nằm ngang)
         ctx.beginPath();
-        ctx.setLineDash([5, 5]);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.setLineDash([5, 5]); // Nét đứt
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 1;
         ctx.moveTo(0, baseY);
         ctx.lineTo(bounding.width, baseY);
         ctx.stroke();
