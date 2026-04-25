@@ -19,8 +19,7 @@ function startRealtimeSync() {
 async function fetchLayer2Data() {
     if (document.hidden) return; 
     try {
-        const antiCacheUrl = `${REALTIME_API_URL}?t=${Date.now()}`;
-        const res = await fetch(antiCacheUrl, {
+        const res = await fetch(REALTIME_API_URL, {
             method: 'GET' 
         });
         const json = await res.json();

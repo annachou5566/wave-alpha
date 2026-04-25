@@ -415,9 +415,9 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
 let targetSymbol = rawId ? `ALPHA_${rawId.toUpperCase()}USDT` : sysSymbol.toUpperCase();
     
 // LOG 1: Báo hiệu bắt đầu gọi
-console.log(`🌊 [DEPTH SNAPSHOT] Đang lấy sổ lệnh 500 nấc cho ${targetSymbol}...`);
+console.log(`🌊 [DEPTH SNAPSHOT] Đang lấy sổ lệnh 50 nấc cho ${targetSymbol}...`);
 
-fetch(`${RENDER_BASE_URL}/api/full-depth?symbol=${targetSymbol}&limit=500`)
+fetch(`${RENDER_BASE_URL}/api/full-depth?symbol=${targetSymbol}&limit=50`)
     .then(res => res.json())
     .then(json => {
         if (window.activeChartSessionId !== currentSession) return; 
