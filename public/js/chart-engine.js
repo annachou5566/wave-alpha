@@ -509,6 +509,7 @@ window.WaveChartEngine = {
     },
 
     // 🚀 CACHE & PARSER MÀU SẮC CHUYÊN NGHIỆP (ĐÃ FIX LỖI ĐEN MÀU RGBA)
+    // 🚀 CACHE & PARSER MÀU SẮC CHUYÊN NGHIỆP (ĐÃ FIX LỖI ĐEN MÀU RGBA)
     _dimColor: function(hex, opacity) {
         if (!hex) return 'transparent';
         const cacheKey = hex + '_' + opacity; 
