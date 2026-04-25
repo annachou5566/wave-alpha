@@ -1540,7 +1540,7 @@ window.closeProChart = function() {
 })();
 
 // =========================================================================
-// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (V9 - FULL PRODUCTION MASTER)
+// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (V9.1 - FULL PRODUCTION MASTER)
 // ✅ Animation mượt | Backdrop click | Escape key | Export/Import JSON
 // ✅ 8 Theme presets | Recent colors | Native color picker | Slider badges
 // ✅ Smart picker positioning | Drag | Linked sliders | Dynamic UI
@@ -2218,7 +2218,7 @@ window.closeProChart = function() {
 
     // ─── COLOR UTILS ─────────────────────────────────────────────────────
     const rgb2hex = (s) => {
-        if (!s || !s.startsWith('rgb')) return s || '#000000';
+        if (!s || (!s.startsWith('rgb') && !s.startsWith('rgba'))) return s || '#000000';
         const m = s.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
         if (!m) return '#000000';
         return '#' + [m[1],m[2],m[3]].map(v => (+v).toString(16).padStart(2,'0')).join('');
@@ -2268,12 +2268,12 @@ window.closeProChart = function() {
     // ─── APPLY COLOR ─────────────────────────────────────────────────────
     function applyColor(hex, opacity) {
         if (!activeSwatch) return;
-        const final = buildColor(hex.length===7 ? hex : hex, opacity);
+        // Fix: chỉ lấy 7 ký tự đầu để bỏ qua alpha hex (nếu có) khi chuyển đổi màu
+        const final = buildColor(hex.slice(0, 7), opacity);
         activeSwatch.style.background = final;
         cpPreview.style.background    = final;
         if (activeKey === 'upColor')   { const el=document.getElementById('preview-upColor');   if(el) el.textContent=final; }
         if (activeKey === 'downColor') { const el=document.getElementById('preview-downColor'); if(el) el.textContent=final; }
-        // Sync all swatches with same key
         modal.querySelectorAll(`.wa-color-swatch[data-color-bind="${activeKey}"]`).forEach(s => s.style.background=final);
         if (window.WaveChartEngine) window.WaveChartEngine.update({ [activeKey]: final });
     }
@@ -2289,7 +2289,7 @@ window.closeProChart = function() {
         palette.querySelectorAll('.wcp-cell.sel').forEach(c=>c.classList.remove('sel'));
         const match = palette.querySelector(`.wcp-cell[title="${hex}"]`);
         if (match) match.classList.add('sel');
-        // Smart position
+        
         const r=swatch.getBoundingClientRect(), pw=242, ph=340;
         let left=r.left, top=r.bottom+8;
         if (left+pw > window.innerWidth-8)  left = window.innerWidth-pw-8;
@@ -2408,7 +2408,7 @@ window.closeProChart = function() {
         modalBox.style.transform='translate(-50%,-50%)'; modalBox.style.left='50%'; modalBox.style.top='50%';
         backdrop.style.display = 'block';
         modal.style.display    = 'block';
-        // Double RAF — đảm bảo animation chạy mượt mà
+        
         requestAnimationFrame(() => requestAnimationFrame(() => {
             backdrop.classList.add('show');
             modal.classList.add('show');
@@ -2434,7 +2434,7 @@ window.closeProChart = function() {
             if (el.dataset.type==='number') val = parseFloat(val);
             if (window.WaveChartEngine) window.WaveChartEngine.update({ [key]: val });
             syncBadges(key, val);
-            // Sync linked controls (VD: slider và input number đồng bộ)
+            
             modal.querySelectorAll(`[data-bind="${key}"]`).forEach(linked => {
                 if (linked===el) return;
                 if (linked.type==='checkbox') linked.checked=el.checked;
@@ -2485,7 +2485,7 @@ window.closeProChart = function() {
                     updateDynamicUI(window.WaveChartEngine.getConfig()); 
                 }
             } catch(err){ 
-                alert('❌ File JSON không hợp lệ:\\n' + err.message); 
+                alert('❌ File JSON không hợp lệ:\n' + err.message); 
             }
         }; 
         fr.readAsText(f); 
@@ -2494,7 +2494,7 @@ window.closeProChart = function() {
 
     // ─── RESET ───────────────────────────────────────────────────────────
     document.getElementById('wa-btn-reset-cfg').onclick = () => {
-        if (confirm('Bạn có chắc muốn khôi phục toàn bộ cài đặt biểu đồ về mặc định?\\nHành động này không thể hoàn tác.')) {
+        if (confirm('Bạn có chắc muốn khôi phục toàn bộ cài đặt biểu đồ về mặc định?\nHành động này không thể hoàn tác.')) {
             localStorage.removeItem('wave_alpha_chart_config');
             window.location.reload();
         }
