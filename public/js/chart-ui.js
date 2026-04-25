@@ -2160,171 +2160,224 @@ window.closeProChart = function() {
 })();
 
 // =========================================================================
-// 🚀 SUPER SETTINGS MODAL: BẢNG CÀI ĐẶT TRADINGVIEW ĐỘNG (BẢN CHUẨN)
-// Dán vào cuối cùng file chart-ui.js, nó sẽ tự động ghi đè lệnh cũ!
+// 🚀 GIAO DIỆN CÀI ĐẶT PRO: GIỮ NGUYÊN THIẾT KẾ GỐC + LOGIC ĐỘNG
 // =========================================================================
 window.openChartSettings = function() {
-    let oldModal = document.getElementById('wa-super-settings-modal');
-    if (oldModal) oldModal.remove();
-
     const engine = window.WaveChartEngine;
     if (!engine) return;
     const c = engine.getConfig();
+    const type = c.chartType;
 
-    const modal = document.createElement('div');
-    modal.id = 'wa-super-settings-modal';
-    modal.style.cssText = `
-        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-        background: #1e2329; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
-        width: 340px; z-index: 999999; box-shadow: 0 16px 40px rgba(0,0,0,0.8);
-        font-family: Arial, sans-serif; display: flex; flex-direction: column;
+    // Xóa menu cũ nếu đang mở
+    let menuCfg = document.getElementById('wa-chart-cfg-menu');
+    if (menuCfg) menuCfg.remove();
+
+    // Tái tạo menu đúng chuẩn UI gốc của bạn
+    menuCfg = document.createElement('div');
+    menuCfg.id = 'wa-chart-cfg-menu';
+    menuCfg.style.cssText = `
+        position:fixed; background:#1e2329; border:1px solid rgba(255,255,255,0.1); 
+        border-radius:10px; padding:16px; min-width:280px; z-index:999999; box-shadow:0 16px 40px rgba(0,0,0,0.9);
     `;
 
-    modal.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-            <select id="cfg-chart-type" style="background:#2b3139; border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:#EAECEF; font-size:14px; font-weight:bold; outline:none; cursor:pointer; padding:6px 10px;">
-                <option value="1">Nến Nhật (Candles)</option>
-                <option value="2">Nến Rỗng (Hollow)</option>
-                <option value="3">Thanh (Bars)</option>
-                <option value="4">Cột (Columns)</option>
-                <option value="5">Đỉnh - Đáy (High-Low)</option>
-                <option value="6">Đường (Line)</option>
-                <option value="7">Đường + Điểm (Marker)</option>
-                <option value="8">Bậc Thang (Step Line)</option>
-                <option value="9">Vùng (Area)</option>
-                <option value="10">Vùng HLC (HLC Area)</option>
-                <option value="11">Đường Cơ Sở (Baseline)</option>
-            </select>
-            <button id="cfg-close-btn" style="background:transparent; border:none; color:#848e9c; cursor:pointer; font-size:20px; line-height:1;">&times;</button>
-        </div>
-        <div id="cfg-dynamic-body" style="padding: 16px; max-height: 450px; overflow-y: auto;">
+    // 🎯 HÀM SINH HTML INPUT CHUẨN STYLE GỐC CỦA BẠN
+    const renderColorRow = (label, keyColor, keyBorder, showBorder = false) => {
+        let valColor = c[keyColor] || '#ffffff';
+        let valBorder = keyBorder ? c[keyBorder] : valColor;
+        
+        // Chuyển rgba sang hex cho input color
+        const toHex = (col) => {
+            if(!col || !col.startsWith('rgba')) return col;
+            const p = col.match(/[\d.]+/g); if(!p) return '#ffffff';
+            return `#${parseInt(p[0]).toString(16).padStart(2,'0')}${parseInt(p[1]).toString(16).padStart(2,'0')}${parseInt(p[2]).toString(16).padStart(2,'0')}`;
+        };
+        const hexColor = toHex(valColor);
+        const hexBorder = toHex(valBorder);
+
+        return `
+            <span style="color:#fff;font-size:12px; display:flex; align-items:center;">${label}</span>
+            <input type="text" id="hex-${keyColor}" value="${hexColor}" maxlength="11" style="width:100%; height:24px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#fff; font-size:11px; text-align:center; outline:none;" data-sync="${keyColor}">
+            <input type="color" id="col-${keyColor}" value="${hexColor}" title="Màu chính" style="width:26px;height:24px;border:1px solid rgba(255,255,255,0.1);border-radius:4px;cursor:pointer;background:transparent;padding:1px;" data-target="${keyColor}">
+            ${showBorder ? `<input type="color" id="col-${keyBorder}" value="${hexBorder}" title="Màu Viền" style="width:26px;height:24px;border:1px solid rgba(255,255,255,0.1);border-radius:4px;cursor:pointer;background:transparent;padding:1px;" data-target="${keyBorder}">` : `<div style="grid-column: 4; width:26px;"></div>`}
+        `;
+    };
+
+    let innerContent = '';
+
+    // 1️⃣ LOGIC HIỂN THỊ CHO NẾN NHẬT & CỘT
+    if (type === 1 || type === 2 || type === 3 || type === 4 || type === 5 || type === 12) {
+        innerContent = `
+            <div style="font-size:10px; font-weight:800; color:#848e9c; letter-spacing:1px; margin-bottom:14px;">⚙️ GIAO DIỆN NẾN & CỘT</div>
+            <div style="display:grid; grid-template-columns: 85px 75px 26px 26px; align-items:center; gap:8px; margin-bottom:16px;">
+                <span style="color:#848e9c; font-size:10px; text-align:right; grid-column:3" title="Màu Thân">THÂN</span>
+                <span style="color:#848e9c; font-size:10px; text-align:right; grid-column:4" title="Màu Viền">VIỀN</span>
+                ${renderColorRow('📈 Tăng', 'upColor', 'borderUpColor', true)}
+                ${renderColorRow('📉 Giảm', 'downColor', 'borderDownColor', true)}
             </div>
-    `;
-    document.body.appendChild(modal);
-
-    const typeSelect = document.getElementById('cfg-chart-type');
-    typeSelect.value = c.chartType;
-
-    function renderDynamicPanel() {
-        const type = parseInt(typeSelect.value);
-        let html = '';
-
-        if (type === 1 || type === 2 || type === 3 || type === 4 || type === 5) {
-            html = `
-                <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
-                    <span style="color:#b7bdc6; font-size:13px;">Màu Tăng</span>
-                    <input type="color" data-key="upColor" value="${c.upColor}" style="cursor:pointer;">
-                </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
-                    <span style="color:#b7bdc6; font-size:13px;">Màu Giảm</span>
-                    <input type="color" data-key="downColor" value="${c.downColor}" style="cursor:pointer;">
-                </div>
-            `;
-        } 
-        else if (type === 6 || type === 7 || type === 8 || type === 9) {
-            html = `
-                <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
-                    <span style="color:#b7bdc6; font-size:13px;">Màu Đường</span>
-                    <input type="color" data-key="upColor" value="${c.upColor}" style="cursor:pointer;">
-                </div>
-            `;
-        }
-        else if (type === 10) { // HLC AREA
-            html = `
+        `;
+    }
+    // 2️⃣ LOGIC HIỂN THỊ CHO VÙNG HLC (HLC AREA)
+    else if (type === 10) {
+        innerContent = `
+            <div style="font-size:10px; font-weight:800; color:#00F0FF; letter-spacing:1px; margin-bottom:14px;">🌊 THÔNG SỐ VÙNG HLC</div>
+            <div style="display:grid; grid-template-columns: 100px 60px 26px; align-items:center; gap:8px; margin-bottom:16px;">
+                <span style="color:#848e9c; font-size:10px; text-align:right; grid-column:3" title="Màu">MÀU</span>
+                ${renderColorRow('Đường Đóng Cửa', 'hlcCloseColor', null, false)}
+                ${renderColorRow('Viền Đỉnh (High)', 'hlcHighColor', null, false)}
+                ${renderColorRow('Viền Đáy (Low)', 'hlcLowColor', null, false)}
+                ${renderColorRow('Màu Nền Vùng', 'hlcFillColor', null, false)}
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.1);">
+                <span style="color:#fff; font-size:12px;">Độ mờ nền HLC</span>
+                <input type="range" id="wa-range-hlcop" min="0" max="1" step="0.05" value="${c.hlcFillOpacity}" style="width:100px; accent-color:#00F0FF;">
+            </div>
+        `;
+    }
+    // 3️⃣ LOGIC HIỂN THỊ CHO ĐƯỜNG CƠ SỞ (BASELINE)
+    else if (type === 11) {
+        innerContent = `
+            <div style="font-size:10px; font-weight:800; color:#0ECB81; letter-spacing:1px; margin-bottom:14px;">⚖️ ĐƯỜNG CƠ SỞ (BASELINE)</div>
+            <div style="display:grid; grid-template-columns: 100px 60px 26px; align-items:center; gap:8px; margin-bottom:16px;">
+                <span style="color:#848e9c; font-size:10px; text-align:right; grid-column:3" title="Màu">MÀU</span>
+                ${renderColorRow('Đường Trên', 'baselineUpColor', null, false)}
+                ${renderColorRow('Đường Dưới', 'baselineDownColor', null, false)}
+                ${renderColorRow('Nền Trên (Fill)', 'baselineUpFill', null, false)}
+                ${renderColorRow('Nền Dưới (Fill)', 'baselineDownFill', null, false)}
+            </div>
+            <div style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.1);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <span style="color:#b7bdc6; font-size:13px;">Đường Đóng Cửa</span>
-                    <input type="color" data-key="hlcCloseColor" value="${c.hlcCloseColor}">
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <label style="color:#b7bdc6; font-size:13px; cursor:pointer;"><input type="checkbox" id="cfg-hlc-show" ${c.hlcShowHighLow?'checked':''}> Viền Đỉnh (High)</label>
-                    <input type="color" data-key="hlcHighColor" value="${c.hlcHighColor}">
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <span style="color:#b7bdc6; font-size:13px; margin-left:22px;">Viền Đáy (Low)</span>
-                    <input type="color" data-key="hlcLowColor" value="${c.hlcLowColor}">
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                    <span style="color:#b7bdc6; font-size:13px;">Màu Nền (Fill)</span>
-                    <input type="color" data-key="hlcFillColor" value="${c.hlcFillColor}">
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                    <span style="color:#6b7280; font-size:11px; margin-left:22px;">Độ mờ nền</span>
-                    <input type="range" id="cfg-hlc-op" min="0" max="1" step="0.05" value="${c.hlcFillOpacity}" style="width:100px;">
-                </div>
-            `;
-        }
-        else if (type === 11) { // BASELINE
-            html = `
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <span style="color:#b7bdc6; font-size:13px;">Đường Nửa Trên</span>
-                    <input type="color" data-key="baselineUpColor" value="${c.baselineUpColor}">
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <span style="color:#b7bdc6; font-size:13px;">Đường Nửa Dưới</span>
-                    <input type="color" data-key="baselineDownColor" value="${c.baselineDownColor}">
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                    <span style="color:#b7bdc6; font-size:13px;">Nền Nửa Trên</span>
-                    <input type="color" data-key="baselineUpFill" value="${c.baselineUpFill}">
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                    <span style="color:#b7bdc6; font-size:13px;">Nền Nửa Dưới</span>
-                    <input type="color" data-key="baselineDownFill" value="${c.baselineDownFill}">
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                    <span style="color:#6b7280; font-size:11px; margin-left:22px;">Độ mờ nền chung</span>
-                    <input type="range" id="cfg-base-op" min="0" max="1" step="0.05" value="${c.baselineFillOpacity}" style="width:100px;">
-                </div>
-
-                <div style="margin-top:16px; border-top:1px solid rgba(255,255,255,0.05); padding-top:16px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <span style="color:#b7bdc6; font-size:13px;">Mức cơ sở (%)</span>
-                        <input type="number" id="cfg-base-val" value="${c.baselineValue}" min="0" max="100" style="width:50px; background:#111; color:#fff; border:1px solid #333; text-align:center; border-radius:4px;">
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="color:#b7bdc6; font-size:13px;">Nguồn giá</span>
-                        <select id="cfg-base-src" style="background:#111; color:#fff; border:1px solid #333; padding:4px; border-radius:4px;">
-                            <option value="close" ${c.baselinePriceSource==='close'?'selected':''}>Đóng cửa</option>
-                            <option value="hl2" ${c.baselinePriceSource==='hl2'?'selected':''}>TB (H+L)/2</option>
-                            <option value="ohlc4" ${c.baselinePriceSource==='ohlc4'?'selected':''}>TB Toàn phần</option>
-                        </select>
+                    <span style="color:#fff; font-size:12px;">Mức cơ sở (%)</span>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="range" id="wa-range-baseval" min="0" max="100" step="1" value="${c.baselineValue}" style="width:70px; accent-color:#0ECB81;">
+                        <input type="number" id="wa-num-baseval" value="${c.baselineValue}" min="0" max="100" style="width:40px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#fff; font-size:11px; text-align:center; padding:4px;">
                     </div>
                 </div>
-            `;
-        }
-
-        document.getElementById('cfg-dynamic-body').innerHTML = html;
-
-        // Bắt sự kiện đổi màu
-        document.getElementById('cfg-dynamic-body').querySelectorAll('input[type="color"]').forEach(input => {
-            input.addEventListener('input', (e) => engine.update({ [e.target.dataset.key]: e.target.value }, true));
-        });
-
-        // Bắt sự kiện HLC
-        const hlcShow = document.getElementById('cfg-hlc-show');
-        if (hlcShow) hlcShow.addEventListener('change', (e) => engine.update({ hlcShowHighLow: e.target.checked }, true));
-        const hlcOp = document.getElementById('cfg-hlc-op');
-        if (hlcOp) hlcOp.addEventListener('input', (e) => engine.update({ hlcFillOpacity: parseFloat(e.target.value) }, true));
-
-        // Bắt sự kiện Baseline
-        const baseOp = document.getElementById('cfg-base-op');
-        if (baseOp) baseOp.addEventListener('input', (e) => engine.update({ baselineFillOpacity: parseFloat(e.target.value) }, true));
-        const baseVal = document.getElementById('cfg-base-val');
-        if (baseVal) baseVal.addEventListener('change', (e) => engine.update({ baselineValue: parseInt(e.target.value) }, true));
-        const baseSrc = document.getElementById('cfg-base-src');
-        if (baseSrc) baseSrc.addEventListener('change', (e) => engine.update({ baselinePriceSource: e.target.value }, true));
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:#fff; font-size:12px;">Nguồn giá</span>
+                    <select id="wa-sel-basesrc" style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#fff; font-size:11px; padding:4px 8px; outline:none;">
+                        <option value="close" ${c.baselinePriceSource==='close'?'selected':''}>Đóng cửa (Close)</option>
+                        <option value="hl2" ${c.baselinePriceSource==='hl2'?'selected':''}>TB (H+L)/2</option>
+                        <option value="ohlc4" ${c.baselinePriceSource==='ohlc4'?'selected':''}>TB (OHLC)/4</option>
+                    </select>
+                </div>
+            </div>
+        `;
+    }
+    // 4️⃣ LOGIC CHO CÁC ĐƯỜNG ĐƠN GIẢN (LINE, STEP, MARKER)
+    else {
+        innerContent = `
+            <div style="font-size:10px; font-weight:800; color:#848e9c; letter-spacing:1px; margin-bottom:14px;">⚙️ GIAO DIỆN ĐƯỜNG</div>
+            <div style="display:grid; grid-template-columns: 85px 75px 26px; align-items:center; gap:8px; margin-bottom:16px;">
+                <span style="color:#848e9c; font-size:10px; text-align:right; grid-column:3">MÀU</span>
+                ${renderColorRow('Đường Chính', 'upColor', null, false)}
+            </div>
+        `;
     }
 
-    renderDynamicPanel();
-
-    typeSelect.addEventListener('change', (e) => {
-        engine.update({ chartType: parseInt(e.target.value) }, true);
-        renderDynamicPanel(); 
+    // 5️⃣ LẮP RÁP CHUNG: MÀU NỀN, LƯỚI, VÀ NÚT THEME (Y hệt code gốc)
+    menuCfg.innerHTML = `
+        ${innerContent}
+        <div style="display:grid; grid-template-columns: 85px 75px 26px 26px; align-items:center; gap:8px; margin-bottom:16px;">
+            ${renderColorRow('🖼️ Màu Nền', 'bgColor', null, false)}
+        </div>
         
-        // Cập nhật icon trên thanh Toolbar nếu cần
-        const btnIcon = document.getElementById('wa-ct-btn-icon');
-        if (btnIcon) btnIcon.innerHTML = `<span style="font-size:12px; font-weight:bold; color:#0ECB81;">Type ${e.target.value}</span>`;
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.1);">
+            <span style="color:#fff; font-size:12px;">Đường Lưới (Grid)</span>
+            <div id="wa-grid-toggle" data-on="${c.gridHorizontal ? '1' : '0'}" style="width:36px; height:20px; background:${c.gridHorizontal ? '#00F0FF' : '#374151'}; border-radius:34px; cursor:pointer; position:relative; transition:.2s;">
+                <div id="wa-grid-knob" style="position:absolute; ${c.gridHorizontal ? 'right:2px; left:auto;' : 'left:2px; right:auto;'} top:2px; width:16px; height:16px; background:#fff; border-radius:50%; transition:.2s;"></div>
+            </div>
+        </div>
+
+        <div style="font-size:10px; color:#848e9c; margin-bottom:8px; font-weight:600;">🎨 BỘ MÀU CÓ SẴN:</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:12px;">
+            <button class="wa-theme-btn" data-ub="#2af592" data-db="#eb367f" data-bg="#0f1a1c" style="background:rgba(42,245,146,0.1); border:1px solid rgba(42,245,146,0.3); border-radius:6px; padding:6px; color:#2af592; font-size:11px; font-weight:700; cursor:pointer;">Wave Alpha</button>
+            <button class="wa-theme-btn" data-ub="#089981" data-db="#f23645" data-bg="#161a1e" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:6px; color:#0ECB81; font-size:11px; font-weight:700; cursor:pointer;">Truyền Thống</button>
+        </div>
+    `;
+
+    document.body.appendChild(menuCfg);
+
+    // XỬ LÝ VỊ TRÍ POPUP (Gắn ngay dưới nút Bánh Răng)
+    const btnCfg = document.getElementById('btn-wa-chart-settings');
+    if (btnCfg) {
+        const rect = btnCfg.getBoundingClientRect();
+        menuCfg.style.top = (rect.bottom + 8) + 'px';
+        menuCfg.style.left = Math.max(10, rect.left - 250) + 'px';
+    }
+
+    // TẮT MENU KHI CLICK RA NGOÀI
+    setTimeout(() => {
+        document.addEventListener('click', function closeMenu(e) {
+            if (!menuCfg.contains(e.target) && !e.target.closest('#btn-wa-chart-settings')) {
+                menuCfg.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        });
+    }, 50);
+
+    // ==========================================
+    // 🎯 GẮN SỰ KIỆN LƯU THAY ĐỔI VÀO ENGINE
+    // ==========================================
+
+    // 1. Cập nhật Màu sắc
+    menuCfg.querySelectorAll('input[type="color"]').forEach(el => {
+        el.addEventListener('input', (e) => {
+            const key = e.target.dataset.target;
+            const val = e.target.value;
+            // Đồng bộ ra text hex
+            const hexInp = document.getElementById(`hex-${key}`);
+            if (hexInp) hexInp.value = val;
+            
+            // Xử lý riêng độ mờ cho HLC và Baseline Fill
+            let finalColor = val;
+            if (key.includes('Fill')) finalColor = engine._dimColor(val, key.includes('hlc') ? c.hlcFillOpacity : c.baselineFillOpacity);
+            if (key.includes('HighColor') || key.includes('LowColor')) finalColor = engine._dimColor(val, c.hlcHighLowOpacity);
+            
+            engine.update({ [key]: finalColor }, true);
+        });
     });
 
-    document.getElementById('cfg-close-btn').onclick = () => modal.remove();
+    // 2. Cập nhật Text Hex
+    menuCfg.querySelectorAll('input[type="text"]').forEach(el => {
+        el.addEventListener('change', (e) => {
+            const key = e.target.dataset.sync;
+            let val = e.target.value;
+            if (val.charAt(0) !== '#') val = '#' + val;
+            const colInp = document.getElementById(`col-${key}`);
+            if (colInp) colInp.value = val.substring(0,7);
+            engine.update({ [key]: val }, true);
+        });
+    });
+
+    // 3. Sự kiện riêng của HLC và Baseline
+    const rngHlcOp = document.getElementById('wa-range-hlcop');
+    if (rngHlcOp) rngHlcOp.addEventListener('input', (e) => engine.update({ hlcFillOpacity: parseFloat(e.target.value) }, true));
+
+    const rngBaseVal = document.getElementById('wa-range-baseval');
+    const numBaseVal = document.getElementById('wa-num-baseval');
+    if (rngBaseVal && numBaseVal) {
+        rngBaseVal.addEventListener('input', (e) => { numBaseVal.value = e.target.value; engine.update({ baselineValue: parseInt(e.target.value) }, true); });
+        numBaseVal.addEventListener('input', (e) => { rngBaseVal.value = e.target.value; engine.update({ baselineValue: parseInt(e.target.value) }, true); });
+    }
+    const selBaseSrc = document.getElementById('wa-sel-basesrc');
+    if (selBaseSrc) selBaseSrc.addEventListener('change', (e) => engine.update({ baselinePriceSource: e.target.value }, true));
+
+    // 4. Bật tắt Lưới
+    const gridTog = document.getElementById('wa-grid-toggle');
+    if (gridTog) {
+        gridTog.addEventListener('click', () => {
+            const isOnoff = gridTog.dataset.on === '1';
+            engine.update({ gridHorizontal: !isOnoff, gridVertical: !isOnoff }, true);
+            window.openChartSettings(); // Vẽ lại menu để update UI toggle
+        });
+    }
+
+    // 5. Nút Theme (Cập nhật màu chính)
+    menuCfg.querySelectorAll('.wa-theme-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const ub = e.target.dataset.ub, db = e.target.dataset.db, bg = e.target.dataset.bg;
+            engine.update({ upColor: ub, downColor: db, borderUpColor: ub, borderDownColor: db, bgColor: bg }, true);
+            window.openChartSettings(); // Vẽ lại menu
+        });
+    });
 };
