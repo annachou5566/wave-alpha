@@ -184,6 +184,56 @@ window.WaveChartEngine = {
                 }
             });
 
+
+// 4. CHỈ BÁO VẼ ĐƯỜNG + ĐIỂM (LINE + MARKERS - ID 7)
+window.klinecharts.registerIndicator({
+    name: 'WA_LINE_MARKER',
+    shortName: ' ',
+    series: 'price',
+    calc: (dataList) => dataList,
+    draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
+        const c = window.WaveChartEngine.config;
+        const { from, to } = visibleRange;
+        const dataList = indicator.result;
+        
+        ctx.save();
+        ctx.setLineDash([]); 
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = c.upColor; // Mặc định lấy màu tăng
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+        // Vẽ đường nối liền mạch
+        ctx.beginPath();
+        const start = Math.max(0, from - 1);
+        let isFirst = true;
+        for (let i = start; i < to; i++) {
+            const kd = dataList[i];
+            if (!kd || kd.close === undefined) continue;
+            const x = xAxis.convertToPixel(i);
+            const y = yAxis.convertToPixel(kd.close);
+            if (isFirst) { ctx.moveTo(x, y); isFirst = false; }
+            else { ctx.lineTo(x, y); }
+        }
+        ctx.stroke();
+
+        // Vẽ các điểm (Markers) hình tròn rỗng
+        for (let i = from; i < to; i++) {
+            const kd = dataList[i];
+            if (!kd || kd.close === undefined) continue;
+            const x = xAxis.convertToPixel(i);
+            const y = yAxis.convertToPixel(kd.close);
+            
+            ctx.beginPath();
+            ctx.arc(x, y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = c.bgColor; // Lõi màu nền tạo hiệu ứng rỗng
+            ctx.fill();
+            ctx.stroke(); 
+        }
+        ctx.restore();
+        return true;
+    }
+});
+
             console.log('[WaveChartEngine] Đã nạp Custom Chart V5 (Columns, High-Low, Step-Line) ✅');
         } catch(e) { console.error("Lỗi nạp Custom Indicator:", e); }
     },
@@ -212,7 +262,7 @@ window.WaveChartEngine = {
         // Nến mặc định hoặc Line Native
         if (c.chartType === 2) kcChartType = 'candle_stroke';
         else if (c.chartType === 3) kcChartType = 'ohlc';     
-        else if (c.chartType === 6 || c.chartType === 7 || c.chartType === 9 || c.chartType === 10 || c.chartType === 11) { 
+        else if (c.chartType === 6 || c.chartType === 9 || c.chartType === 10 || c.chartType === 11) {
             kcChartType = 'area'; isLine = (c.chartType !== 9); 
         } 
 
@@ -229,7 +279,10 @@ window.WaveChartEngine = {
             this.chartInstance.createIndicator('WA_STEP_LINE', false, { id: 'candle_pane' });
             hideCandle = true;
         }
-
+        else if (c.chartType === 7) { // 🚀 Router đến Đường + Điểm (ID 7)
+            this.chartInstance.createIndicator('WA_LINE_MARKER', false, { id: 'candle_pane' });
+            hideCandle = true;
+        }
         const isHollow = (c.chartType === 2);
         
         const finalUpColor = hideCandle ? 'transparent' : c.upColor;
