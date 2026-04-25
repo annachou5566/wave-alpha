@@ -1540,255 +1540,331 @@ window.closeProChart = function() {
 })();
 
 // =========================================================================
-// 🚀 GIAO DIỆN CÀI ĐẶT PRO: BẢN FIX OPACITY MƯỢT + NÚT KHÔI PHỤC MẶC ĐỊNH
+// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (ĐÃ FIX LỖI MẤT BÁNH RĂNG + OPACITY)
 // =========================================================================
-window.openChartSettings = function() {
-    const engine = window.WaveChartEngine;
-    if (!engine) return;
-    const c = engine.getConfig();
-    const type = c.chartType;
+(function initChartSettingsModal() {
+    'use strict';
 
-    let menuCfg = document.getElementById('wa-chart-cfg-menu');
-    if (menuCfg) menuCfg.remove();
-
-    menuCfg = document.createElement('div');
-    menuCfg.id = 'wa-chart-cfg-menu';
-    menuCfg.style.cssText = `
-        position:fixed; background:#1e2329; border:1px solid rgba(255,255,255,0.1); 
-        border-radius:10px; padding:16px; min-width:280px; z-index:999999; box-shadow:0 16px 40px rgba(0,0,0,0.9);
+    const style = document.createElement('style');
+    style.textContent = `
+        #wa-chart-settings-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999999; pointer-events: none; opacity: 0; transition: opacity 0.15s ease; }
+        #wa-chart-settings-modal.show { display: block; opacity: 1; }
+        .wa-csm-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e222d; width: 680px; height: 500px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; pointer-events: auto; }
+        .wa-csm-sidebar { width: 200px; background: #131722; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 20px 0; }
+        .wa-csm-tab { padding: 12px 24px; color: #848e9c; font-size: 13px; font-weight: 600; cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s; display: flex; align-items: center; gap: 10px; }
+        .wa-csm-tab:hover { background: rgba(255,255,255,0.03); color: #EAECEF; }
+        .wa-csm-tab.active { background: rgba(38,166,154,0.1); color: #26a69a; border-left-color: #26a69a; }
+        .wa-csm-content { flex: 1; display: flex; flex-direction: column; background: #1e222d; }
+        .wa-csm-header { padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; cursor: grab; user-select: none; }
+        .wa-csm-header:active { cursor: grabbing; }
+        .wa-csm-title { font-size: 16px; font-weight: 700; color: #EAECEF; pointer-events: none; }
+        .wa-csm-close { color: #848e9c; cursor: pointer; font-size: 18px; transition: 0.2s; }
+        .wa-csm-close:hover { color: #F6465D; }
+        .wa-csm-panels { flex: 1; overflow-y: auto; padding: 20px 24px; }
+        .wa-csm-panel { display: none; flex-direction: column; gap: 20px; }
+        .wa-csm-panel.active { display: flex; }
+        .wa-csm-row { display: flex; justify-content: space-between; align-items: center; }
+        .wa-csm-label { font-size: 13px; color: #b7bdc6; display: flex; align-items: center; gap: 8px; }
+        .wa-csm-control { display: flex; align-items: center; gap: 10px; }
+        .wa-csm-select { background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 4px; font-size: 12px; outline: none; cursor: pointer; width: 140px; }
+        .wa-csm-slider { width: 100px; accent-color: #26a69a; }
+        .wa-color-swatch { width: 26px; height: 26px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; transition: 0.2s; background: transparent; }
+        .wa-color-swatch:hover { border-color: #00F0FF; box-shadow: 0 0 5px rgba(0,240,255,0.3); }
+        .wa-switch { position: relative; display: inline-block; width: 36px; height: 20px; }
+        .wa-switch input { opacity: 0; width: 0; height: 0; }
+        .wa-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .2s; border-radius: 20px; }
+        .wa-slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: #848e9c; transition: .2s; border-radius: 50%; }
+        input:checked + .wa-slider { background-color: rgba(38,166,154,0.3); }
+        input:checked + .wa-slider:before { transform: translateX(16px); background-color: #26a69a; }
+        .wa-csm-divider { font-size: 11px; font-weight: 800; color: #527c82; text-transform: uppercase; margin-top: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; }
+        #wa-color-picker { display: none; position: fixed; background: #1e222d; border: 1px solid #363c4e; border-radius: 8px; padding: 12px; z-index: 99999999; box-shadow: 0 10px 30px rgba(0,0,0,0.8); width: 220px; }
+        .wcp-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-bottom: 12px; }
+        .wcp-cell { width: 18px; height: 18px; border-radius: 3px; cursor: pointer; border: 1px solid transparent; transition: 0.1s; }
+        .wcp-cell:hover { border-color: #fff; transform: scale(1.1); }
+        .wcp-hex-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .wcp-hex-input { flex: 1; background: #131722; border: 1px solid #363c4e; color: #EAECEF; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 12px; outline: none; }
+        .wcp-opacity-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #848e9c; }
+        .wcp-opacity-slider { flex: 1; accent-color: #26a69a; }
     `;
+    document.head.appendChild(style);
 
-    const renderColorRow = (label, keyColor, keyBorder, showBorder = false) => {
-        let valColor = c[keyColor] || '#ffffff';
-        let valBorder = keyBorder ? c[keyBorder] : valColor;
-        const toHex = (col) => {
-            if(!col || !col.startsWith('rgba')) return col;
-            const p = col.match(/[\d.]+/g); if(!p) return '#ffffff';
-            return `#${parseInt(p[0]).toString(16).padStart(2,'0')}${parseInt(p[1]).toString(16).padStart(2,'0')}${parseInt(p[2]).toString(16).padStart(2,'0')}`;
-        };
-        const hexColor = toHex(valColor); const hexBorder = toHex(valBorder);
-
-        return `
-            <span style="color:#fff;font-size:12px; display:flex; align-items:center;">${label}</span>
-            <input type="text" id="hex-${keyColor}" value="${hexColor}" maxlength="11" style="width:100%; height:24px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#fff; font-size:11px; text-align:center; outline:none;" data-sync="${keyColor}">
-            <input type="color" id="col-${keyColor}" value="${hexColor}" title="Màu chính" style="width:26px;height:24px;border:1px solid rgba(255,255,255,0.1);border-radius:4px;cursor:pointer;background:transparent;padding:1px;" data-target="${keyColor}">
-            ${showBorder ? `<input type="color" id="col-${keyBorder}" value="${hexBorder}" title="Màu Viền" style="width:26px;height:24px;border:1px solid rgba(255,255,255,0.1);border-radius:4px;cursor:pointer;background:transparent;padding:1px;" data-target="${keyBorder}">` : `<div style="grid-column: 4; width:26px;"></div>`}
-        `;
-    };
-
-    let innerContent = '';
-
-    if (type === 1 || type === 2 || type === 3 || type === 4 || type === 5 || type === 12) {
-        innerContent = `
-            <div style="font-size:10px; font-weight:800; color:#848e9c; letter-spacing:1px; margin-bottom:14px;">⚙️ GIAO DIỆN NẾN & CỘT</div>
-            <div style="display:grid; grid-template-columns: 85px 75px 26px 26px; align-items:center; gap:8px; margin-bottom:16px;">
-                <span style="color:#848e9c; font-size:10px; text-align:right; grid-column:3">THÂN</span>
-                <span style="color:#848e9c; font-size:10px; text-align:right; grid-column:4">VIỀN</span>
-                ${renderColorRow('📈 Tăng', 'upColor', 'borderUpColor', true)}
-                ${renderColorRow('📉 Giảm', 'downColor', 'borderDownColor', true)}
-            </div>
-        `;
-    }
-    else if (type === 8) { 
-        innerContent = `
-            <div style="font-size:10px; font-weight:800; color:#848e9c; letter-spacing:1px; margin-bottom:14px;">⚙️ GIAO DIỆN BẬC THANG</div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.05);">
-                <span style="color:#b7bdc6; font-size:12px;">Sử dụng 1 màu liền mạch</span>
-                <div id="wa-step-toggle" data-on="${c.stepLineSingleColor ? '1' : '0'}" style="width:36px; height:20px; background:${c.stepLineSingleColor ? '#0ECB81' : '#374151'}; border-radius:34px; cursor:pointer; position:relative; transition:.2s;">
-                    <div style="position:absolute; ${c.stepLineSingleColor ? 'right:2px; left:auto;' : 'left:2px; right:auto;'} top:2px; width:16px; height:16px; background:#fff; border-radius:50%; transition:.2s;"></div>
+    const modalHTML = `
+        <div id="wa-chart-settings-modal">
+            <div class="wa-csm-box" id="wa-csm-box">
+                <div class="wa-csm-sidebar">
+                    <div class="wa-csm-tab active" data-tab="csm-symbol">Biểu Tượng</div>
+                    <div class="wa-csm-tab" data-tab="csm-status">Trạng Thái</div>
+                    <div class="wa-csm-tab" data-tab="csm-appearance">Giao Diện</div>
+                    <div class="wa-csm-tab" data-tab="csm-pro">Nâng Cao</div>
                 </div>
-            </div>
-            <div style="display:grid; grid-template-columns: 85px 75px 26px; align-items:center; gap:8px; margin-bottom:16px;">
-                <span style="color:#848e9c; font-size:10px; text-align:right; grid-column:3">MÀU</span>
-                ${renderColorRow(c.stepLineSingleColor ? 'Màu Đường' : 'Đoạn Tăng', 'upColor', null, false)}
-                ${!c.stepLineSingleColor ? renderColorRow('Đoạn Giảm', 'downColor', null, false) : ''}
-            </div>
-        `;
-    }
-    else if (type === 7) { 
-        innerContent = `
-            <div style="font-size:10px; font-weight:800; color:#848e9c; letter-spacing:1px; margin-bottom:14px;">⚙️ ĐƯỜNG & ĐIỂM (MARKER)</div>
-            <div style="display:grid; grid-template-columns: 85px 75px 26px; align-items:center; gap:8px; margin-bottom:16px;">
-                <span style="color:#848e9c; font-size:10px; text-align:right; grid-column:3">MÀU</span>
-                ${renderColorRow('Đường Chính', 'upColor', null, false)}
-                ${renderColorRow('Điểm Giảm', 'downColor', null, false)}
-            </div>
-        `;
-    }
-    else if (type === 10) { 
-        innerContent = `
-            <div style="font-size:10px; font-weight:800; color:#00F0FF; letter-spacing:1px; margin-bottom:14px;">🌊 THÔNG SỐ VÙNG HLC</div>
-            <div style="display:grid; grid-template-columns: 100px 60px 26px; align-items:center; gap:8px; margin-bottom:16px;">
-                <span style="color:#848e9c; font-size:10px; text-align:right; grid-column:3">MÀU</span>
-                ${renderColorRow('Đường Đóng Cửa', 'hlcCloseColor', null, false)}
-                ${renderColorRow('Viền Đỉnh (High)', 'hlcHighColor', null, false)}
-                ${renderColorRow('Viền Đáy (Low)', 'hlcLowColor', null, false)}
-                ${renderColorRow('Nền Trên (High-Close)', 'hlcUpFillColor', null, false)}
-                ${renderColorRow('Nền Dưới (Close-Low)', 'hlcDownFillColor', null, false)}
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.1);">
-                <span style="color:#fff; font-size:12px;">Độ mờ vùng (Opacity)</span>
-                <input type="range" id="wa-range-hlcop" min="0" max="1" step="0.05" value="${c.hlcFillOpacity}" style="width:100px; accent-color:#00F0FF;">
-            </div>
-        `;
-    }
-    else if (type === 11) { 
-        innerContent = `
-            <div style="font-size:10px; font-weight:800; color:#0ECB81; letter-spacing:1px; margin-bottom:14px;">⚖️ ĐƯỜNG CƠ SỞ (BASELINE)</div>
-            <div style="display:grid; grid-template-columns: 100px 60px 26px; align-items:center; gap:8px; margin-bottom:16px;">
-                <span style="color:#848e9c; font-size:10px; text-align:right; grid-column:3">MÀU</span>
-                ${renderColorRow('Đường Nửa Trên', 'baselineUpColor', null, false)}
-                ${renderColorRow('Đường Nửa Dưới', 'baselineDownColor', null, false)}
-                ${renderColorRow('Nền Trên (Fill)', 'baselineUpFill', null, false)}
-                ${renderColorRow('Nền Dưới (Fill)', 'baselineDownFill', null, false)}
-            </div>
-            <div style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.1);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <span style="color:#fff; font-size:12px;">Độ mờ nền chung</span>
-                    <input type="range" id="wa-range-baseop" min="0" max="1" step="0.05" value="${c.baselineFillOpacity}" style="width:100px; accent-color:#0ECB81;">
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <span style="color:#fff; font-size:12px;">Mức cơ sở (%)</span>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <input type="range" id="wa-range-baseval" min="0" max="100" step="1" value="${c.baselineValue}" style="width:70px; accent-color:#0ECB81;">
-                        <input type="number" id="wa-num-baseval" value="${c.baselineValue}" min="0" max="100" style="width:40px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#fff; font-size:11px; text-align:center; padding:4px;">
+                <div class="wa-csm-content">
+                    <div class="wa-csm-header">
+                        <div class="wa-csm-title">Cài đặt Biểu đồ</div>
+                        <div class="wa-csm-close" id="btn-wa-csm-close">✖</div>
+                    </div>
+                    <div class="wa-csm-panels">
+                        <div id="csm-symbol" class="wa-csm-panel active">
+                            <div class="wa-csm-row"><div class="wa-csm-label">Loại biểu đồ</div>
+                            <select class="wa-csm-select" data-bind="chartType" id="csm-chart-type" data-type="number">
+                                <option value="1">Nến Nhật</option><option value="2">Nến Rỗng</option><option value="3">Thanh (Bars)</option>
+                                <option value="4">Cột (Columns)</option><option value="5">Đỉnh-Đáy (H-L)</option>
+                                <option value="6">Đường (Line)</option><option value="7">Đường + Điểm</option><option value="8">Bậc Thang</option>
+                                <option value="9">Vùng (Area)</option><option value="10">Vùng HLC (Pro)</option><option value="11">Đường Cơ Sở (Pro)</option>
+                            </select></div>
+                            <div class="wa-csm-divider">Màu sắc</div>
+                            
+                            <div id="csm-ui-candles" style="display:flex; flex-direction:column; gap:20px;">
+                                <div class="wa-csm-row"><div class="wa-csm-label">Thân nến (Body)</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="upColor"></div><div class="wa-color-swatch" data-color-bind="downColor"></div></div></div>
+                                <div class="wa-csm-row">
+                                    <div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="showBorder"><span class="wa-slider"></span></label> Viền (Borders)</div>
+                                    <div class="wa-csm-control">
+                                        <label class="wa-switch" title="Màu độc lập"><input type="checkbox" data-bind="borderIndependent"><span class="wa-slider"></span></label>
+                                        <div id="csm-border-swatches" style="display:flex; gap:10px; opacity:0.5; pointer-events:none;">
+                                            <div class="wa-color-swatch" data-color-bind="borderUpColor"></div><div class="wa-color-swatch" data-color-bind="borderDownColor"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="wa-csm-row">
+                                    <div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="showWick"><span class="wa-slider"></span></label> Bóng nến (Wicks)</div>
+                                    <div class="wa-csm-control">
+                                        <label class="wa-switch" title="Màu độc lập"><input type="checkbox" data-bind="wickIndependent"><span class="wa-slider"></span></label>
+                                        <div id="csm-wick-swatches" style="display:flex; gap:10px; opacity:0.5; pointer-events:none;">
+                                            <div class="wa-color-swatch" data-color-bind="wickUpColor"></div><div class="wa-color-swatch" data-color-bind="wickDownColor"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="csm-ui-lines" style="display:none; flex-direction:column; gap:20px;">
+                                <div class="wa-csm-row"><div class="wa-csm-label" id="lbl-line-color">Màu Đường / Vùng</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="upColor"></div><div class="wa-color-swatch" id="swatch-line-down" data-color-bind="downColor" style="display:none;"></div></div></div>
+                            </div>
+
+                            <div id="csm-ui-step" style="display:none; flex-direction:column; gap:20px;">
+                                <div class="wa-csm-row">
+                                    <div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="stepLineSingleColor"><span class="wa-slider"></span></label> Dùng 1 màu liền mạch</div>
+                                </div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Màu Đoạn Tăng / 1 Màu</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="upColor"></div></div></div>
+                                <div class="wa-csm-row" id="row-step-down"><div class="wa-csm-label">Màu Đoạn Giảm</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="downColor"></div></div></div>
+                            </div>
+
+                            <div id="csm-ui-hlc" style="display:none; flex-direction:column; gap:20px;">
+                                <div class="wa-csm-row"><div class="wa-csm-label">Đường Đóng Cửa (Close)</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="hlcCloseColor"></div></div></div>
+                                <div class="wa-csm-row">
+                                    <div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="hlcShowHighLow"><span class="wa-slider"></span></label> Viền Đỉnh/Đáy (H-L)</div>
+                                    <div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="hlcHighColor"></div><div class="wa-color-swatch" data-color-bind="hlcLowColor"></div></div>
+                                </div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Độ mờ viền (Opacity)</div><div class="wa-csm-control"><input type="range" class="wa-csm-slider" min="0" max="1" step="0.05" data-bind="hlcHighLowOpacity" data-type="number"></div></div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Nền Trên / Nền Dưới</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="hlcUpFillColor"></div><div class="wa-color-swatch" data-color-bind="hlcDownFillColor"></div></div></div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Độ mờ nền (Opacity)</div><div class="wa-csm-control"><input type="range" class="wa-csm-slider" min="0" max="1" step="0.05" data-bind="hlcFillOpacity" data-type="number"></div></div>
+                            </div>
+
+                            <div id="csm-ui-baseline" style="display:none; flex-direction:column; gap:20px;">
+                                <div class="wa-csm-row"><div class="wa-csm-label">Đường Trên / Nền Trên</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="baselineUpColor"></div><div class="wa-color-swatch" data-color-bind="baselineUpFill"></div></div></div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Đường Dưới / Nền Dưới</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="baselineDownColor"></div><div class="wa-color-swatch" data-color-bind="baselineDownFill"></div></div></div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Độ mờ nền chung</div><div class="wa-csm-control"><input type="range" class="wa-csm-slider" min="0" max="1" step="0.05" data-bind="baselineFillOpacity" data-type="number"></div></div>
+                                <div class="wa-csm-divider">Thông số Baseline</div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Mức cơ sở (%)</div><div class="wa-csm-control"><input type="number" class="wa-csm-select" style="width:80px; text-align:center;" min="0" max="100" data-bind="baselineValue" data-type="number"></div></div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Nguồn giá</div><select class="wa-csm-select" data-bind="baselinePriceSource"><option value="close">Đóng cửa</option><option value="hl2">TB (H+L)/2</option><option value="ohlc4">TB Toàn phần</option></select></div>
+                            </div>
+
+                            <div class="wa-csm-divider">Trục Y</div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Thang đo giá</div><select class="wa-csm-select" data-bind="yAxisMode"><option value="normal">Bình thường</option><option value="percentage">Phần trăm (%)</option><option value="log">Logarit</option></select></div>
+                        </div>
+                        
+                        <div id="csm-status" class="wa-csm-panel">
+                            <div class="wa-csm-row"><div class="wa-csm-label">OHLC Values</div><label class="wa-switch"><input type="checkbox" data-bind="showOHLC"><span class="wa-slider"></span></label></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Đếm ngược (Countdown)</div><label class="wa-switch"><input type="checkbox" data-bind="showCountdown"><span class="wa-slider"></span></label></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Đường giá Last Price</div><label class="wa-switch"><input type="checkbox" data-bind="showLastPriceLine"><span class="wa-slider"></span></label></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Nhãn High/Low</div><label class="wa-switch"><input type="checkbox" data-bind="showHighLowTags"><span class="wa-slider"></span></label></div>
+                            <div class="wa-csm-divider">Watermark</div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Hiển thị Dấu chìm</div><div class="wa-csm-control"><input type="range" class="wa-csm-slider" min="0" max="0.3" step="0.01" data-bind="watermarkOpacity"><label class="wa-switch"><input type="checkbox" data-bind="showWatermark"><span class="wa-slider"></span></label></div></div>
+                        </div>
+
+                        <div id="csm-appearance" class="wa-csm-panel">
+                            <div class="wa-csm-row"><div class="wa-csm-label">Kiểu nền</div><div class="wa-csm-control"><select class="wa-csm-select" data-bind="bgType" id="csm-bg-type" style="width:100px;"><option value="solid">Đơn sắc</option><option value="gradient">Gradient</option></select><div class="wa-color-swatch" data-color-bind="bgColor"></div><div class="wa-color-swatch" data-color-bind="bgColor2" id="csm-bg2-swatch" style="display:none;"></div></div></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Lưới dọc</div><label class="wa-switch"><input type="checkbox" data-bind="gridVertical"><span class="wa-slider"></span></label></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Lưới ngang</div><label class="wa-switch"><input type="checkbox" data-bind="gridHorizontal"><span class="wa-slider"></span></label></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Màu Lưới</div><div class="wa-color-swatch" data-color-bind="gridColor"></div></div>
+                            <div class="wa-csm-divider">Trục & Không gian</div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Tâm ngắm</div><select class="wa-csm-select" data-bind="crosshairMode"><option value="normal">Bình thường</option><option value="hidden">Ẩn</option></select></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Lề phải (Nến)</div><input type="range" class="wa-csm-slider" min="0" max="50" step="1" data-bind="rightMargin" data-type="number"></div>
+                        </div>
+                        
+                        <div id="csm-pro" class="wa-csm-panel">
+                            <div style="background: rgba(240,185,11,0.1); border: 1px dashed rgba(240,185,11,0.3); padding: 10px; border-radius: 6px; font-size: 11px; color: #F0B90B; margin-bottom: 10px;">🚀 Dự phòng cho Phase 4.</div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">PAC Coloring</div><label class="wa-switch"><input type="checkbox" data-bind="pacColoring"><span class="wa-slider"></span></label></div>
+                            
+                            <div style="display:flex; justify-content:center; align-items:center; margin-top:20px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.05);">
+                                <button id="wa-btn-reset-cfg" style="width: 100%; background: rgba(246, 70, 93, 0.1); color: #F6465D; border: 1px dashed rgba(246, 70, 93, 0.4); padding: 10px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s;">
+                                    🔄 KHÔI PHỤC VỀ MẶC ĐỊNH
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="color:#fff; font-size:12px;">Nguồn giá</span>
-                    <select id="wa-sel-basesrc" style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#fff; font-size:11px; padding:4px 8px; outline:none;">
-                        <option value="close" ${c.baselinePriceSource==='close'?'selected':''}>Đóng cửa (Close)</option>
-                        <option value="hl2" ${c.baselinePriceSource==='hl2'?'selected':''}>TB (H+L)/2</option>
-                        <option value="ohlc4" ${c.baselinePriceSource==='ohlc4'?'selected':''}>TB (OHLC)/4</option>
-                    </select>
-                </div>
             </div>
-        `;
-    }
-    else { 
-        innerContent = `
-            <div style="font-size:10px; font-weight:800; color:#848e9c; letter-spacing:1px; margin-bottom:14px;">⚙️ GIAO DIỆN ĐƯỜNG/VÙNG</div>
-            <div style="display:grid; grid-template-columns: 85px 75px 26px; align-items:center; gap:8px; margin-bottom:16px;">
-                <span style="color:#848e9c; font-size:10px; text-align:right; grid-column:3">MÀU</span>
-                ${renderColorRow('Đường Chính', 'upColor', null, false)}
-            </div>
-        `;
-    }
-
-    menuCfg.innerHTML = `
-        ${innerContent}
-        <div style="display:grid; grid-template-columns: 85px 75px 26px 26px; align-items:center; gap:8px; margin-bottom:16px;">
-            ${renderColorRow('🖼️ Màu Nền', 'bgColor', null, false)}
-        </div>
-        
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.1);">
-            <span style="color:#fff; font-size:12px;">Đường Lưới (Grid)</span>
-            <div id="wa-grid-toggle" data-on="${c.gridHorizontal ? '1' : '0'}" style="width:36px; height:20px; background:${c.gridHorizontal ? '#00F0FF' : '#374151'}; border-radius:34px; cursor:pointer; position:relative; transition:.2s;">
-                <div id="wa-grid-knob" style="position:absolute; ${c.gridHorizontal ? 'right:2px; left:auto;' : 'left:2px; right:auto;'} top:2px; width:16px; height:16px; background:#fff; border-radius:50%; transition:.2s;"></div>
-            </div>
-        </div>
-
-        <div style="font-size:10px; color:#848e9c; margin-bottom:8px; font-weight:600;">🎨 BỘ MÀU CÓ SẴN:</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:12px;">
-            <button class="wa-theme-btn" data-ub="#2af592" data-db="#eb367f" data-bg="#0f1a1c" style="background:rgba(42,245,146,0.1); border:1px solid rgba(42,245,146,0.3); border-radius:6px; padding:6px; color:#2af592; font-size:11px; font-weight:700; cursor:pointer;">Wave Alpha</button>
-            <button class="wa-theme-btn" data-ub="#089981" data-db="#f23645" data-bg="#161a1e" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:6px; color:#0ECB81; font-size:11px; font-weight:700; cursor:pointer;">Truyền Thống</button>
-        </div>
-
-        <div style="display:flex; justify-content:center; align-items:center; margin-top:16px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.05);">
-            <button id="wa-btn-reset-cfg" style="width: 100%; background: rgba(246, 70, 93, 0.1); color: #F6465D; border: 1px dashed rgba(246, 70, 93, 0.4); padding: 8px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s;">
-                🔄 KHÔI PHỤC MẶC ĐỊNH
-            </button>
         </div>
     `;
+    
+    const pickerHTML = `
+        <div id="wa-color-picker">
+            <div class="wcp-grid" id="wcp-palette"></div>
+            <div class="wcp-hex-row"><span style="font-size:11px; color:#848e9c; font-weight:bold;">HEX</span><input type="text" class="wcp-hex-input" id="wcp-hex" maxlength="9"></div>
+            <div class="wcp-opacity-row"><span>OPACITY</span><input type="range" class="wcp-opacity-slider" id="wcp-opacity" min="0" max="1" step="0.05" value="1"></div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML + pickerHTML);
 
-    document.body.appendChild(menuCfg);
+    const modal = document.getElementById('wa-chart-settings-modal');
+    const modalBox = document.getElementById('wa-csm-box');
+    const header = modal.querySelector('.wa-csm-header');
+    const colorPicker = document.getElementById('wa-color-picker');
 
-    const btnCfg = document.getElementById('btn-wa-chart-settings');
-    if (btnCfg) {
-        const rect = btnCfg.getBoundingClientRect();
-        menuCfg.style.top = (rect.bottom + 8) + 'px';
-        menuCfg.style.left = Math.max(10, rect.left - 250) + 'px';
+    let isDragging = false, startX, startY, initLeft, initTop;
+    header.addEventListener('mousedown', (e) => {
+        isDragging = true; startX = e.clientX; startY = e.clientY;
+        const rect = modalBox.getBoundingClientRect();
+        initLeft = rect.left; initTop = rect.top;
+        modalBox.style.transform = 'none'; modalBox.style.left = initLeft + 'px'; modalBox.style.top = initTop + 'px';
+        document.body.style.userSelect = 'none'; 
+    });
+    window.addEventListener('mousemove', (e) => { if (!isDragging) return; modalBox.style.left = (initLeft + e.clientX - startX) + 'px'; modalBox.style.top = (initTop + e.clientY - startY) + 'px'; });
+    window.addEventListener('mouseup', () => { isDragging = false; document.body.style.userSelect = ''; });
+
+    const tabs = modal.querySelectorAll('.wa-csm-tab');
+    const panels = modal.querySelectorAll('.wa-csm-panel');
+    tabs.forEach(tab => {
+        tab.onclick = () => {
+            tabs.forEach(t => t.classList.remove('active')); panels.forEach(p => p.classList.remove('active'));
+            tab.classList.add('active'); document.getElementById(tab.dataset.tab).classList.add('active');
+        };
+    });
+
+    const tvColors = ['#ffffff','#d1d4dc','#b2b5be','#848e9c','#5d606b','#363a45','#1e222d','#000000','#f23645','#ff9800','#f0b90b','#089981','#00bcd4','#2962ff','#673ab7','#9c27b0','#f7525f','#ffb74d','#ffe066','#2af592','#4dd0e1','#448aff','#9575cd','#ba68c8','#f98080','#ffcc80','#fff59d','#66bb6a','#80deea','#82b1ff','#b39ddb','#ce93d8'];
+    const palette = document.getElementById('wcp-palette'), hexInp = document.getElementById('wcp-hex'), opSlider = document.getElementById('wcp-opacity');
+    let activeSwatchBtn = null, activeBindKey = null;
+
+    tvColors.forEach(col => {
+        const cell = document.createElement('div'); cell.className = 'wcp-cell'; cell.style.background = col;
+        cell.onclick = () => applyColorToSwatch(col, opSlider.value);
+        palette.appendChild(cell);
+    });
+
+    function applyColorToSwatch(hexCode, opacity) {
+        if (!activeSwatchBtn) return;
+        let finalColor = hexCode;
+        if (opacity < 1 && hexCode.startsWith('#')) {
+            let r = parseInt(hexCode.slice(1,3), 16), g = parseInt(hexCode.slice(3,5), 16), b = parseInt(hexCode.slice(5,7), 16);
+            finalColor = `rgba(${r},${g},${b},${opacity})`;
+        }
+        activeSwatchBtn.style.background = finalColor; hexInp.value = finalColor;
+        if (window.WaveChartEngine) window.WaveChartEngine.update({ [activeBindKey]: finalColor });
     }
 
-    setTimeout(() => {
-        document.addEventListener('click', function closeMenu(e) {
-            if (!menuCfg.contains(e.target) && !e.target.closest('#btn-wa-chart-settings')) {
-                menuCfg.remove();
-                document.removeEventListener('click', closeMenu);
+    modal.querySelectorAll('.wa-color-swatch').forEach(swatch => {
+        swatch.onclick = (e) => {
+            e.stopPropagation(); activeSwatchBtn = swatch; activeBindKey = swatch.dataset.colorBind;
+            let curColor = swatch.style.background || '#ffffff';
+            hexInp.value = curColor.startsWith('rgb') ? curColor : rgb2hex(curColor);
+            const rect = swatch.getBoundingClientRect();
+            colorPicker.style.display = 'block'; colorPicker.style.left = rect.left + 'px'; colorPicker.style.top = (rect.bottom + 10) + 'px';
+        };
+    });
+
+    hexInp.oninput = (e) => applyColorToSwatch(e.target.value, opSlider.value);
+    opSlider.oninput = (e) => applyColorToSwatch(hexInp.value.substring(0,7), e.target.value);
+    document.addEventListener('click', (e) => { if (!colorPicker.contains(e.target) && !e.target.classList.contains('wa-color-swatch')) colorPicker.style.display = 'none'; });
+    function rgb2hex(rgb) { if (rgb.search("rgb") === -1) return rgb; rgb = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/); return "#" + ("0" + parseInt(rgb[1]).toString(16)).slice(-2) + ("0" + parseInt(rgb[2]).toString(16)).slice(-2) + ("0" + parseInt(rgb[3]).toString(16)).slice(-2); }
+
+    function updateDynamicUI(config) {
+        const t = parseInt(config.chartType); 
+        
+        const isCandles = (t === 1 || t === 2 || t === 3 || t === 4 || t === 5 || t === 12);
+        const isLines = (t === 6 || t === 7 || t === 9);
+        const isStep = (t === 8);
+        const isHLC = (t === 10);
+        const isBaseline = (t === 11);
+
+        document.getElementById('csm-ui-candles').style.display = isCandles ? 'flex' : 'none';
+        
+        let linesEl = document.getElementById('csm-ui-lines');
+        if(linesEl) {
+            linesEl.style.display = isLines ? 'flex' : 'none';
+            let lineDownSwatch = document.getElementById('swatch-line-down');
+            let lblLine = document.getElementById('lbl-line-color');
+            if (lineDownSwatch) lineDownSwatch.style.display = (t === 7) ? 'block' : 'none';
+            if (lblLine) lblLine.innerText = (t === 7) ? 'Đường Chính / Điểm Giảm' : 'Màu Đường / Vùng';
+        }
+
+        let stepEl = document.getElementById('csm-ui-step'); 
+        if(stepEl) {
+            stepEl.style.display = isStep ? 'flex' : 'none';
+            let rowStepDown = document.getElementById('row-step-down');
+            if (rowStepDown) rowStepDown.style.display = config.stepLineSingleColor ? 'none' : 'flex';
+        }
+        
+        let hlcEl = document.getElementById('csm-ui-hlc'); if(hlcEl) hlcEl.style.display = isHLC ? 'flex' : 'none';
+        let baseEl = document.getElementById('csm-ui-baseline'); if(baseEl) baseEl.style.display = isBaseline ? 'flex' : 'none';
+
+        document.getElementById('csm-bg2-swatch').style.display = config.bgType === 'gradient' ? 'block' : 'none';
+        
+        document.getElementById('csm-wick-swatches').style.opacity = config.wickIndependent ? '1' : '0.5';
+        document.getElementById('csm-wick-swatches').style.pointerEvents = config.wickIndependent ? 'auto' : 'none';
+        document.getElementById('csm-border-swatches').style.opacity = config.borderIndependent ? '1' : '0.5';
+        document.getElementById('csm-border-swatches').style.pointerEvents = config.borderIndependent ? 'auto' : 'none';
+    }
+
+    window.openChartSettings = function() {
+        if (!window.WaveChartEngine) return;
+        const config = window.WaveChartEngine.getConfig();
+        modal.querySelectorAll('[data-bind]').forEach(el => {
+            const key = el.dataset.bind;
+            if (config[key] !== undefined) { if (el.type === 'checkbox') el.checked = config[key]; else el.value = config[key]; }
+        });
+        modal.querySelectorAll('.wa-color-swatch').forEach(swatch => {
+            const key = swatch.dataset.colorBind; if (config[key]) swatch.style.background = config[key];
+        });
+        modalBox.style.transform = 'translate(-50%, -50%)'; modalBox.style.left = '50%'; modalBox.style.top = '50%';
+        updateDynamicUI(config);
+        modal.classList.add('show');
+    };
+
+    document.getElementById('btn-wa-csm-close').onclick = () => modal.classList.remove('show');
+    
+    // GẮN SỰ KIỆN CHÍNH
+    modal.querySelectorAll('[data-bind]').forEach(el => {
+        const eventType = el.type === 'range' ? 'input' : 'change';
+        el.addEventListener(eventType, (e) => {
+            const key = el.dataset.bind;
+            let value = el.type === 'checkbox' ? el.checked : el.value;
+            if (el.dataset.type === 'number') value = parseFloat(value);
+            if (window.WaveChartEngine) window.WaveChartEngine.update({ [key]: value });
+            updateDynamicUI(window.WaveChartEngine.getConfig());
+        });
+    });
+
+    // 🚀 TẠO VÀ GẮN BÁNH RĂNG VÀO ĐÚNG VỊ TRÍ GỐC
+    const checkToolbar = setInterval(() => {
+        // Tìm nút Type Btn để gắn sát bên cạnh
+        const typeBtn = document.getElementById('btn-wa-chart-type');
+        if (typeBtn && typeBtn.parentNode) {
+            clearInterval(checkToolbar);
+            
+            // Đảm bảo không bị add trùng nếu hot reload
+            if (!document.getElementById('btn-wa-chart-settings')) {
+                const btnHTML = `
+                    <button id="btn-wa-chart-settings" data-wa-tip="Cài đặt Biểu đồ" style="background: rgba(255,255,255,0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; margin-left: 6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    </button>
+                `;
+                typeBtn.parentNode.insertAdjacentHTML('beforeend', btnHTML);
             }
-        });
-    }, 50);
+            document.getElementById('btn-wa-chart-settings').onclick = (e) => { e.stopPropagation(); window.openChartSettings(); };
+        }
+    }, 200);
 
-    // ==========================================
-    // 🎯 SỰ KIỆN LƯU THAY ĐỔI ĐÃ FIX LỖI OPACITY
-    // ==========================================
-
-    // 1. Cập nhật Màu sắc (Tuyệt đối KHÔNG gài thêm hàm trộn RGBA vào đây nữa)
-    menuCfg.querySelectorAll('input[type="color"]').forEach(el => {
-        el.addEventListener('input', (e) => {
-            const key = e.target.dataset.target;
-            const val = e.target.value;
-            const hexInp = document.getElementById(`hex-${key}`);
-            if (hexInp) hexInp.value = val;
-            
-            // Engine sẽ tự động gọi hàm _dimColor ở bước vẽ Canvas
-            engine.update({ [key]: val }, true);
-        });
-    });
-
-    // 2. Cập nhật Text Hex
-    menuCfg.querySelectorAll('input[type="text"]').forEach(el => {
-        el.addEventListener('change', (e) => {
-            const key = e.target.dataset.sync;
-            let val = e.target.value;
-            if (val.charAt(0) !== '#') val = '#' + val;
-            const colInp = document.getElementById(`col-${key}`);
-            if (colInp) colInp.value = val.substring(0,7);
-            
-            engine.update({ [key]: val }, true);
-        });
-    });
-
-    // 3. Sự kiện riêng: Kéo độ mờ siêu mượt 60fps (Chỉ gửi duy nhất số opacity)
-    const rngHlcOp = document.getElementById('wa-range-hlcop');
-    if (rngHlcOp) rngHlcOp.addEventListener('input', (e) => engine.update({ hlcFillOpacity: parseFloat(e.target.value) }, true));
-
-    const rngBaseOp = document.getElementById('wa-range-baseop');
-    if (rngBaseOp) rngBaseOp.addEventListener('input', (e) => engine.update({ baselineFillOpacity: parseFloat(e.target.value) }, true));
-
-    // Bậc thang 1 màu
-    const stepTog = document.getElementById('wa-step-toggle');
-    if (stepTog) stepTog.addEventListener('click', () => { engine.update({ stepLineSingleColor: !c.stepLineSingleColor }, true); window.openChartSettings(); });
-
-    // Baseline Levels
-    const rngBaseVal = document.getElementById('wa-range-baseval');
-    const numBaseVal = document.getElementById('wa-num-baseval');
-    if (rngBaseVal && numBaseVal) {
-        rngBaseVal.addEventListener('input', (e) => { numBaseVal.value = e.target.value; engine.update({ baselineValue: parseInt(e.target.value) }, true); });
-        numBaseVal.addEventListener('input', (e) => { rngBaseVal.value = e.target.value; engine.update({ baselineValue: parseInt(e.target.value) }, true); });
-    }
-    const selBaseSrc = document.getElementById('wa-sel-basesrc');
-    if (selBaseSrc) selBaseSrc.addEventListener('change', (e) => engine.update({ baselinePriceSource: e.target.value }, true));
-
-    // 4. Lưới & Theme
-    const gridTog = document.getElementById('wa-grid-toggle');
-    if (gridTog) {
-        gridTog.addEventListener('click', () => {
-            const isOnoff = gridTog.dataset.on === '1';
-            engine.update({ gridHorizontal: !isOnoff, gridVertical: !isOnoff }, true);
-            window.openChartSettings(); // Vẽ lại menu
-        });
-    }
-
-    menuCfg.querySelectorAll('.wa-theme-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const ub = e.target.dataset.ub, db = e.target.dataset.db, bg = e.target.dataset.bg;
-            engine.update({ upColor: ub, downColor: db, borderUpColor: ub, borderDownColor: db, bgColor: bg }, true);
-            window.openChartSettings();
-        });
-    });
-
-    // 🚀 SỰ KIỆN NÚT RESET MẶC ĐỊNH
+    // XỬ LÝ NÚT RESET
     const btnReset = document.getElementById('wa-btn-reset-cfg');
     if (btnReset) {
         btnReset.onmouseenter = () => btnReset.style.background = 'rgba(246, 70, 93, 0.2)';
@@ -1800,7 +1876,7 @@ window.openChartSettings = function() {
             }
         };
     }
-};
+})();
 
 // =========================================================================
 // ⏱️ BƯỚC 5: CHART OVERLAYS (NATIVE COUNTDOWN & WATERMARK)
