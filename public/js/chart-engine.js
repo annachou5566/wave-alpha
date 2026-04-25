@@ -39,7 +39,7 @@ const DEFAULT_CHART_CONFIG = {
 const LS_CONFIG_KEY = 'wave_alpha_chart_config';
 
 // 🚀 Danh sách các Custom Chart để tự động dọn dẹp khi chuyển đổi
-const CUSTOM_CHART_IDS = ['WA_COL_CHART', 'WA_HL_CHART', 'WA_STEP_LINE', 'WA_LINE_MARKER', 'WA_HLC_AREA'];
+const CUSTOM_CHART_IDS = ['WA_COL_CHART', 'WA_HL_CHART', 'WA_STEP_LINE', 'WA_LINE_MARKER', 'WA_HLC_AREA', 'WA_BASELINE'];
 
 window.WaveChartEngine = {
     chartInstance: null, config: { ...DEFAULT_CHART_CONFIG }, _debounceTimer: null,
@@ -313,6 +313,83 @@ window.klinecharts.registerIndicator({
     }
 });
 
+// 6. CHỈ BÁO VẼ ĐƯỜNG CƠ SỞ (BASELINE - ID 11) 🚀 [DÙNG KỸ THUẬT CLIPPING]
+window.klinecharts.registerIndicator({
+    name: 'WA_BASELINE',
+    shortName: ' ',
+    series: 'price',
+    calc: (dataList) => dataList,
+    draw: ({ ctx, indicator, visibleRange, bounding, xAxis, yAxis }) => {
+        const c = window.WaveChartEngine.config;
+        const { from, to } = visibleRange;
+        const dataList = indicator.result;
+        
+        if (!dataList[from]) return true;
+
+        // 1. Xác định mức giá Cơ sở (Lấy giá Close của cây nến đầu tiên bên trái màn hình làm mốc)
+        const basePrice = dataList[from].close;
+        const baseY = yAxis.convertToPixel(basePrice);
+
+        ctx.save();
+        ctx.setLineDash([]); 
+
+        // Hàm phụ: Vẽ đường Line nối giá Close và Khép góc để tô màu Area
+        const drawPath = (isArea) => {
+            ctx.beginPath();
+            const start = Math.max(0, from - 1);
+            for (let i = start; i < to; i++) {
+                const kd = dataList[i];
+                if (!kd || kd.close === undefined) continue;
+                const x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(kd.close);
+                if (i === start) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            if (isArea) {
+                ctx.lineTo(xAxis.convertToPixel(to - 1), baseY);
+                ctx.lineTo(xAxis.convertToPixel(start), baseY);
+                ctx.closePath();
+            }
+        };
+
+        // 🚀 NỬA TRÊN: Cắt cúp màn hình và vẽ MÀU TĂNG (Xanh)
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, bounding.width, baseY); // Chỉ cho phép vẽ từ mép trên xuống đến đường mốc
+        ctx.clip();
+        
+        drawPath(true); // Đổ màu vùng
+        ctx.fillStyle = window.WaveChartEngine._dimColor(c.upColor, 0.2); ctx.fill();
+        
+        drawPath(false); // Vẽ viền đậm
+        ctx.lineWidth = 2; ctx.strokeStyle = c.upColor; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+        ctx.restore();
+
+        // 🚀 NỬA DƯỚI: Cắt cúp màn hình và vẽ MÀU GIẢM (Đỏ)
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, baseY, bounding.width, bounding.height - baseY); // Chỉ cho phép vẽ từ đường mốc xuống đáy
+        ctx.clip();
+        
+        drawPath(true); // Đổ màu vùng
+        ctx.fillStyle = window.WaveChartEngine._dimColor(c.downColor, 0.2); ctx.fill();
+        
+        drawPath(false); // Vẽ viền đậm
+        ctx.lineWidth = 2; ctx.strokeStyle = c.downColor; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+        ctx.restore();
+
+        // 🚀 VẼ ĐƯỜNG CƠ SỞ (Đường đứt nét tàng hình đứt đoạn ở giữa)
+        ctx.beginPath();
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.moveTo(0, baseY);
+        ctx.lineTo(bounding.width, baseY);
+        ctx.stroke();
+
+        ctx.restore(); 
+        return true;
+    }
+});
+
+
             console.log('[WaveChartEngine] Đã nạp Custom Chart V5 (Columns, High-Low, Step-Line) ✅');
         } catch(e) { console.error("Lỗi nạp Custom Indicator:", e); }
     },
@@ -341,9 +418,7 @@ window.klinecharts.registerIndicator({
         // Nến mặc định hoặc Line Native
         if (c.chartType === 2) kcChartType = 'candle_stroke';
         else if (c.chartType === 3) kcChartType = 'ohlc';     
-        else if (c.chartType === 6 || c.chartType === 9 || c.chartType === 11) {
-            kcChartType = 'area'; isLine = (c.chartType !== 9); 
-        } 
+        else if (c.chartType === 6 || c.chartType === 9) { kcChartType = 'area'; isLine = (c.chartType === 6); }
 
         // 🚀 CHIA ĐƯỜNG ĐẾN CUSTOM CHART
         if (c.chartType === 4) { 
@@ -368,6 +443,10 @@ window.klinecharts.registerIndicator({
             hideCandle = true;
         }
 
+        else if (c.chartType === 11) { // 🚀 Router đến Đường Cơ Sở (Baseline - ID 11)
+            this.chartInstance.createIndicator('WA_BASELINE', false, { id: 'candle_pane' });
+            hideCandle = true;
+        }
 
         const isHollow = (c.chartType === 2);
         
