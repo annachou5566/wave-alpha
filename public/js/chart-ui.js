@@ -1271,6 +1271,11 @@ if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeCha
 // chart-ui.js — hàm changeChartInterval
 window.changeChartInterval = function(interval, btnEl) {
     if (window.currentChartInterval === interval) return;
+    
+    // Cập nhật nhãn hiển thị trên nút Master mới
+    const labelEl = document.getElementById('wa-current-tf-label');
+    if (labelEl) labelEl.innerText = interval.toUpperCase();
+
     if (window.__wa_onIntervalChange) window.__wa_onIntervalChange(interval);
 
     document.querySelectorAll('.sc-time-btn').forEach(b => b.classList.remove('active'));
@@ -1879,4 +1884,97 @@ window.closeProChart = function() {
         // Gọi lại liên tục để bám dính siêu mượt khi cuộn/zoom biểu đồ
         countdownRafId = requestAnimationFrame(syncPosition60FPS);
     }
+})();
+
+(function initTimeframeSelector() {
+    'use strict';
+
+    // Danh sách các Timeframe phổ biến cho Crypto
+    const TIMEFRAMES = [
+        { id: '1s', name: '1 Giây', pro: true },
+        { id: '1m', name: '1 Phút', pro: false },
+        { id: '5m', name: '5 Phút', pro: false },
+        { id: '15m', name: '15 Phút', pro: false },
+        { id: '30m', name: '30 Phút', pro: false },
+        { id: '1h', name: '1 Giờ', pro: false },
+        { id: '4h', name: '4 Giờ', pro: false },
+        { id: '1d', name: '1 Ngày', pro: false },
+        { id: '1w', name: '1 Tuần', pro: false }
+    ];
+
+    const checkToolbar = setInterval(() => {
+        // Tìm Group chứa các nút Chart Type/Settings đã làm trước đó
+        const targetGroup = document.getElementById('wa-chart-controls-group');
+        
+        if (targetGroup) {
+            clearInterval(checkToolbar);
+
+            // 1. Tạo Nút Master hiển thị Timeframe hiện tại
+            const tfBtnWrap = document.createElement('div');
+            tfBtnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; margin-right: 8px;';
+            tfBtnWrap.innerHTML = `
+                <button id="btn-wa-timeframe-master" style="background: rgba(255,255,255,0.03); color: #00F0FF; border: 1px solid rgba(0,240,255,0.2); border-radius: 4px; padding: 4px 8px; height: 26px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; font-family: var(--font-num); font-weight: 800; font-size: 12px;">
+                    <span id="wa-current-tf-label">1D</span>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+            `;
+            
+            // Chèn vào đầu Group để nó nằm bên trái nút Chart Type
+            targetGroup.prepend(tfBtnWrap);
+
+            // 2. Tạo Menu Dropdown
+            const menu = document.createElement('div');
+            menu.id = 'wa-timeframe-menu';
+            menu.style.cssText = `
+                display: none; position: fixed; background: #1e222d; border: 1px solid rgba(255,255,255,0.1); 
+                border-radius: 8px; width: 140px; z-index: 999999; box-shadow: 0 16px 40px rgba(0,0,0,0.8);
+                padding: 8px; flex-direction: column; gap: 2px;
+            `;
+
+            TIMEFRAMES.forEach(tf => {
+                const item = document.createElement('div');
+                item.className = 'wa-tf-item';
+                item.style.cssText = `
+                    display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; 
+                    border-radius: 4px; cursor: pointer; color: #EAECEF; font-size: 12px; font-weight: 500;
+                `;
+                item.innerHTML = `
+                    <span>${tf.name}</span>
+                    <span style="color: #848e9c; font-size: 10px; font-weight: 800;">${tf.id.toUpperCase()}</span>
+                `;
+
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    // Gọi hàm chuyển timeframe hiện có của Wave Alpha
+                    window.changeChartInterval(tf.id); 
+                    menu.style.display = 'none';
+                };
+
+                // Hiệu ứng Hover
+                item.onmouseenter = () => item.style.background = 'rgba(255,255,255,0.05)';
+                item.onmouseleave = () => item.style.background = 'transparent';
+
+                menu.appendChild(item);
+            });
+
+            document.body.appendChild(menu);
+
+            // 3. Logic đóng mở Menu
+            const masterBtn = document.getElementById('btn-wa-timeframe-master');
+            masterBtn.onclick = (e) => {
+                e.stopPropagation();
+                const isHidden = menu.style.display === 'none';
+                if (isHidden) {
+                    const rect = masterBtn.getBoundingClientRect();
+                    menu.style.top = (rect.bottom + 6) + 'px';
+                    menu.style.left = rect.left + 'px';
+                    menu.style.display = 'flex';
+                } else {
+                    menu.style.display = 'none';
+                }
+            };
+
+            document.addEventListener('click', () => menu.style.display = 'none');
+        }
+    }, 200);
 })();

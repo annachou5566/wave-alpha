@@ -3611,3 +3611,14 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 }
 .eb-capsule-label.active { color: var(--brand); }
 .eb-capsule-label.passed { color: rgba(0, 240, 255, 0.5); }
+
+
+#wa-timeframe-menu .wa-tf-item:hover {
+    background: rgba(0, 240, 255, 0.1) !important;
+    color: #00F0FF !important;
+}
+
+/* Ẩn các nút timeframe cũ nếu chúng vẫn còn trên giao diện */
+.sc-time-btn {
+    display: none !important;
+}
