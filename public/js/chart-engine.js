@@ -22,7 +22,7 @@ window.bookmapHistory = [];
 window.isHeatmapOn = true; 
 
 // =========================================================================
-// 🧠 BƯỚC 1: WAVE CHART ENGINE (HOÀN THIỆN ĐỈNH ĐÁY CHUẨN TRADINGVIEW)
+// 🧠 BƯỚC 1: WAVE CHART ENGINE (BỔ SUNG BẬC THANG & ĐƯỜNG CÓ ĐIỂM)
 // =========================================================================
 const DEFAULT_CHART_CONFIG = {
     chartType: 1, upColor: '#0ECB81', downColor: '#F6465D',
@@ -38,6 +38,9 @@ const DEFAULT_CHART_CONFIG = {
 
 const LS_CONFIG_KEY = 'wave_alpha_chart_config';
 
+// 🚀 Danh sách các ID của Custom Chart để dọn dẹp một lượt
+const CUSTOM_CHART_IDS = ['WA_COL_CHART', 'WA_HL_CHART', 'WA_STEP_LINE', 'WA_LINE_MARKER'];
+
 window.WaveChartEngine = {
     chartInstance: null, config: { ...DEFAULT_CHART_CONFIG }, _debounceTimer: null,
 
@@ -52,88 +55,132 @@ window.WaveChartEngine = {
     _registerCustomIndicators: function() {
         if (!window.klinecharts || !window.klinecharts.registerIndicator) return;
         try {
-            // 1. CHỈ BÁO VẼ CỘT (COLUMNS)
+            // 1. CHỈ BÁO VẼ CỘT (COLUMNS - Type 4)
             window.klinecharts.registerIndicator({
-                name: 'WA_COL_CHART',
-                shortName: ' ', 
-                series: 'price',
-                calc: (dataList) => dataList,
+                name: 'WA_COL_CHART', shortName: ' ', series: 'price', calc: (d) => d,
                 draw: ({ ctx, indicator, visibleRange, bounding, barSpace, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
                     const bottomY = bounding.height;
                     const dataList = indicator.result; 
-
                     ctx.save(); 
                     const bSpace = barSpace.gapBar || barSpace.bar || 6;
                     const colWidth = Math.max(1, bSpace * 0.6);
-
                     for (let i = from; i < to; i++) {
                         const kd = dataList[i];
                         if (!kd || kd.close === undefined) continue;
-
                         ctx.fillStyle = kd.close >= kd.open ? c.upColor : c.downColor;
-                        const x = xAxis.convertToPixel(i);
-                        const closeY = yAxis.convertToPixel(kd.close);
-                        ctx.fillRect(x - colWidth / 2, closeY, colWidth, bottomY - closeY);
+                        ctx.fillRect(xAxis.convertToPixel(i) - colWidth / 2, yAxis.convertToPixel(kd.close), colWidth, bottomY - yAxis.convertToPixel(kd.close));
                     }
-                    ctx.restore(); 
-                    return true; 
+                    ctx.restore(); return true; 
                 }
             });
 
-            // 2. CHỈ BÁO VẼ ĐỈNH-ĐÁY (HIGH-LOW) CHUẨN TRADINGVIEW
+            // 2. CHỈ BÁO VẼ ĐỈNH-ĐÁY (HIGH-LOW - Type 5)
             window.klinecharts.registerIndicator({
-                name: 'WA_HL_CHART',
-                shortName: ' ',
-                series: 'price',
-                calc: (dataList) => dataList,
+                name: 'WA_HL_CHART', shortName: ' ', series: 'price', calc: (d) => d,
                 draw: ({ ctx, indicator, visibleRange, barSpace, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
                     const dataList = indicator.result;
-
                     ctx.save(); 
                     const bSpace = barSpace.gapBar || barSpace.bar || 6;
-                    
-                    // 🚀 THAY ĐỔI: Đỉnh Đáy chuẩn TradingView là 1 khối trụ lơ lửng từ Low lên High
                     const colWidth = Math.max(1, bSpace * 0.6);
-                    const isTextVisible = bSpace > 30; // Chữ số High/Low chỉ hiện khi bạn zoom đủ to
-
+                    const isTextVisible = bSpace > 30;
                     for (let i = from; i < to; i++) {
                         const kd = dataList[i];
-                        if (!kd || kd.high === undefined || kd.low === undefined) continue;
-
+                        if (!kd || kd.high === undefined) continue;
                         ctx.fillStyle = kd.close >= kd.open ? c.upColor : c.downColor;
-                        
                         const x = xAxis.convertToPixel(i);
-                        const highY = yAxis.convertToPixel(kd.high);
-                        const lowY = yAxis.convertToPixel(kd.low);
-                        
-                        const rectY = Math.min(highY, lowY);
-                        const rectH = Math.max(1, Math.abs(highY - lowY));
-
-                        // 1. Vẽ khối trụ nổi giữa High và Low
+                        const rectY = Math.min(yAxis.convertToPixel(kd.high), yAxis.convertToPixel(kd.low));
+                        const rectH = Math.max(1, Math.abs(yAxis.convertToPixel(kd.high) - yAxis.convertToPixel(kd.low)));
                         ctx.fillRect(x - colWidth / 2, rectY, colWidth, rectH);
-
-                        // 2. Tùy chọn: Vẽ chữ số High/Low ở 2 đầu (Giống hệt TradingView)
                         if (isTextVisible) {
-                            ctx.font = '10px Arial';
-                            ctx.textAlign = 'center';
-                            ctx.fillStyle = '#848e9c';
-                            
-                            ctx.textBaseline = 'bottom';
-                            ctx.fillText(kd.high.toString(), x, rectY - 3); // In High trên đỉnh
-                            
-                            ctx.textBaseline = 'top';
-                            ctx.fillText(kd.low.toString(), x, rectY + rectH + 3); // In Low dưới đáy
+                            ctx.font = '10px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#848e9c';
+                            ctx.textBaseline = 'bottom'; ctx.fillText(kd.high.toString(), x, rectY - 3); 
+                            ctx.textBaseline = 'top'; ctx.fillText(kd.low.toString(), x, rectY + rectH + 3); 
                         }
                     }
-                    ctx.restore(); 
-                    return true; 
+                    ctx.restore(); return true; 
                 }
             });
-            console.log('[WaveChartEngine] Đã nạp Custom Chart V4 (Columns, High-Low chuẩn) ✅');
+
+            // 3. CHỈ BÁO VẼ ĐƯỜNG BẬC THANG (STEP LINE - Tạm gọi Type 6)
+            window.klinecharts.registerIndicator({
+                name: 'WA_STEP_LINE', shortName: ' ', series: 'price', calc: (d) => d,
+                draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
+                    const c = window.WaveChartEngine.config;
+                    const { from, to } = visibleRange;
+                    const dataList = indicator.result;
+                    
+                    ctx.save();
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = c.upColor; // Line mặc định lấy màu UpColor
+                    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                    ctx.beginPath();
+                    
+                    let isFirst = true;
+                    for (let i = from; i < to; i++) {
+                        const kd = dataList[i];
+                        if (!kd || kd.close === undefined) continue;
+                        const x = xAxis.convertToPixel(i);
+                        const y = yAxis.convertToPixel(kd.close);
+                        
+                        if (isFirst) {
+                            ctx.moveTo(x, y); isFirst = false;
+                        } else {
+                            const prevX = xAxis.convertToPixel(i - 1);
+                            const prevY = yAxis.convertToPixel(dataList[i - 1].close);
+                            // 🚀 Công thức Step: Đi ngang sang cột hiện tại, rồi mới bẻ góc đâm thẳng xuống/lên giá Close
+                            ctx.lineTo(x, prevY);
+                            ctx.lineTo(x, y);
+                        }
+                    }
+                    ctx.stroke();
+                    ctx.restore(); return true;
+                }
+            });
+
+            // 4. CHỈ BÁO VẼ ĐƯỜNG CÓ ĐIỂM (LINE WITH MARKERS - Tạm gọi Type 7)
+            window.klinecharts.registerIndicator({
+                name: 'WA_LINE_MARKER', shortName: ' ', series: 'price', calc: (d) => d,
+                draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
+                    const c = window.WaveChartEngine.config;
+                    const { from, to } = visibleRange;
+                    const dataList = indicator.result;
+                    
+                    ctx.save();
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = c.upColor; 
+                    ctx.fillStyle = c.bgColor; // Lõi của dấu chấm sẽ thủng nhìn xuyên thấu màu nền
+                    
+                    // 1. Vẽ đường thẳng nối các điểm (Line)
+                    ctx.beginPath();
+                    let isFirst = true;
+                    for (let i = from; i < to; i++) {
+                        const kd = dataList[i];
+                        if (!kd || kd.close === undefined) continue;
+                        const x = xAxis.convertToPixel(i); const y = yAxis.convertToPixel(kd.close);
+                        if (isFirst) { ctx.moveTo(x, y); isFirst = false; } else { ctx.lineTo(x, y); }
+                    }
+                    ctx.stroke();
+
+                    // 2. Chấm thêm các vòng tròn (Markers) đè lên trên đường thẳng
+                    for (let i = from; i < to; i++) {
+                        const kd = dataList[i];
+                        if (!kd || kd.close === undefined) continue;
+                        const x = xAxis.convertToPixel(i); const y = yAxis.convertToPixel(kd.close);
+                        ctx.beginPath();
+                        ctx.arc(x, y, 3.5, 0, 2 * Math.PI); // Bán kính 3.5px
+                        ctx.fill();   // Tô nền bên trong
+                        ctx.stroke(); // Vẽ viền vòng tròn
+                    }
+                    
+                    ctx.restore(); return true;
+                }
+            });
+
+            console.log('[WaveChartEngine] Đã nạp 4 Custom Charts (Columns, HighLow, StepLine, LineMarkers) ✅');
         } catch(e) { console.error("Lỗi nạp Custom Indicator:", e); }
     },
 
@@ -155,32 +202,27 @@ window.WaveChartEngine = {
         let isLine = false; 
         let hideCandle = false;
 
+        // 🚀 DỌN DẸP SẠCH SẼ TẤT CẢ CUSTOM CHART TRƯỚC KHI CHỌN CÁI MỚI
+        CUSTOM_CHART_IDS.forEach(id => this.chartInstance.removeIndicator('candle_pane', id));
+
+        // NẾN MẶC ĐỊNH & LINE/AREA NATIVE
         if (c.chartType === 2) kcChartType = 'candle_stroke';
         else if (c.chartType === 3) kcChartType = 'ohlc';     
-        else if (c.chartType === 6 || c.chartType === 7 || c.chartType === 8) { kcChartType = 'area'; isLine = true; } 
-        else if (c.chartType === 9 || c.chartType === 10 || c.chartType === 11) { kcChartType = 'area'; isLine = false; } 
-
-        if (c.chartType === 4) { 
-            this.chartInstance.removeIndicator('candle_pane', 'WA_HL_CHART');
-            this.chartInstance.createIndicator('WA_COL_CHART', false, { id: 'candle_pane' });
-            hideCandle = true;
-        } 
-        else if (c.chartType === 5) { 
-            this.chartInstance.removeIndicator('candle_pane', 'WA_COL_CHART');
-            this.chartInstance.createIndicator('WA_HL_CHART', false, { id: 'candle_pane' });
-            hideCandle = true;
-        } 
-        else { 
-            this.chartInstance.removeIndicator('candle_pane', 'WA_COL_CHART');
-            this.chartInstance.removeIndicator('candle_pane', 'WA_HL_CHART');
-        }
+        
+        // 🚀 ROUTER KÍCH HOẠT CUSTOM CHART MỚI
+        else if (c.chartType === 4) { this.chartInstance.createIndicator('WA_COL_CHART', false, { id: 'candle_pane' }); hideCandle = true; } // CỘT
+        else if (c.chartType === 5) { this.chartInstance.createIndicator('WA_HL_CHART', false, { id: 'candle_pane' }); hideCandle = true; }  // ĐỈNH ĐÁY
+        else if (c.chartType === 6) { this.chartInstance.createIndicator('WA_STEP_LINE', false, { id: 'candle_pane' }); hideCandle = true; } // BẬC THANG
+        else if (c.chartType === 7) { this.chartInstance.createIndicator('WA_LINE_MARKER', false, { id: 'candle_pane' }); hideCandle = true; } // ĐƯỜNG CÓ ĐIỂM
+        
+        // AREA / LINE NATIVE (Nếu bạn gán ID 8, 9, 10...)
+        else if (c.chartType >= 8) { kcChartType = 'area'; isLine = (c.chartType === 8); } 
 
         const isHollow = (c.chartType === 2);
         
         const finalUpColor = hideCandle ? 'transparent' : c.upColor;
         const finalDownColor = hideCandle ? 'transparent' : c.downColor;
         const finalNoChange = hideCandle ? 'transparent' : '#787b86';
-
         const finalUpBorder = hideCandle ? 'transparent' : (c.showBorder ? (c.borderIndependent ? c.borderUpColor : c.upColor) : (isHollow ? c.upColor : 'transparent'));
         const finalDownBorder = hideCandle ? 'transparent' : (c.showBorder ? (c.borderIndependent ? c.borderDownColor : c.downColor) : (isHollow ? c.downColor : 'transparent'));
         const finalUpWick = hideCandle ? 'transparent' : (c.showWick ? (c.wickIndependent ? c.wickUpColor : c.upColor) : 'transparent');
