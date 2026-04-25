@@ -22,7 +22,7 @@ window.bookmapHistory = [];
 window.isHeatmapOn = true; 
 
 // =========================================================================
-// 🧠 BƯỚC 1: WAVE CHART ENGINE (HOÀN THIỆN ĐỈNH ĐÁY CHUẨN TRADINGVIEW)
+// 🧠 BƯỚC 1: WAVE CHART ENGINE (BỔ SUNG BIỂU ĐỒ BẬC THANG - STEP LINE)
 // =========================================================================
 const DEFAULT_CHART_CONFIG = {
     chartType: 1, upColor: '#0ECB81', downColor: '#F6465D',
@@ -38,6 +38,9 @@ const DEFAULT_CHART_CONFIG = {
 
 const LS_CONFIG_KEY = 'wave_alpha_chart_config';
 
+// 🚀 Danh sách các Custom Chart để tự động dọn dẹp khi chuyển đổi
+const CUSTOM_CHART_IDS = ['WA_COL_CHART', 'WA_HL_CHART', 'WA_STEP_LINE'];
+
 window.WaveChartEngine = {
     chartInstance: null, config: { ...DEFAULT_CHART_CONFIG }, _debounceTimer: null,
 
@@ -52,7 +55,7 @@ window.WaveChartEngine = {
     _registerCustomIndicators: function() {
         if (!window.klinecharts || !window.klinecharts.registerIndicator) return;
         try {
-            // 1. CHỈ BÁO VẼ CỘT (COLUMNS)
+            // 1. CHỈ BÁO VẼ CỘT (COLUMNS - ID 4)
             window.klinecharts.registerIndicator({
                 name: 'WA_COL_CHART',
                 shortName: ' ', 
@@ -82,7 +85,7 @@ window.WaveChartEngine = {
                 }
             });
 
-            // 2. CHỈ BÁO VẼ ĐỈNH-ĐÁY (HIGH-LOW) CHUẨN TRADINGVIEW
+            // 2. CHỈ BÁO VẼ ĐỈNH-ĐÁY (HIGH-LOW - ID 5)
             window.klinecharts.registerIndicator({
                 name: 'WA_HL_CHART',
                 shortName: ' ',
@@ -95,10 +98,8 @@ window.WaveChartEngine = {
 
                     ctx.save(); 
                     const bSpace = barSpace.gapBar || barSpace.bar || 6;
-                    
-                    // 🚀 THAY ĐỔI: Đỉnh Đáy chuẩn TradingView là 1 khối trụ lơ lửng từ Low lên High
                     const colWidth = Math.max(1, bSpace * 0.6);
-                    const isTextVisible = bSpace > 30; // Chữ số High/Low chỉ hiện khi bạn zoom đủ to
+                    const isTextVisible = bSpace > 30; 
 
                     for (let i = from; i < to; i++) {
                         const kd = dataList[i];
@@ -113,27 +114,66 @@ window.WaveChartEngine = {
                         const rectY = Math.min(highY, lowY);
                         const rectH = Math.max(1, Math.abs(highY - lowY));
 
-                        // 1. Vẽ khối trụ nổi giữa High và Low
                         ctx.fillRect(x - colWidth / 2, rectY, colWidth, rectH);
 
-                        // 2. Tùy chọn: Vẽ chữ số High/Low ở 2 đầu (Giống hệt TradingView)
                         if (isTextVisible) {
                             ctx.font = '10px Arial';
                             ctx.textAlign = 'center';
                             ctx.fillStyle = '#848e9c';
-                            
                             ctx.textBaseline = 'bottom';
-                            ctx.fillText(kd.high.toString(), x, rectY - 3); // In High trên đỉnh
-                            
+                            ctx.fillText(kd.high.toString(), x, rectY - 3); 
                             ctx.textBaseline = 'top';
-                            ctx.fillText(kd.low.toString(), x, rectY + rectH + 3); // In Low dưới đáy
+                            ctx.fillText(kd.low.toString(), x, rectY + rectH + 3); 
                         }
                     }
                     ctx.restore(); 
                     return true; 
                 }
             });
-            console.log('[WaveChartEngine] Đã nạp Custom Chart V4 (Columns, High-Low chuẩn) ✅');
+
+            // 3. CHỈ BÁO VẼ ĐƯỜNG BẬC THANG (STEP LINE - ID 8) 🚀 [MỚI THÊM]
+            window.klinecharts.registerIndicator({
+                name: 'WA_STEP_LINE',
+                shortName: ' ',
+                series: 'price',
+                calc: (dataList) => dataList,
+                draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
+                    const c = window.WaveChartEngine.config;
+                    const { from, to } = visibleRange;
+                    const dataList = indicator.result;
+                    
+                    ctx.save();
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = c.upColor; // Lấy màu Nến Tăng làm màu chủ đạo cho đường line
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.beginPath();
+                    
+                    let isFirst = true;
+                    for (let i = from; i < to; i++) {
+                        const kd = dataList[i];
+                        if (!kd || kd.close === undefined) continue;
+                        
+                        const x = xAxis.convertToPixel(i);
+                        const y = yAxis.convertToPixel(kd.close);
+                        
+                        if (isFirst) {
+                            ctx.moveTo(x, y); 
+                            isFirst = false;
+                        } else {
+                            // Cốt lõi của Step Line: Kéo ngang sang cột mới trước (theo giá cũ), rồi mới kéo dọc lên/xuống (giá mới)
+                            const prevY = yAxis.convertToPixel(dataList[i - 1].close);
+                            ctx.lineTo(x, prevY);
+                            ctx.lineTo(x, y);
+                        }
+                    }
+                    ctx.stroke();
+                    ctx.restore(); 
+                    return true;
+                }
+            });
+
+            console.log('[WaveChartEngine] Đã nạp Custom Chart V5 (Columns, High-Low, Step-Line) ✅');
         } catch(e) { console.error("Lỗi nạp Custom Indicator:", e); }
     },
 
@@ -155,24 +195,28 @@ window.WaveChartEngine = {
         let isLine = false; 
         let hideCandle = false;
 
+        // 🚀 DỌN RÁC: Xóa sạch các chart custom trước khi vẽ cái mới
+        CUSTOM_CHART_IDS.forEach(id => this.chartInstance.removeIndicator('candle_pane', id));
+
+        // Nến mặc định hoặc Line Native
         if (c.chartType === 2) kcChartType = 'candle_stroke';
         else if (c.chartType === 3) kcChartType = 'ohlc';     
-        else if (c.chartType === 6 || c.chartType === 7 || c.chartType === 8) { kcChartType = 'area'; isLine = true; } 
-        else if (c.chartType === 9 || c.chartType === 10 || c.chartType === 11) { kcChartType = 'area'; isLine = false; } 
+        else if (c.chartType === 6 || c.chartType === 7 || c.chartType === 9 || c.chartType === 10 || c.chartType === 11) { 
+            kcChartType = 'area'; isLine = (c.chartType !== 9); 
+        } 
 
+        // 🚀 CHIA ĐƯỜNG ĐẾN CUSTOM CHART
         if (c.chartType === 4) { 
-            this.chartInstance.removeIndicator('candle_pane', 'WA_HL_CHART');
             this.chartInstance.createIndicator('WA_COL_CHART', false, { id: 'candle_pane' });
             hideCandle = true;
         } 
         else if (c.chartType === 5) { 
-            this.chartInstance.removeIndicator('candle_pane', 'WA_COL_CHART');
             this.chartInstance.createIndicator('WA_HL_CHART', false, { id: 'candle_pane' });
             hideCandle = true;
-        } 
-        else { 
-            this.chartInstance.removeIndicator('candle_pane', 'WA_COL_CHART');
-            this.chartInstance.removeIndicator('candle_pane', 'WA_HL_CHART');
+        }
+        else if (c.chartType === 8) { // Biểu đồ Bậc thang (ID = 8)
+            this.chartInstance.createIndicator('WA_STEP_LINE', false, { id: 'candle_pane' });
+            hideCandle = true;
         }
 
         const isHollow = (c.chartType === 2);
