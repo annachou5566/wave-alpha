@@ -1540,996 +1540,261 @@ window.closeProChart = function() {
 })();
 
 // =========================================================================
-// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (V9.1 - FULL PRODUCTION MASTER)
-// ✅ Animation mượt | Backdrop click | Escape key | Export/Import JSON
-// ✅ 8 Theme presets | Recent colors | Native color picker | Slider badges
-// ✅ Smart picker positioning | Drag | Linked sliders | Dynamic UI
+// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (FIX LỖI CẤM CLICK RÂU/VIỀN NẾN)
 // =========================================================================
 (function initChartSettingsModal() {
     'use strict';
 
-    // ─── PALETTE & PRESETS ───────────────────────────────────────────────
-    const PALETTE = [
-        '#ffffff','#d1d4dc','#b2b5be','#848e9c','#5d606b','#363a45','#1e222d','#000000',
-        '#f23645','#ff5252','#ff7043','#ff9800','#ffc107','#ffeb3b','#8bc34a','#4caf50',
-        '#f7525f','#ff8a80','#ffccbc','#ffe0b2','#fff9c4','#f1f8e9','#b9f6ca','#ccff90',
-        '#089981','#00bcd4','#03a9f4','#2196f3','#3f51b5','#673ab7','#9c27b0','#e91e63',
-        '#26a69a','#00e5ff','#40c4ff','#448aff','#7c4dff','#e040fb','#f50057','#ff4081',
-        '#0ECB81','#F6465D','#F0B90B','#00F0FF','#7B61FF','#FF6B35','#2af592','#131722',
-    ];
-
-    const THEMES = {
-        'Binance':   { upColor:'#0ECB81', downColor:'#F6465D', bgColor:'#131722', gridColor:'rgba(255,255,255,0.06)' },
-        'Dark Pro':  { upColor:'#26a69a', downColor:'#ef5350', bgColor:'#0d0d12', gridColor:'rgba(255,255,255,0.04)' },
-        'Solarize':  { upColor:'#2af592', downColor:'#cb4335', bgColor:'#0a0e1a', gridColor:'rgba(42,245,146,0.06)' },
-        'Classic':   { upColor:'#089981', downColor:'#F23645', bgColor:'#1e222d', gridColor:'rgba(255,255,255,0.06)' },
-        'Mono':      { upColor:'#b2b5be', downColor:'#5d606b', bgColor:'#000000', gridColor:'rgba(255,255,255,0.05)' },
-        'Neon':      { upColor:'#00F0FF', downColor:'#FF6B35', bgColor:'#080810', gridColor:'rgba(0,240,255,0.05)' },
-        'Purple':    { upColor:'#7B61FF', downColor:'#F6465D', bgColor:'#0f0b1e', gridColor:'rgba(123,97,255,0.07)' },
-        'TradFi':    { upColor:'#00897B', downColor:'#C62828', bgColor:'#0d0d0d', gridColor:'rgba(255,255,255,0.04)' },
-    };
-
-    // ─── STYLES ──────────────────────────────────────────────────────────
     const style = document.createElement('style');
     style.textContent = `
-        /* BACKDROP */
-        #wa-csm-backdrop {
-            display: none; position: fixed; inset: 0;
-            background: rgba(0,0,0,0.55); z-index: 9999997;
-            opacity: 0; transition: opacity 0.2s ease;
-        }
-        #wa-csm-backdrop.show { opacity: 1; }
-
-        /* MODAL WRAPPER */
-        #wa-chart-settings-modal {
-            display: none; position: fixed;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%) scale(0.96);
-            z-index: 9999999; opacity: 0;
-            transition: opacity 0.2s ease, transform 0.2s ease;
-            pointer-events: none;
-        }
-        #wa-chart-settings-modal.show {
-            opacity: 1; transform: translate(-50%, -50%) scale(1);
-            pointer-events: auto;
-        }
-
-        /* BOX */
-        .wa-csm-box {
-            background: #1e222d; width: 740px; height: 540px;
-            border-radius: 10px; border: 1px solid rgba(255,255,255,0.09);
-            box-shadow: 0 28px 70px rgba(0,0,0,0.75);
-            display: flex; overflow: hidden;
-            font-family: 'Inter', system-ui, sans-serif;
-            min-width: 520px; min-height: 400px;
-        }
-
-        /* SIDEBAR */
-        .wa-csm-sidebar {
-            width: 186px; flex-shrink: 0;
-            background: #131722;
-            border-right: 1px solid rgba(255,255,255,0.05);
-            display: flex; flex-direction: column; padding: 14px 0;
-        }
-        .wa-csm-sidebar-lbl {
-            font-size: 9.5px; font-weight: 800; color: #3d4450;
-            text-transform: uppercase; letter-spacing: 0.09em;
-            padding: 6px 18px 4px;
-        }
-        .wa-csm-tab {
-            padding: 9px 18px; color: #848e9c;
-            font-size: 12.5px; font-weight: 500; cursor: pointer;
-            border-left: 2px solid transparent; transition: all 0.14s;
-            display: flex; align-items: center; gap: 9px; user-select: none;
-        }
-        .wa-csm-tab:hover { background: rgba(255,255,255,0.03); color: #cdd2dc; }
-        .wa-csm-tab.active {
-            background: rgba(38,166,154,0.1); color: #26a69a;
-            border-left-color: #26a69a; font-weight: 600;
-        }
-        .wa-csm-tab-sep { height: 1px; background: rgba(255,255,255,0.04); margin: 6px 0; }
-
-        /* CONTENT */
-        .wa-csm-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        .wa-csm-header {
-            padding: 13px 20px; border-bottom: 1px solid rgba(255,255,255,0.06);
-            display: flex; justify-content: space-between; align-items: center;
-            cursor: grab; user-select: none; flex-shrink: 0;
-        }
+        #wa-chart-settings-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999999; pointer-events: none; opacity: 0; transition: opacity 0.15s ease; }
+        #wa-chart-settings-modal.show { display: block; opacity: 1; }
+        .wa-csm-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e222d; width: 680px; height: 500px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; pointer-events: auto; }
+        .wa-csm-sidebar { width: 200px; background: #131722; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 20px 0; }
+        .wa-csm-tab { padding: 12px 24px; color: #848e9c; font-size: 13px; font-weight: 600; cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s; display: flex; align-items: center; gap: 10px; }
+        .wa-csm-tab:hover { background: rgba(255,255,255,0.03); color: #EAECEF; }
+        .wa-csm-tab.active { background: rgba(38,166,154,0.1); color: #26a69a; border-left-color: #26a69a; }
+        .wa-csm-content { flex: 1; display: flex; flex-direction: column; background: #1e222d; }
+        .wa-csm-header { padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; cursor: grab; user-select: none; }
         .wa-csm-header:active { cursor: grabbing; }
-        .wa-csm-title { font-size: 14px; font-weight: 700; color: #EAECEF; pointer-events: none; }
-        .wa-csm-close {
-            color: #5d606b; cursor: pointer; font-size: 15px;
-            width: 26px; height: 26px; border-radius: 4px;
-            display: flex; align-items: center; justify-content: center; transition: 0.14s;
-        }
-        .wa-csm-close:hover { color: #F6465D; background: rgba(246,70,93,0.1); }
-
-        /* PANELS */
-        .wa-csm-panels {
-            flex: 1; overflow-y: auto; padding: 16px 20px;
-            scrollbar-width: thin; scrollbar-color: #2a2e39 transparent;
-        }
-        .wa-csm-panels::-webkit-scrollbar { width: 4px; }
-        .wa-csm-panels::-webkit-scrollbar-thumb { background: #2a2e39; border-radius: 2px; }
-        .wa-csm-panel { display: none; flex-direction: column; gap: 13px; }
+        .wa-csm-title { font-size: 16px; font-weight: 700; color: #EAECEF; pointer-events: none; }
+        .wa-csm-close { color: #848e9c; cursor: pointer; font-size: 18px; transition: 0.2s; }
+        .wa-csm-close:hover { color: #F6465D; }
+        .wa-csm-panels { flex: 1; overflow-y: auto; padding: 20px 24px; }
+        .wa-csm-panel { display: none; flex-direction: column; gap: 20px; }
         .wa-csm-panel.active { display: flex; }
-
-        /* ROW */
-        .wa-csm-row {
-            display: flex; justify-content: space-between;
-            align-items: center; min-height: 30px;
-        }
-        .wa-csm-label {
-            font-size: 12.5px; color: #b7bdc6;
-            display: flex; align-items: center; gap: 7px; flex-shrink: 0;
-        }
-        .wa-hint {
-            font-size: 10px; color: #4a5568;
-            background: rgba(255,255,255,0.05);
-            padding: 1px 5px; border-radius: 3px;
-        }
-        .wa-csm-control { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-
-        /* DIVIDER */
-        .wa-csm-divider {
-            font-size: 10px; font-weight: 800; color: #3d6e73;
-            text-transform: uppercase; letter-spacing: 0.06em;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            padding-bottom: 4px; margin-top: 2px;
-        }
-
-        /* GROUP BOX */
-        .wa-csm-group {
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 6px; padding: 10px 14px;
-            display: flex; flex-direction: column; gap: 11px;
-        }
-
-        /* SELECT */
-        .wa-csm-select {
-            background: #131722; color: #EAECEF;
-            border: 1px solid rgba(255,255,255,0.09);
-            padding: 5px 9px; border-radius: 4px;
-            font-size: 12px; outline: none; cursor: pointer; width: 148px;
-            transition: border-color 0.14s;
-        }
-        .wa-csm-select:focus { border-color: #26a69a; }
-
-        /* NUMBER INPUT */
-        .wa-csm-input-num {
-            background: #131722; color: #EAECEF;
-            border: 1px solid rgba(255,255,255,0.09);
-            padding: 5px 6px; border-radius: 4px;
-            font-size: 12px; outline: none; width: 60px;
-            text-align: center; transition: border-color 0.14s;
-        }
-        .wa-csm-input-num:focus { border-color: #26a69a; }
-
-        /* SLIDER */
-        .wa-slider-wrap { display: flex; align-items: center; gap: 7px; }
-        .wa-csm-slider { width: 100px; accent-color: #26a69a; cursor: pointer; height: 3px; }
-        .wa-slider-badge {
-            font-size: 10.5px; color: #848e9c; min-width: 34px;
-            text-align: right; font-variant-numeric: tabular-nums;
-        }
-
-        /* TOGGLE */
-        .wa-switch { position: relative; display: inline-block; width: 34px; height: 18px; flex-shrink: 0; }
+        .wa-csm-row { display: flex; justify-content: space-between; align-items: center; }
+        .wa-csm-label { font-size: 13px; color: #b7bdc6; display: flex; align-items: center; gap: 8px; }
+        .wa-csm-control { display: flex; align-items: center; gap: 10px; }
+        .wa-csm-select { background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 4px; font-size: 12px; outline: none; cursor: pointer; width: 140px; }
+        .wa-csm-slider { width: 100px; accent-color: #26a69a; }
+        .wa-color-swatch { width: 26px; height: 26px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; transition: 0.2s; background: transparent; }
+        .wa-color-swatch:hover { border-color: #00F0FF; box-shadow: 0 0 5px rgba(0,240,255,0.3); }
+        .wa-switch { position: relative; display: inline-block; width: 36px; height: 20px; }
         .wa-switch input { opacity: 0; width: 0; height: 0; }
-        .wa-slider {
-            position: absolute; cursor: pointer; inset: 0;
-            background: rgba(255,255,255,0.08); transition: .18s; border-radius: 18px;
-        }
-        .wa-slider:before {
-            position: absolute; content: ""; height: 12px; width: 12px;
-            left: 3px; bottom: 3px; background: #5d606b; transition: .18s; border-radius: 50%;
-        }
-        input:checked + .wa-slider { background: rgba(38,166,154,0.25); }
-        input:checked + .wa-slider:before { transform: translateX(16px); background: #26a69a; }
-
-        /* COLOR SWATCH */
-        .wa-color-swatch {
-            width: 24px; height: 24px; border-radius: 4px;
-            border: 1.5px solid rgba(255,255,255,0.12);
-            cursor: pointer; transition: 0.14s; flex-shrink: 0; position: relative;
-        }
-        .wa-color-swatch:hover {
-            border-color: #00F0FF;
-            box-shadow: 0 0 7px rgba(0,240,255,0.35);
-            transform: scale(1.08);
-        }
-        .wa-swatch-group { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-        .wa-swatch-lbl { font-size: 9.5px; color: #5d606b; }
-
-        /* PRESET */
-        .wa-preset-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-        .wa-preset-btn {
-            padding: 6px 4px; border-radius: 5px;
-            border: 1px solid rgba(255,255,255,0.07);
-            background: rgba(255,255,255,0.02);
-            color: #848e9c; font-size: 11px; cursor: pointer; transition: 0.14s; text-align: center;
-        }
-        .wa-preset-btn:hover { border-color: #26a69a; color: #26a69a; background: rgba(38,166,154,0.1); }
-        .wa-preset-btn.active-preset { border-color: #26a69a; color: #26a69a; background: rgba(38,166,154,0.15); }
-
-        /* ACTION BUTTONS */
-        .wa-action-row { display: flex; gap: 8px; }
-        .wa-action-btn {
-            flex: 1; padding: 8px 10px; border-radius: 5px;
-            font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.14s;
-            display: flex; align-items: center; justify-content: center; gap: 6px;
-        }
-        .wa-btn-danger  { background:rgba(246,70,93,0.08);  color:#F6465D; border:1px solid rgba(246,70,93,0.2); }
-        .wa-btn-danger:hover  { background:rgba(246,70,93,0.18); }
-        .wa-btn-neutral { background:rgba(255,255,255,0.04); color:#b7bdc6; border:1px solid rgba(255,255,255,0.09); }
-        .wa-btn-neutral:hover { background:rgba(255,255,255,0.09); color:#EAECEF; }
-        .wa-btn-primary { background:rgba(38,166,154,0.1);  color:#26a69a; border:1px solid rgba(38,166,154,0.25); }
-        .wa-btn-primary:hover { background:rgba(38,166,154,0.2); }
-
-        /* INFO BOX */
-        .wa-info-box {
-            background: rgba(240,185,11,0.07); border: 1px dashed rgba(240,185,11,0.25);
-            padding: 9px 12px; border-radius: 6px; font-size: 11px; color: #F0B90B; line-height: 1.6;
-        }
-        .wa-success-box {
-            background: rgba(14,203,129,0.07); border: 1px dashed rgba(14,203,129,0.25);
-            padding: 9px 12px; border-radius: 6px; font-size: 11px; color: #0ECB81; line-height: 1.6;
-        }
-
-        /* ── COLOR PICKER ── */
-        #wa-color-picker {
-            display: none; position: fixed;
-            background: #1a1d29; border: 1px solid #2a2e3e;
-            border-radius: 10px; padding: 13px;
-            z-index: 99999999; box-shadow: 0 18px 50px rgba(0,0,0,0.85); width: 238px;
-        }
-        .wcp-preview {
-            height: 26px; border-radius: 5px; margin-bottom: 10px;
-            border: 1px solid rgba(255,255,255,0.08); transition: background 0.08s;
-        }
-        .wcp-section-lbl { font-size: 9.5px; font-weight: 800; color: #3d4450; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 5px; }
-        .wcp-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-bottom: 10px; }
-        .wcp-cell {
-            width: 20px; height: 20px; border-radius: 3px;
-            cursor: pointer; border: 1.5px solid transparent; transition: 0.1s;
-        }
-        .wcp-cell:hover { border-color: rgba(255,255,255,0.6); transform: scale(1.12); }
-        .wcp-cell.sel { border-color: #fff; }
-        .wcp-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
-        .wcp-lbl { font-size: 10px; color: #4a5568; font-weight: 700; min-width: 44px; }
-        .wcp-hex {
-            flex: 1; background: #0d1017; border: 1px solid #2a2e3e; color: #EAECEF;
-            padding: 4px 8px; border-radius: 4px;
-            font-family: 'JetBrains Mono', monospace; font-size: 11.5px; outline: none;
-        }
-        .wcp-hex:focus { border-color: #26a69a; }
-        .wcp-native { width: 30px; height: 26px; padding: 0; border: none; border-radius: 3px; cursor: pointer; background: none; overflow: hidden; }
-        .wcp-opacity { flex: 1; accent-color: #26a69a; height: 3px; }
-        .wcp-op-val { font-size: 11px; color: #848e9c; min-width: 32px; text-align: right; font-variant-numeric: tabular-nums; }
-        .wcp-recent { display: flex; flex-wrap: wrap; gap: 3px; }
-        .wcp-rcell { width: 17px; height: 17px; border-radius: 3px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); transition: 0.1s; }
-        .wcp-rcell:hover { border-color: #fff; transform: scale(1.1); }
+        .wa-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .2s; border-radius: 20px; }
+        .wa-slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: #848e9c; transition: .2s; border-radius: 50%; }
+        input:checked + .wa-slider { background-color: rgba(38,166,154,0.3); }
+        input:checked + .wa-slider:before { transform: translateX(16px); background-color: #26a69a; }
+        .wa-csm-divider { font-size: 11px; font-weight: 800; color: #527c82; text-transform: uppercase; margin-top: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; }
+        #wa-color-picker { display: none; position: fixed; background: #1e222d; border: 1px solid #363c4e; border-radius: 8px; padding: 12px; z-index: 99999999; box-shadow: 0 10px 30px rgba(0,0,0,0.8); width: 220px; }
+        .wcp-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-bottom: 12px; }
+        .wcp-cell { width: 18px; height: 18px; border-radius: 3px; cursor: pointer; border: 1px solid transparent; transition: 0.1s; }
+        .wcp-cell:hover { border-color: #fff; transform: scale(1.1); }
+        .wcp-hex-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .wcp-hex-input { flex: 1; background: #131722; border: 1px solid #363c4e; color: #EAECEF; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 12px; outline: none; }
+        .wcp-opacity-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #848e9c; }
+        .wcp-opacity-slider { flex: 1; accent-color: #26a69a; }
     `;
     document.head.appendChild(style);
 
-    // ─── HTML ────────────────────────────────────────────────────────────
-    document.body.insertAdjacentHTML('beforeend', `
-        <div id="wa-csm-backdrop"></div>
+    const modalHTML = `
         <div id="wa-chart-settings-modal">
-        <div class="wa-csm-box" id="wa-csm-box">
-
-            <div class="wa-csm-sidebar">
-                <div class="wa-csm-sidebar-lbl">Biểu đồ</div>
-                <div class="wa-csm-tab active" data-tab="csm-symbol">📊 Biểu Tượng</div>
-                <div class="wa-csm-tab" data-tab="csm-status">🔖 Trạng Thái</div>
-                <div class="wa-csm-tab-sep"></div>
-                <div class="wa-csm-sidebar-lbl">Hiển thị</div>
-                <div class="wa-csm-tab" data-tab="csm-appearance">🎨 Giao Diện</div>
-                <div class="wa-csm-tab" data-tab="csm-themes">✨ Chủ Đề</div>
-                <div class="wa-csm-tab-sep"></div>
-                <div class="wa-csm-sidebar-lbl">Hệ thống</div>
-                <div class="wa-csm-tab" data-tab="csm-pro">⚡ Nâng Cao</div>
-            </div>
-
-            <div class="wa-csm-content">
-                <div class="wa-csm-header">
-                    <div class="wa-csm-title">⚙️ Cài đặt Biểu đồ</div>
-                    <div class="wa-csm-close" id="btn-wa-csm-close">✕</div>
+            <div class="wa-csm-box" id="wa-csm-box">
+                <div class="wa-csm-sidebar">
+                    <div class="wa-csm-tab active" data-tab="csm-symbol">Biểu Tượng</div>
+                    <div class="wa-csm-tab" data-tab="csm-status">Trạng Thái</div>
+                    <div class="wa-csm-tab" data-tab="csm-appearance">Giao Diện</div>
+                    <div class="wa-csm-tab" data-tab="csm-pro">Nâng Cao</div>
                 </div>
-                <div class="wa-csm-panels">
-
-                    <div id="csm-symbol" class="wa-csm-panel active">
-                        <div class="wa-csm-row">
-                            <div class="wa-csm-label">Loại biểu đồ</div>
-                            <select class="wa-csm-select" data-bind="chartType" data-type="number">
-                                <option value="1">🕯 Nến Nhật (Candle)</option>
-                                <option value="2">🕯 Nến Rỗng (Hollow)</option>
-                                <option value="3">▮ Thanh OHLC (Bars)</option>
-                                <option value="4">▊ Cột (Columns)</option>
-                                <option value="5">↕ Đỉnh-Đáy (H-L)</option>
-                                <option value="6">╱ Đường (Line)</option>
-                                <option value="7">╱● Đường + Điểm</option>
-                                <option value="8">⌐ Bậc Thang (Step)</option>
-                                <option value="9">◭ Vùng (Area)</option>
-                                <option value="10">◬ Vùng HLC (Pro)</option>
-                                <option value="11">≈ Đường Cơ Sở (Baseline)</option>
-                            </select>
-                        </div>
-
-                        <div id="csm-ui-candles" style="display:flex; flex-direction:column; gap:13px;">
-                            <div class="wa-csm-divider">Màu thân nến</div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">Tăng / Giảm</div>
-                                <div class="wa-csm-control">
-                                    <div class="wa-swatch-group"><div class="wa-color-swatch" data-color-bind="upColor"></div><div class="wa-swatch-lbl">Tăng</div></div>
-                                    <div class="wa-swatch-group"><div class="wa-color-swatch" data-color-bind="downColor"></div><div class="wa-swatch-lbl">Giảm</div></div>
+                <div class="wa-csm-content">
+                    <div class="wa-csm-header">
+                        <div class="wa-csm-title">Cài đặt Biểu đồ</div>
+                        <div class="wa-csm-close" id="btn-wa-csm-close">✖</div>
+                    </div>
+                    <div class="wa-csm-panels">
+                        <div id="csm-symbol" class="wa-csm-panel active">
+                            <div class="wa-csm-row"><div class="wa-csm-label">Loại biểu đồ</div><select class="wa-csm-select" data-bind="chartType" id="csm-chart-type" data-type="number"><option value="1">Nến Nhật</option><option value="2">Nến Rỗng</option><option value="3">Thanh (Bars)</option><option value="6">Đường (Line)</option><option value="9">Vùng (Area)</option></select></div>
+                            <div class="wa-csm-divider">Màu sắc</div>
+                            
+                            <div id="csm-ui-candles" style="display:flex; flex-direction:column; gap:20px;">
+                                <div class="wa-csm-row"><div class="wa-csm-label">Thân nến (Body)</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="upColor"></div><div class="wa-color-swatch" data-color-bind="downColor"></div></div></div>
+                                
+                                <div class="wa-csm-row">
+                                    <div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="showBorder"><span class="wa-slider"></span></label> Viền (Borders)</div>
+                                    <div class="wa-csm-control">
+                                        <label class="wa-switch" title="Màu độc lập"><input type="checkbox" data-bind="borderIndependent"><span class="wa-slider"></span></label>
+                                        <div id="csm-border-swatches" style="display:flex; gap:10px; opacity:0.5; pointer-events:none;">
+                                            <div class="wa-color-swatch" data-color-bind="borderUpColor"></div><div class="wa-color-swatch" data-color-bind="borderDownColor"></div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="wa-csm-divider">Viền nến (Border)</div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">
-                                    <label class="wa-switch"><input type="checkbox" data-bind="showBorder"><span class="wa-slider"></span></label>
-                                    Hiện viền
-                                </div>
-                                <div class="wa-csm-control">
-                                    <span style="font-size:11px; color:#5d606b;">Màu riêng</span>
-                                    <label class="wa-switch"><input type="checkbox" data-bind="borderIndependent"><span class="wa-slider"></span></label>
-                                    <div id="csm-border-swatches" style="display:flex;gap:6px;opacity:0.35;pointer-events:none;transition:0.2s;">
-                                        <div class="wa-color-swatch" data-color-bind="borderUpColor"></div>
-                                        <div class="wa-color-swatch" data-color-bind="borderDownColor"></div>
+
+                                <div class="wa-csm-row">
+                                    <div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="showWick"><span class="wa-slider"></span></label> Bóng nến (Wicks)</div>
+                                    <div class="wa-csm-control">
+                                        <label class="wa-switch" title="Màu độc lập"><input type="checkbox" data-bind="wickIndependent"><span class="wa-slider"></span></label>
+                                        <div id="csm-wick-swatches" style="display:flex; gap:10px; opacity:0.5; pointer-events:none;">
+                                            <div class="wa-color-swatch" data-color-bind="wickUpColor"></div><div class="wa-color-swatch" data-color-bind="wickDownColor"></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="wa-csm-divider">Bóng nến (Wick)</div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">
-                                    <label class="wa-switch"><input type="checkbox" data-bind="showWick"><span class="wa-slider"></span></label>
-                                    Hiện bóng
-                                </div>
-                                <div class="wa-csm-control">
-                                    <span style="font-size:11px; color:#5d606b;">Màu riêng</span>
-                                    <label class="wa-switch"><input type="checkbox" data-bind="wickIndependent"><span class="wa-slider"></span></label>
-                                    <div id="csm-wick-swatches" style="display:flex;gap:6px;opacity:0.35;pointer-events:none;transition:0.2s;">
-                                        <div class="wa-color-swatch" data-color-bind="wickUpColor"></div>
-                                        <div class="wa-color-swatch" data-color-bind="wickDownColor"></div>
-                                    </div>
-                                </div>
+
+                            <div id="csm-ui-lines" style="display:none; flex-direction:column; gap:20px;">
+                                <div class="wa-csm-row"><div class="wa-csm-label">Màu Đường / Vùng</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="upColor"></div></div></div>
                             </div>
+
+                            <div class="wa-csm-divider">Trục Y</div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Thang đo giá</div><select class="wa-csm-select" data-bind="yAxisMode"><option value="normal">Bình thường</option><option value="percentage">Phần trăm (%)</option><option value="log">Logarit</option></select></div>
+                        </div>
+                        
+                        <div id="csm-status" class="wa-csm-panel">
+                            <div class="wa-csm-row"><div class="wa-csm-label">OHLC Values</div><label class="wa-switch"><input type="checkbox" data-bind="showOHLC"><span class="wa-slider"></span></label></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Đếm ngược (Countdown)</div><label class="wa-switch"><input type="checkbox" data-bind="showCountdown"><span class="wa-slider"></span></label></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Đường giá Last Price</div><label class="wa-switch"><input type="checkbox" data-bind="showLastPriceLine"><span class="wa-slider"></span></label></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Nhãn High/Low</div><label class="wa-switch"><input type="checkbox" data-bind="showHighLowTags"><span class="wa-slider"></span></label></div>
+                            <div class="wa-csm-divider">Watermark</div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Hiển thị Dấu chìm</div><div class="wa-csm-control"><input type="range" class="wa-csm-slider" min="0" max="0.3" step="0.01" data-bind="watermarkOpacity"><label class="wa-switch"><input type="checkbox" data-bind="showWatermark"><span class="wa-slider"></span></label></div></div>
                         </div>
 
-                        <div id="csm-ui-lines" style="display:none; flex-direction:column; gap:13px;">
-                            <div class="wa-csm-divider">Màu đường</div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label" id="lbl-line-color">Màu đường</div>
-                                <div class="wa-csm-control">
-                                    <div class="wa-color-swatch" data-color-bind="upColor"></div>
-                                    <div class="wa-color-swatch" id="swatch-line-down" data-color-bind="downColor" style="display:none;"></div>
-                                </div>
-                            </div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">Độ dày <span class="wa-hint">1–5 px</span></div>
-                                <div class="wa-csm-control">
-                                    <div class="wa-slider-wrap">
-                                        <input type="range" class="wa-csm-slider" min="1" max="5" step="0.5" data-bind="lineWidth" data-type="number">
-                                        <span class="wa-slider-badge" data-val-key="lineWidth">2px</span>
-                                    </div>
-                                </div>
-                            </div>
+                        <div id="csm-appearance" class="wa-csm-panel">
+                            <div class="wa-csm-row"><div class="wa-csm-label">Kiểu nền</div><div class="wa-csm-control"><select class="wa-csm-select" data-bind="bgType" id="csm-bg-type" style="width:100px;"><option value="solid">Đơn sắc</option><option value="gradient">Gradient</option></select><div class="wa-color-swatch" data-color-bind="bgColor"></div><div class="wa-color-swatch" data-color-bind="bgColor2" id="csm-bg2-swatch" style="display:none;"></div></div></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Lưới dọc</div><label class="wa-switch"><input type="checkbox" data-bind="gridVertical"><span class="wa-slider"></span></label></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Lưới ngang</div><label class="wa-switch"><input type="checkbox" data-bind="gridHorizontal"><span class="wa-slider"></span></label></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Màu Lưới</div><div class="wa-color-swatch" data-color-bind="gridColor"></div></div>
+                            <div class="wa-csm-divider">Trục & Không gian</div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Tâm ngắm</div><select class="wa-csm-select" data-bind="crosshairMode"><option value="normal">Bình thường</option><option value="hidden">Ẩn</option></select></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Lề phải (Nến)</div><input type="range" class="wa-csm-slider" min="0" max="50" step="1" data-bind="rightMargin" data-type="number"></div>
                         </div>
-
-                        <div id="csm-ui-step" style="display:none; flex-direction:column; gap:13px;">
-                            <div class="wa-csm-divider">Cài đặt bậc thang</div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">
-                                    <label class="wa-switch"><input type="checkbox" data-bind="stepLineSingleColor"><span class="wa-slider"></span></label>
-                                    Dùng 1 màu liền mạch
-                                </div>
-                            </div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">Màu tăng / 1 màu</div>
-                                <div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="upColor"></div></div>
-                            </div>
-                            <div class="wa-csm-row" id="row-step-down">
-                                <div class="wa-csm-label">Màu đoạn giảm</div>
-                                <div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="downColor"></div></div>
-                            </div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">Độ dày <span class="wa-hint">1–5 px</span></div>
-                                <div class="wa-csm-control">
-                                    <div class="wa-slider-wrap">
-                                        <input type="range" class="wa-csm-slider" min="1" max="5" step="0.5" data-bind="lineWidth" data-type="number">
-                                        <span class="wa-slider-badge" data-val-key="lineWidth">2px</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="csm-ui-hlc" style="display:none; flex-direction:column; gap:13px;">
-                            <div class="wa-csm-divider">Đường Close</div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">Màu đường Close</div>
-                                <div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="hlcCloseColor"></div></div>
-                            </div>
-                            <div class="wa-csm-divider">Viền đỉnh / đáy</div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">
-                                    <label class="wa-switch"><input type="checkbox" data-bind="hlcShowHighLow"><span class="wa-slider"></span></label>
-                                    Hiện viền H-L
-                                </div>
-                                <div class="wa-csm-control">
-                                    <div class="wa-swatch-group"><div class="wa-color-swatch" data-color-bind="hlcHighColor"></div><div class="wa-swatch-lbl">High</div></div>
-                                    <div class="wa-swatch-group"><div class="wa-color-swatch" data-color-bind="hlcLowColor"></div><div class="wa-swatch-lbl">Low</div></div>
-                                </div>
-                            </div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">Độ mờ viền</div>
-                                <div class="wa-csm-control"><div class="wa-slider-wrap">
-                                    <input type="range" class="wa-csm-slider" min="0" max="1" step="0.05" data-bind="hlcHighLowOpacity" data-type="number">
-                                    <span class="wa-slider-badge" data-val-key="hlcHighLowOpacity">0.35</span>
-                                </div></div>
-                            </div>
-                            <div class="wa-csm-divider">Vùng nền</div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">Nền trên / dưới</div>
-                                <div class="wa-csm-control">
-                                    <div class="wa-swatch-group"><div class="wa-color-swatch" data-color-bind="hlcUpFillColor"></div><div class="wa-swatch-lbl">Trên</div></div>
-                                    <div class="wa-swatch-group"><div class="wa-color-swatch" data-color-bind="hlcDownFillColor"></div><div class="wa-swatch-lbl">Dưới</div></div>
-                                </div>
-                            </div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">Độ mờ nền</div>
-                                <div class="wa-csm-control"><div class="wa-slider-wrap">
-                                    <input type="range" class="wa-csm-slider" min="0" max="0.6" step="0.05" data-bind="hlcFillOpacity" data-type="number">
-                                    <span class="wa-slider-badge" data-val-key="hlcFillOpacity">0.15</span>
-                                </div></div>
-                            </div>
-                        </div>
-
-                        <div id="csm-ui-baseline" style="display:none; flex-direction:column; gap:13px;">
-                            <div class="wa-csm-divider">Màu đường & nền</div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">Nửa trên (Tăng)</div>
-                                <div class="wa-csm-control">
-                                    <div class="wa-swatch-group"><div class="wa-color-swatch" data-color-bind="baselineUpColor"></div><div class="wa-swatch-lbl">Đường</div></div>
-                                    <div class="wa-swatch-group"><div class="wa-color-swatch" data-color-bind="baselineUpFill"></div><div class="wa-swatch-lbl">Nền</div></div>
-                                </div>
-                            </div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">Nửa dưới (Giảm)</div>
-                                <div class="wa-csm-control">
-                                    <div class="wa-swatch-group"><div class="wa-color-swatch" data-color-bind="baselineDownColor"></div><div class="wa-swatch-lbl">Đường</div></div>
-                                    <div class="wa-swatch-group"><div class="wa-color-swatch" data-color-bind="baselineDownFill"></div><div class="wa-swatch-lbl">Nền</div></div>
-                                </div>
-                            </div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">Độ mờ nền chung</div>
-                                <div class="wa-csm-control"><div class="wa-slider-wrap">
-                                    <input type="range" class="wa-csm-slider" min="0" max="0.6" step="0.05" data-bind="baselineFillOpacity" data-type="number">
-                                    <span class="wa-slider-badge" data-val-key="baselineFillOpacity">0.20</span>
-                                </div></div>
-                            </div>
-                            <div class="wa-csm-divider">Thông số Baseline</div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">Mức cơ sở <span class="wa-hint">0–100%</span></div>
-                                <div class="wa-csm-control">
-                                    <div class="wa-slider-wrap">
-                                        <input type="range" class="wa-csm-slider" min="0" max="100" step="1" data-bind="baselineValue" data-type="number">
-                                        <span class="wa-slider-badge" data-val-key="baselineValue">50%</span>
-                                    </div>
-                                    <input type="number" class="wa-csm-input-num" min="0" max="100" data-bind="baselineValue" data-type="number">
-                                </div>
-                            </div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">Nguồn giá</div>
-                                <select class="wa-csm-select" data-bind="baselinePriceSource">
-                                    <option value="close">Đóng cửa (Close)</option>
-                                    <option value="hl2">TB High+Low ÷ 2</option>
-                                    <option value="ohlc4">TB toàn phần OHLC÷4</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="wa-csm-divider">Trục giá (Y-Axis)</div>
-                        <div class="wa-csm-row">
-                            <div class="wa-csm-label">Thang đo</div>
-                            <select class="wa-csm-select" data-bind="yAxisMode">
-                                <option value="normal">Bình thường</option>
-                                <option value="percentage">Phần trăm (%)</option>
-                                <option value="log">Logarit (Log)</option>
-                            </select>
+                        <div id="csm-pro" class="wa-csm-panel">
+                            <div style="background: rgba(240,185,11,0.1); border: 1px dashed rgba(240,185,11,0.3); padding: 10px; border-radius: 6px; font-size: 11px; color: #F0B90B; margin-bottom: 10px;">🚀 Dự phòng cho Phase 4.</div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">PAC Coloring</div><label class="wa-switch"><input type="checkbox" data-bind="pacColoring"><span class="wa-slider"></span></label></div>
                         </div>
                     </div>
-
-                    <div id="csm-status" class="wa-csm-panel">
-                        <div class="wa-csm-divider">Thông tin trên biểu đồ</div>
-                        <div class="wa-csm-row"><div class="wa-csm-label">Dữ liệu OHLCV</div><label class="wa-switch"><input type="checkbox" data-bind="showOHLC"><span class="wa-slider"></span></label></div>
-                        <div class="wa-csm-row"><div class="wa-csm-label">Đếm ngược (Countdown)</div><label class="wa-switch"><input type="checkbox" data-bind="showCountdown"><span class="wa-slider"></span></label></div>
-                        <div class="wa-csm-row"><div class="wa-csm-label">Đường giá hiện tại</div><label class="wa-switch"><input type="checkbox" data-bind="showLastPriceLine"><span class="wa-slider"></span></label></div>
-                        <div class="wa-csm-row"><div class="wa-csm-label">Nhãn High / Low</div><label class="wa-switch"><input type="checkbox" data-bind="showHighLowTags"><span class="wa-slider"></span></label></div>
-
-                        <div class="wa-csm-divider">Watermark (Dấu chìm)</div>
-                        <div class="wa-csm-row">
-                            <div class="wa-csm-label">
-                                <label class="wa-switch"><input type="checkbox" data-bind="showWatermark"><span class="wa-slider"></span></label>
-                                Hiện watermark
-                            </div>
-                            <div class="wa-csm-control"><div class="wa-slider-wrap">
-                                <input type="range" class="wa-csm-slider" min="0" max="0.3" step="0.01" data-bind="watermarkOpacity" data-type="number">
-                                <span class="wa-slider-badge" data-val-key="watermarkOpacity">0.05</span>
-                            </div></div>
-                        </div>
-
-                        <div class="wa-csm-divider">Crosshair</div>
-                        <div class="wa-csm-row">
-                            <div class="wa-csm-label">Tâm ngắm</div>
-                            <select class="wa-csm-select" data-bind="crosshairMode">
-                                <option value="normal">Bình thường</option>
-                                <option value="hidden">Ẩn hoàn toàn</option>
-                            </select>
-                        </div>
-
-                        <div class="wa-csm-divider">Múi giờ</div>
-                        <div class="wa-csm-row">
-                            <div class="wa-csm-label">Timezone</div>
-                            <select class="wa-csm-select" data-bind="timezone">
-                                <option value="Asia/Ho_Chi_Minh">🇻🇳 Hồ Chí Minh (UTC+7)</option>
-                                <option value="Asia/Singapore">🇸🇬 Singapore (UTC+8)</option>
-                                <option value="Asia/Tokyo">🇯🇵 Tokyo (UTC+9)</option>
-                                <option value="Asia/Seoul">🇰🇷 Seoul (UTC+9)</option>
-                                <option value="Asia/Shanghai">🇨🇳 Shanghai (UTC+8)</option>
-                                <option value="Europe/London">🇬🇧 London (UTC+0)</option>
-                                <option value="America/New_York">🇺🇸 New York (UTC-5)</option>
-                                <option value="UTC">🌐 UTC</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div id="csm-appearance" class="wa-csm-panel">
-                        <div class="wa-csm-divider">Nền biểu đồ</div>
-                        <div class="wa-csm-row">
-                            <div class="wa-csm-label">Kiểu nền</div>
-                            <div class="wa-csm-control">
-                                <select class="wa-csm-select" data-bind="bgType" id="csm-bg-type" style="width:110px;">
-                                    <option value="solid">Đơn sắc</option>
-                                    <option value="gradient">Gradient</option>
-                                </select>
-                                <div class="wa-swatch-group"><div class="wa-color-swatch" data-color-bind="bgColor"></div><div class="wa-swatch-lbl">Màu 1</div></div>
-                                <div class="wa-swatch-group" id="csm-bg2-wrap" style="display:none;">
-                                    <div class="wa-color-swatch" data-color-bind="bgColor2"></div>
-                                    <div class="wa-swatch-lbl">Màu 2</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="wa-csm-divider">Lưới (Grid)</div>
-                        <div class="wa-csm-row">
-                            <div class="wa-csm-label">Lưới dọc</div>
-                            <label class="wa-switch"><input type="checkbox" data-bind="gridVertical"><span class="wa-slider"></span></label>
-                        </div>
-                        <div class="wa-csm-row">
-                            <div class="wa-csm-label">Lưới ngang</div>
-                            <label class="wa-switch"><input type="checkbox" data-bind="gridHorizontal"><span class="wa-slider"></span></label>
-                        </div>
-                        <div class="wa-csm-row">
-                            <div class="wa-csm-label">Màu lưới</div>
-                            <div class="wa-color-swatch" data-color-bind="gridColor"></div>
-                        </div>
-
-                        <div class="wa-csm-divider">Không gian biểu đồ</div>
-                        <div class="wa-csm-row">
-                            <div class="wa-csm-label">Lề phải <span class="wa-hint">nến</span></div>
-                            <div class="wa-csm-control"><div class="wa-slider-wrap">
-                                <input type="range" class="wa-csm-slider" min="0" max="50" step="1" data-bind="rightMargin" data-type="number">
-                                <span class="wa-slider-badge" data-val-key="rightMargin">10</span>
-                            </div></div>
-                        </div>
-                    </div>
-
-                    <div id="csm-themes" class="wa-csm-panel">
-                        <div class="wa-csm-divider">Chủ đề nhanh (1 click)</div>
-                        <div class="wa-preset-grid" id="csm-preset-grid"></div>
-
-                        <div class="wa-csm-divider" style="margin-top:4px;">Màu đang dùng</div>
-                        <div class="wa-csm-group">
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">Tăng (Up)</div>
-                                <div class="wa-csm-control">
-                                    <div class="wa-color-swatch" data-color-bind="upColor"></div>
-                                    <code id="preview-upColor" style="font-size:11px;color:#26a69a;font-family:monospace;">#0ECB81</code>
-                                </div>
-                            </div>
-                            <div class="wa-csm-row">
-                                <div class="wa-csm-label">Giảm (Down)</div>
-                                <div class="wa-csm-control">
-                                    <div class="wa-color-swatch" data-color-bind="downColor"></div>
-                                    <code id="preview-downColor" style="font-size:11px;color:#F6465D;font-family:monospace;">#F6465D</code>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="wa-csm-divider">Sao lưu & khôi phục</div>
-                        <div class="wa-action-row">
-                            <button class="wa-action-btn wa-btn-neutral" id="wa-btn-export-cfg">📤 Xuất JSON</button>
-                            <button class="wa-action-btn wa-btn-neutral" id="wa-btn-import-cfg">📥 Nhập JSON</button>
-                        </div>
-                        <input type="file" id="wa-import-file" accept=".json" style="display:none;">
-                    </div>
-
-                    <div id="csm-pro" class="wa-csm-panel">
-                        <div class="wa-info-box">⚡ Tính năng thực nghiệm — dành cho người dùng chuyên nghiệp.</div>
-                        <div class="wa-csm-divider">Màu sắc nâng cao</div>
-                        <div class="wa-csm-row">
-                            <div class="wa-csm-label">PAC Coloring <span class="wa-hint">Beta</span></div>
-                            <label class="wa-switch"><input type="checkbox" data-bind="pacColoring"><span class="wa-slider"></span></label>
-                        </div>
-                        <div class="wa-csm-row">
-                            <div class="wa-csm-label">Volume Overlay <span class="wa-hint">Beta</span></div>
-                            <label class="wa-switch"><input type="checkbox" data-bind="volumeOverlay"><span class="wa-slider"></span></label>
-                        </div>
-                        <div class="wa-csm-row">
-                            <div class="wa-csm-label">Abnormal Vol Color</div>
-                            <label class="wa-switch"><input type="checkbox" data-bind="abnormalVolColoring"><span class="wa-slider"></span></label>
-                        </div>
-                        <div class="wa-csm-divider" style="color:#F6465D; border-color:rgba(246,70,93,0.15);">⚠️ Nguy hiểm</div>
-                        <div class="wa-action-row">
-                            <button class="wa-action-btn wa-btn-danger" id="wa-btn-reset-cfg">🔄 Khôi phục mặc định</button>
-                        </div>
-                    </div>
-
-                </div></div></div></div><div id="wa-color-picker">
-            <div class="wcp-preview" id="wcp-preview"></div>
-            <div class="wcp-section-lbl">Palette</div>
-            <div class="wcp-grid" id="wcp-palette"></div>
-            <div class="wcp-row">
-                <span class="wcp-lbl">HEX</span>
-                <input class="wcp-hex" id="wcp-hex" maxlength="7" placeholder="#000000">
-                <input type="color" class="wcp-native" id="wcp-native">
-            </div>
-            <div class="wcp-row">
-                <span class="wcp-lbl">Opacity</span>
-                <input type="range" class="wcp-opacity" id="wcp-opacity" min="0" max="1" step="0.01" value="1">
-                <span class="wcp-op-val" id="wcp-op-val">100%</span>
-            </div>
-            <div id="wcp-recent-section" style="display:none;">
-                <div class="wcp-section-lbl" style="margin-top:6px;">Gần đây</div>
-                <div class="wcp-recent" id="wcp-recent"></div>
+                </div>
             </div>
         </div>
-    `);
+    `;
+    
+    const pickerHTML = `
+        <div id="wa-color-picker">
+            <div class="wcp-grid" id="wcp-palette"></div>
+            <div class="wcp-hex-row"><span style="font-size:11px; color:#848e9c; font-weight:bold;">HEX</span><input type="text" class="wcp-hex-input" id="wcp-hex" maxlength="9"></div>
+            <div class="wcp-opacity-row"><span>OPACITY</span><input type="range" class="wcp-opacity-slider" id="wcp-opacity" min="0" max="1" step="0.05" value="1"></div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML + pickerHTML);
 
-    // ─── DOM refs ────────────────────────────────────────────────────────
-    const backdrop    = document.getElementById('wa-csm-backdrop');
-    const modal       = document.getElementById('wa-chart-settings-modal');
-    const modalBox    = document.getElementById('wa-csm-box');
-    const header      = modal.querySelector('.wa-csm-header');
-    const cp          = document.getElementById('wa-color-picker');
-    const cpPreview   = document.getElementById('wcp-preview');
-    const hexInp      = document.getElementById('wcp-hex');
-    const nativeInp   = document.getElementById('wcp-native');
-    const opSlider    = document.getElementById('wcp-opacity');
-    const opValEl     = document.getElementById('wcp-op-val');
-    const palette     = document.getElementById('wcp-palette');
+    const modal = document.getElementById('wa-chart-settings-modal');
+    const modalBox = document.getElementById('wa-csm-box');
+    const header = modal.querySelector('.wa-csm-header');
+    const colorPicker = document.getElementById('wa-color-picker');
 
-    let activeSwatch = null, activeKey = null;
-    let recentColors = [];
-    try { recentColors = JSON.parse(localStorage.getItem('_wa_rcols') || '[]'); } catch(e){}
+    let isDragging = false, startX, startY, initLeft, initTop;
+    header.addEventListener('mousedown', (e) => {
+        isDragging = true; startX = e.clientX; startY = e.clientY;
+        const rect = modalBox.getBoundingClientRect();
+        initLeft = rect.left; initTop = rect.top;
+        modalBox.style.transform = 'none'; modalBox.style.left = initLeft + 'px'; modalBox.style.top = initTop + 'px';
+        document.body.style.userSelect = 'none'; 
+    });
+    window.addEventListener('mousemove', (e) => { if (!isDragging) return; modalBox.style.left = (initLeft + e.clientX - startX) + 'px'; modalBox.style.top = (initTop + e.clientY - startY) + 'px'; });
+    window.addEventListener('mouseup', () => { isDragging = false; document.body.style.userSelect = ''; });
 
-    // ─── COLOR UTILS ─────────────────────────────────────────────────────
-    const rgb2hex = (s) => {
-        if (!s || (!s.startsWith('rgb') && !s.startsWith('rgba'))) return s || '#000000';
-        const m = s.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-        if (!m) return '#000000';
-        return '#' + [m[1],m[2],m[3]].map(v => (+v).toString(16).padStart(2,'0')).join('');
-    };
-    const getAlpha = (s) => {
-        if (!s) return 1;
-        const m = s.match(/rgba?\(\d+,\s*\d+,\s*\d+,\s*([\d.]+)\)/);
-        return m ? Math.round(parseFloat(m[1]) * 100) / 100 : 1;
-    };
-    const buildColor = (hex, op) => {
-        if (!hex || hex.length < 7) return hex || '#000000';
-        if (op >= 0.999) return hex;
-        const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-        return `rgba(${r},${g},${b},${op.toFixed(2)})`;
-    };
-
-    // ─── RECENT COLORS ───────────────────────────────────────────────────
-    const syncRecent = () => {
-        const sec = document.getElementById('wcp-recent-section');
-        const el  = document.getElementById('wcp-recent');
-        if (!recentColors.length) { sec.style.display='none'; return; }
-        sec.style.display='block';
-        el.innerHTML = '';
-        recentColors.slice(0,12).forEach(c => {
-            const d = document.createElement('div'); d.className='wcp-rcell'; d.style.background=c; d.title=c;
-            d.onclick = () => { hexInp.value=c; nativeInp.value=c; applyColor(c, parseFloat(opSlider.value)); };
-            el.appendChild(d);
-        });
-    };
-    const addRecent = (hex) => {
-        recentColors = [hex, ...recentColors.filter(c=>c!==hex)].slice(0,12);
-        try { localStorage.setItem('_wa_rcols', JSON.stringify(recentColors)); } catch(e){}
-        syncRecent();
-    };
-
-    // ─── PALETTE BUILD ───────────────────────────────────────────────────
-    PALETTE.forEach(col => {
-        const el = document.createElement('div'); el.className='wcp-cell'; el.style.background=col; el.title=col;
-        el.onclick = () => {
-            palette.querySelectorAll('.wcp-cell').forEach(c=>c.classList.remove('sel')); el.classList.add('sel');
-            hexInp.value=col; nativeInp.value=col; applyColor(col, parseFloat(opSlider.value));
+    const tabs = modal.querySelectorAll('.wa-csm-tab');
+    const panels = modal.querySelectorAll('.wa-csm-panel');
+    tabs.forEach(tab => {
+        tab.onclick = () => {
+            tabs.forEach(t => t.classList.remove('active')); panels.forEach(p => p.classList.remove('active'));
+            tab.classList.add('active'); document.getElementById(tab.dataset.tab).classList.add('active');
         };
-        palette.appendChild(el);
     });
-    syncRecent();
 
-    // ─── APPLY COLOR ─────────────────────────────────────────────────────
-    function applyColor(hex, opacity) {
-        if (!activeSwatch) return;
-        // Fix: chỉ lấy 7 ký tự đầu để bỏ qua alpha hex (nếu có) khi chuyển đổi màu
-        const final = buildColor(hex.slice(0, 7), opacity);
-        activeSwatch.style.background = final;
-        cpPreview.style.background    = final;
-        if (activeKey === 'upColor')   { const el=document.getElementById('preview-upColor');   if(el) el.textContent=final; }
-        if (activeKey === 'downColor') { const el=document.getElementById('preview-downColor'); if(el) el.textContent=final; }
-        modal.querySelectorAll(`.wa-color-swatch[data-color-bind="${activeKey}"]`).forEach(s => s.style.background=final);
-        if (window.WaveChartEngine) window.WaveChartEngine.update({ [activeKey]: final });
-    }
+    const tvColors = ['#ffffff','#d1d4dc','#b2b5be','#848e9c','#5d606b','#363a45','#1e222d','#000000','#f23645','#ff9800','#f0b90b','#089981','#00bcd4','#2962ff','#673ab7','#9c27b0','#f7525f','#ffb74d','#ffe066','#2af592','#4dd0e1','#448aff','#9575cd','#ba68c8','#f98080','#ffcc80','#fff59d','#66bb6a','#80deea','#82b1ff','#b39ddb','#ce93d8'];
+    const palette = document.getElementById('wcp-palette'), hexInp = document.getElementById('wcp-hex'), opSlider = document.getElementById('wcp-opacity');
+    let activeSwatchBtn = null, activeBindKey = null;
 
-    // ─── OPEN PICKER ─────────────────────────────────────────────────────
-    function openPicker(swatch, e) {
-        activeSwatch = swatch; activeKey = swatch.dataset.colorBind;
-        const cur = swatch.style.background || '#0ECB81';
-        const hex = rgb2hex(cur); const op = getAlpha(cur);
-        hexInp.value=hex; nativeInp.value=hex;
-        opSlider.value=op; opValEl.textContent=Math.round(op*100)+'%';
-        cpPreview.style.background = cur;
-        palette.querySelectorAll('.wcp-cell.sel').forEach(c=>c.classList.remove('sel'));
-        const match = palette.querySelector(`.wcp-cell[title="${hex}"]`);
-        if (match) match.classList.add('sel');
-        
-        const r=swatch.getBoundingClientRect(), pw=242, ph=340;
-        let left=r.left, top=r.bottom+8;
-        if (left+pw > window.innerWidth-8)  left = window.innerWidth-pw-8;
-        if (top+ph  > window.innerHeight-8) top  = r.top-ph-8;
-        if (left < 8) left = 8;
-        cp.style.left=left+'px'; cp.style.top=top+'px'; cp.style.display='block';
-        e.stopPropagation();
-    }
-
-    modal.querySelectorAll('.wa-color-swatch').forEach(sw => sw.addEventListener('click', e=>openPicker(sw,e)));
-
-    hexInp.addEventListener('input', e => {
-        const v=e.target.value.trim();
-        if (/^#[0-9A-Fa-f]{6}$/.test(v)) { nativeInp.value=v; applyColor(v, parseFloat(opSlider.value)); }
+    tvColors.forEach(col => {
+        const cell = document.createElement('div'); cell.className = 'wcp-cell'; cell.style.background = col;
+        cell.onclick = () => applyColorToSwatch(col, opSlider.value);
+        palette.appendChild(cell);
     });
-    hexInp.addEventListener('keydown', e => { if(e.key==='Enter'){ addRecent(hexInp.value); cp.style.display='none'; } });
-    nativeInp.addEventListener('input', e => { hexInp.value=e.target.value; applyColor(e.target.value, parseFloat(opSlider.value)); });
-    opSlider.addEventListener('input', e => {
-        const op=parseFloat(e.target.value);
-        opValEl.textContent = Math.round(op*100)+'%';
-        applyColor(hexInp.value, op);
-    });
-    document.addEventListener('click', e => {
-        if (!cp.contains(e.target) && !e.target.classList.contains('wa-color-swatch')) {
-            if (cp.style.display!=='none' && activeSwatch) addRecent(hexInp.value);
-            cp.style.display='none';
+
+    function applyColorToSwatch(hexCode, opacity) {
+        if (!activeSwatchBtn) return;
+        let finalColor = hexCode;
+        if (opacity < 1 && hexCode.startsWith('#')) {
+            let r = parseInt(hexCode.slice(1,3), 16), g = parseInt(hexCode.slice(3,5), 16), b = parseInt(hexCode.slice(5,7), 16);
+            finalColor = `rgba(${r},${g},${b},${opacity})`;
         }
-    });
-
-    // ─── SLIDER BADGES ───────────────────────────────────────────────────
-    const BADGE_FMT = {
-        lineWidth:           v => (+v).toFixed(1)+'px',
-        watermarkOpacity:    v => (+v).toFixed(2),
-        rightMargin:         v => v+' px',
-        hlcHighLowOpacity:   v => (+v).toFixed(2),
-        hlcFillOpacity:      v => (+v).toFixed(2),
-        baselineFillOpacity: v => (+v).toFixed(2),
-        baselineValue:       v => v+'%',
-    };
-    function syncBadges(key, value) {
-        const fmt = BADGE_FMT[key]; if (!fmt) return;
-        modal.querySelectorAll(`[data-val-key="${key}"]`).forEach(el => el.textContent=fmt(value));
+        activeSwatchBtn.style.background = finalColor; hexInp.value = finalColor;
+        if (window.WaveChartEngine) window.WaveChartEngine.update({ [activeBindKey]: finalColor });
     }
 
-    // ─── DYNAMIC UI ──────────────────────────────────────────────────────
-    function updateDynamicUI(cfg) {
-        const t = parseInt(cfg.chartType);
-        const show = (id, vis) => { const el=document.getElementById(id); if(el) el.style.display=vis?'flex':'none'; };
-        show('csm-ui-candles',  [1,2,3,4,5].includes(t));
-        show('csm-ui-lines',    [6,7,9].includes(t));
-        show('csm-ui-step',     t===8);
-        show('csm-ui-hlc',      t===10);
-        show('csm-ui-baseline', t===11);
-
-        const lds = document.getElementById('swatch-line-down');
-        const lbl = document.getElementById('lbl-line-color');
-        if (lds) lds.style.display = t===7 ? 'block' : 'none';
-        if (lbl) lbl.textContent   = t===7 ? 'Đường / Điểm giảm' : 'Màu đường';
-
-        const rsd = document.getElementById('row-step-down');
-        if (rsd) rsd.style.display = cfg.stepLineSingleColor ? 'none' : 'flex';
-
-        const bg2 = document.getElementById('csm-bg2-wrap');
-        if (bg2) bg2.style.display = cfg.bgType==='gradient' ? 'flex' : 'none';
-
-        ['border','wick'].forEach(k => {
-            const el = document.getElementById(`csm-${k}-swatches`);
-            if (!el) return;
-            const on = cfg[k+'Independent'];
-            el.style.opacity       = on ? '1' : '0.35';
-            el.style.pointerEvents = on ? 'auto' : 'none';
-        });
-    }
-
-    // ─── SYNC UI FROM CONFIG ─────────────────────────────────────────────
-    function syncUI(cfg) {
-        modal.querySelectorAll('[data-bind]').forEach(el => {
-            const key=el.dataset.bind; if (cfg[key]===undefined) return;
-            if (el.type==='checkbox') el.checked=!!cfg[key]; else el.value=cfg[key];
-            syncBadges(key, cfg[key]);
-        });
-        modal.querySelectorAll('.wa-color-swatch').forEach(sw => {
-            const key=sw.dataset.colorBind; if(cfg[key]) sw.style.background=cfg[key];
-        });
-        const pu=document.getElementById('preview-upColor'), pd=document.getElementById('preview-downColor');
-        if(pu) pu.textContent=cfg.upColor; if(pd) pd.textContent=cfg.downColor;
-    }
-
-    // ─── DRAG ────────────────────────────────────────────────────────────
-    let drag=false, dx=0, dy=0, ox=0, oy=0;
-    header.addEventListener('mousedown', e => {
-        if (e.target.id==='btn-wa-csm-close') return;
-        drag=true; dx=e.clientX; dy=e.clientY;
-        const r=modalBox.getBoundingClientRect(); ox=r.left; oy=r.top;
-        modalBox.style.transform='none'; modalBox.style.left=ox+'px'; modalBox.style.top=oy+'px';
-        document.body.style.userSelect='none';
-    });
-    window.addEventListener('mousemove', e => { if(!drag) return; modalBox.style.left=(ox+e.clientX-dx)+'px'; modalBox.style.top=(oy+e.clientY-dy)+'px'; });
-    window.addEventListener('mouseup',   () => { drag=false; document.body.style.userSelect=''; });
-
-    // ─── TABS ────────────────────────────────────────────────────────────
-    modal.querySelectorAll('.wa-csm-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            modal.querySelectorAll('.wa-csm-tab').forEach(t=>t.classList.remove('active'));
-            modal.querySelectorAll('.wa-csm-panel').forEach(p=>p.classList.remove('active'));
-            tab.classList.add('active');
-            document.getElementById(tab.dataset.tab).classList.add('active');
-        });
+    modal.querySelectorAll('.wa-color-swatch').forEach(swatch => {
+        swatch.onclick = (e) => {
+            e.stopPropagation(); activeSwatchBtn = swatch; activeBindKey = swatch.dataset.colorBind;
+            let curColor = swatch.style.background || '#ffffff';
+            hexInp.value = curColor.startsWith('rgb') ? curColor : rgb2hex(curColor);
+            const rect = swatch.getBoundingClientRect();
+            colorPicker.style.display = 'block'; colorPicker.style.left = rect.left + 'px'; colorPicker.style.top = (rect.bottom + 10) + 'px';
+        };
     });
 
-    // ─── OPEN / CLOSE ────────────────────────────────────────────────────
+    hexInp.oninput = (e) => applyColorToSwatch(e.target.value, opSlider.value);
+    opSlider.oninput = (e) => applyColorToSwatch(hexInp.value.substring(0,7), e.target.value);
+    document.addEventListener('click', (e) => { if (!colorPicker.contains(e.target) && !e.target.classList.contains('wa-color-swatch')) colorPicker.style.display = 'none'; });
+    function rgb2hex(rgb) { if (rgb.search("rgb") === -1) return rgb; rgb = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/); return "#" + ("0" + parseInt(rgb[1]).toString(16)).slice(-2) + ("0" + parseInt(rgb[2]).toString(16)).slice(-2) + ("0" + parseInt(rgb[3]).toString(16)).slice(-2); }
+
+    function updateDynamicUI(config) {
+        const t = parseInt(config.chartType); const isLineOrArea = (t === 6 || t === 9);
+        document.getElementById('csm-ui-candles').style.display = isLineOrArea ? 'none' : 'flex';
+        document.getElementById('csm-ui-lines').style.display = isLineOrArea ? 'flex' : 'none';
+        document.getElementById('csm-bg2-swatch').style.display = config.bgType === 'gradient' ? 'block' : 'none';
+        
+        // 🚀 BẬT TẮT SỰ KIỆN CLICK CHUẨN XÁC CHO BOX MÀU
+        document.getElementById('csm-wick-swatches').style.opacity = config.wickIndependent ? '1' : '0.5';
+        document.getElementById('csm-wick-swatches').style.pointerEvents = config.wickIndependent ? 'auto' : 'none';
+        document.getElementById('csm-border-swatches').style.opacity = config.borderIndependent ? '1' : '0.5';
+        document.getElementById('csm-border-swatches').style.pointerEvents = config.borderIndependent ? 'auto' : 'none';
+    }
+
     window.openChartSettings = function() {
         if (!window.WaveChartEngine) return;
-        const cfg = window.WaveChartEngine.getConfig();
-        syncUI(cfg); updateDynamicUI(cfg);
-        modalBox.style.transform='translate(-50%,-50%)'; modalBox.style.left='50%'; modalBox.style.top='50%';
-        backdrop.style.display = 'block';
-        modal.style.display    = 'block';
-        
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-            backdrop.classList.add('show');
-            modal.classList.add('show');
-        }));
+        const config = window.WaveChartEngine.getConfig();
+        modal.querySelectorAll('[data-bind]').forEach(el => {
+            const key = el.dataset.bind;
+            if (config[key] !== undefined) { if (el.type === 'checkbox') el.checked = config[key]; else el.value = config[key]; }
+        });
+        modal.querySelectorAll('.wa-color-swatch').forEach(swatch => {
+            const key = swatch.dataset.colorBind; if (config[key]) swatch.style.background = config[key];
+        });
+        modalBox.style.transform = 'translate(-50%, -50%)'; modalBox.style.left = '50%'; modalBox.style.top = '50%';
+        updateDynamicUI(config);
+        modal.classList.add('show');
     };
 
-    function closeModal() {
-        backdrop.classList.remove('show');
-        modal.classList.remove('show');
-        cp.style.display = 'none';
-        setTimeout(() => { backdrop.style.display='none'; modal.style.display='none'; }, 210);
-    }
-
-    document.getElementById('btn-wa-csm-close').addEventListener('click', closeModal);
-    backdrop.addEventListener('click', closeModal);
-    document.addEventListener('keydown', e => { if(e.key==='Escape' && modal.classList.contains('show')) closeModal(); });
-
-    // ─── CHANGE EVENTS ───────────────────────────────────────────────────
+    document.getElementById('btn-wa-csm-close').onclick = () => modal.classList.remove('show');
+    
     modal.querySelectorAll('[data-bind]').forEach(el => {
-        el.addEventListener(el.type==='range' ? 'input' : 'change', () => {
+        const eventType = el.type === 'range' ? 'input' : 'change';
+        el.addEventListener(eventType, (e) => {
             const key = el.dataset.bind;
-            let val = el.type==='checkbox' ? el.checked : el.value;
-            if (el.dataset.type==='number') val = parseFloat(val);
-            if (window.WaveChartEngine) window.WaveChartEngine.update({ [key]: val });
-            syncBadges(key, val);
-            
-            modal.querySelectorAll(`[data-bind="${key}"]`).forEach(linked => {
-                if (linked===el) return;
-                if (linked.type==='checkbox') linked.checked=el.checked;
-                else linked.value=el.value;
-            });
+            let value = el.type === 'checkbox' ? el.checked : el.value;
+            if (el.dataset.type === 'number') value = parseFloat(value);
+            if (window.WaveChartEngine) window.WaveChartEngine.update({ [key]: value });
             updateDynamicUI(window.WaveChartEngine.getConfig());
         });
     });
 
-    // ─── THEME PRESETS ───────────────────────────────────────────────────
-    const pg = document.getElementById('csm-preset-grid');
-    Object.entries(THEMES).forEach(([name, preset]) => {
-        const btn = document.createElement('button'); btn.className='wa-preset-btn';
-        btn.innerHTML=`<div style="display:flex;justify-content:center;gap:3px;margin-bottom:3px;">
-            <div style="width:10px;height:10px;border-radius:2px;background:${preset.upColor};"></div>
-            <div style="width:10px;height:10px;border-radius:2px;background:${preset.downColor};"></div>
-        </div>${name}`;
-        btn.title=`Áp dụng chủ đề: ${name}`;
-        btn.onclick = () => {
-            if (!window.WaveChartEngine) return;
-            window.WaveChartEngine.update(preset, true);
-            syncUI(window.WaveChartEngine.getConfig());
-            pg.querySelectorAll('.wa-preset-btn').forEach(b=>b.classList.remove('active-preset'));
-            btn.classList.add('active-preset');
-        };
-        pg.appendChild(btn);
-    });
-
-    // ─── EXPORT / IMPORT ────────────────────────────────────────────────
-    document.getElementById('wa-btn-export-cfg').onclick = () => {
-        if (!window.WaveChartEngine) return;
-        const blob = new Blob([JSON.stringify(window.WaveChartEngine.getConfig(), null, 2)], {type:'application/json'});
-        const a = Object.assign(document.createElement('a'), { href:URL.createObjectURL(blob), download:'wave-chart-config.json' });
-        a.click(); URL.revokeObjectURL(a.href);
-    };
-    
-    document.getElementById('wa-btn-import-cfg').onclick = () => document.getElementById('wa-import-file').click();
-    document.getElementById('wa-import-file').onchange = e => {
-        const f = e.target.files[0]; 
-        if(!f) return;
-        const fr = new FileReader(); 
-        fr.onload = ev => {
-            try {
-                const cfg = JSON.parse(ev.target.result);
-                if(window.WaveChartEngine){ 
-                    window.WaveChartEngine.update(cfg, true); 
-                    syncUI(window.WaveChartEngine.getConfig()); 
-                    updateDynamicUI(window.WaveChartEngine.getConfig()); 
-                }
-            } catch(err){ 
-                alert('❌ File JSON không hợp lệ:\n' + err.message); 
-            }
-        }; 
-        fr.readAsText(f); 
-        e.target.value = '';
-    };
-
-    // ─── RESET ───────────────────────────────────────────────────────────
-    document.getElementById('wa-btn-reset-cfg').onclick = () => {
-        if (confirm('Bạn có chắc muốn khôi phục toàn bộ cài đặt biểu đồ về mặc định?\nHành động này không thể hoàn tác.')) {
-            localStorage.removeItem('wave_alpha_chart_config');
-            window.location.reload();
+    const checkToolbar = setInterval(() => {
+        // Tìm thẳng cái Group chứa nút Chart Type vừa tạo ở trên
+        const targetGroup = document.getElementById('wa-chart-controls-group');
+        
+        if (targetGroup) {
+            clearInterval(checkToolbar);
+            // Bơm trực tiếp nút HTML vào trong Group đó (nằm cạnh nút Chart Type)
+            const btnHTML = `
+                <button id="btn-wa-chart-settings" data-wa-tip="Cài đặt Biểu đồ" style="background: rgba(255,255,255,0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                </button>
+            `;
+            targetGroup.insertAdjacentHTML('beforeend', btnHTML);
+            document.getElementById('btn-wa-chart-settings').onclick = (e) => { e.stopPropagation(); window.openChartSettings(); };
         }
-    };
-
-    // ─── GEAR BUTTON ────────────────────────────────────────────────────
-    const timer = setInterval(() => {
-        const typeBtn = document.getElementById('btn-wa-chart-type');
-        if (!typeBtn || !typeBtn.parentNode) return;
-        clearInterval(timer);
-        if (document.getElementById('btn-wa-chart-settings')) return;
-        typeBtn.insertAdjacentHTML('afterend', `
-            <button id="btn-wa-chart-settings" title="Cài đặt biểu đồ  [Ctrl+,]"
-                style="background:rgba(255,255,255,0.05);color:#848e9c;border:1px solid rgba(255,255,255,0.1);
-                       border-radius:4px;width:26px;height:26px;display:flex;align-items:center;
-                       justify-content:center;cursor:pointer;transition:0.18s;margin-left:6px;flex-shrink:0;"
-                onmouseenter="this.style.background='rgba(38,166,154,0.15)';this.style.color='#26a69a';this.style.borderColor='rgba(38,166,154,0.3)';"
-                onmouseleave="this.style.background='rgba(255,255,255,0.05)';this.style.color='#848e9c';this.style.borderColor='rgba(255,255,255,0.1)';">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="3"/>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 4.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                </svg>
-            </button>
-        `);
-        document.getElementById('btn-wa-chart-settings').onclick = e => { e.stopPropagation(); window.openChartSettings(); };
     }, 200);
-
-    // Ctrl+, shortcut
-    document.addEventListener('keydown', e => { if ((e.ctrlKey||e.metaKey) && e.key===',') { e.preventDefault(); window.openChartSettings?.(); } });
-
-    // Listen for config updates from outside
-    window.addEventListener('wa_chart_config_updated', e => {
-        if (!modal.classList.contains('show')) return;
-        syncUI(e.detail); updateDynamicUI(e.detail);
-    });
 
 })();
 
