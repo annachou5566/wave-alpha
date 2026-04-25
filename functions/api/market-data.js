@@ -44,7 +44,7 @@ export async function onRequest(context) {
             headers.set("Access-Control-Allow-Origin", allowedOrigin);
             headers.set("Vary", "Origin");
             // Fix đúng 1 chỗ: Thêm stale-while-revalidate để cứu Render server
-            headers.set('Cache-Control', 'public, s-maxage=10, stale-while-revalidate=20'); 
+            headers.set('Cache-Control', 'public, s-maxage=180, stale-while-revalidate=60');
 
             response = new Response(upstreamResponse.body, { headers });
             context.waitUntil(cache.put(cacheKey, response.clone()));

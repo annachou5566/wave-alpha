@@ -44,8 +44,8 @@ export async function onRequest(context) {
             headers.set("Access-Control-Allow-Origin", allowedOrigin);
             headers.set("Vary", "Origin");
             
-            // Ép Cache 60 giây: Trình duyệt sẽ load cái vèo, không cần đợi Render!
-            headers.set('Cache-Control', 'public, s-maxage=60, max-age=60');
+            // Ép Cache 180 giây (3 phút) để giảm tải triệt để cho Render
+            headers.set('Cache-Control', 'public, s-maxage=180, stale-while-revalidate=60');
 
             response = new Response(upstreamResponse.body, { headers });
             context.waitUntil(cache.put(cacheKey, response.clone()));
