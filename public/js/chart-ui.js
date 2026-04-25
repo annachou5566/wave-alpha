@@ -1540,7 +1540,7 @@ window.closeProChart = function() {
 })();
 
 // =========================================================================
-// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (FIX LỖI CẤM CLICK RÂU/VIỀN NẾN)
+// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (NÂNG CẤP HLC & BASELINE - GIỮ NGUYÊN BẢN GỐC)
 // =========================================================================
 (function initChartSettingsModal() {
     'use strict';
@@ -1604,12 +1604,19 @@ window.closeProChart = function() {
                     </div>
                     <div class="wa-csm-panels">
                         <div id="csm-symbol" class="wa-csm-panel active">
-                            <div class="wa-csm-row"><div class="wa-csm-label">Loại biểu đồ</div><select class="wa-csm-select" data-bind="chartType" id="csm-chart-type" data-type="number"><option value="1">Nến Nhật</option><option value="2">Nến Rỗng</option><option value="3">Thanh (Bars)</option><option value="6">Đường (Line)</option><option value="9">Vùng (Area)</option></select></div>
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">Loại biểu đồ</div>
+                                <select class="wa-csm-select" data-bind="chartType" id="csm-chart-type" data-type="number">
+                                    <option value="1">Nến Nhật</option><option value="2">Nến Rỗng</option><option value="3">Thanh (Bars)</option>
+                                    <option value="4">Cột (Columns)</option><option value="5">Đỉnh-Đáy (H-L)</option>
+                                    <option value="6">Đường (Line)</option><option value="7">Đường + Điểm</option><option value="8">Bậc Thang</option><option value="9">Vùng (Area)</option>
+                                    <option value="10">Vùng HLC (Pro)</option><option value="11">Đường Cơ Sở (Pro)</option>
+                                </select>
+                            </div>
                             <div class="wa-csm-divider">Màu sắc</div>
                             
                             <div id="csm-ui-candles" style="display:flex; flex-direction:column; gap:20px;">
                                 <div class="wa-csm-row"><div class="wa-csm-label">Thân nến (Body)</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="upColor"></div><div class="wa-color-swatch" data-color-bind="downColor"></div></div></div>
-                                
                                 <div class="wa-csm-row">
                                     <div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="showBorder"><span class="wa-slider"></span></label> Viền (Borders)</div>
                                     <div class="wa-csm-control">
@@ -1619,7 +1626,6 @@ window.closeProChart = function() {
                                         </div>
                                     </div>
                                 </div>
-
                                 <div class="wa-csm-row">
                                     <div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="showWick"><span class="wa-slider"></span></label> Bóng nến (Wicks)</div>
                                     <div class="wa-csm-control">
@@ -1633,6 +1639,26 @@ window.closeProChart = function() {
 
                             <div id="csm-ui-lines" style="display:none; flex-direction:column; gap:20px;">
                                 <div class="wa-csm-row"><div class="wa-csm-label">Màu Đường / Vùng</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="upColor"></div></div></div>
+                            </div>
+
+                            <div id="csm-ui-hlc" style="display:none; flex-direction:column; gap:20px;">
+                                <div class="wa-csm-row"><div class="wa-csm-label">Đường Đóng Cửa (Close)</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="hlcCloseColor"></div></div></div>
+                                <div class="wa-csm-row">
+                                    <div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="hlcShowHighLow"><span class="wa-slider"></span></label> Viền Đỉnh/Đáy (H-L)</div>
+                                    <div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="hlcHighColor"></div><div class="wa-color-swatch" data-color-bind="hlcLowColor"></div></div>
+                                </div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Độ mờ viền (Opacity)</div><div class="wa-csm-control"><input type="range" class="wa-csm-slider" min="0" max="1" step="0.05" data-bind="hlcHighLowOpacity" data-type="number"></div></div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Màu Nền Vùng (Fill)</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="hlcFillColor"></div></div></div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Độ mờ nền (Opacity)</div><div class="wa-csm-control"><input type="range" class="wa-csm-slider" min="0" max="1" step="0.05" data-bind="hlcFillOpacity" data-type="number"></div></div>
+                            </div>
+
+                            <div id="csm-ui-baseline" style="display:none; flex-direction:column; gap:20px;">
+                                <div class="wa-csm-row"><div class="wa-csm-label">Đường Trên / Nền Trên</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="baselineUpColor"></div><div class="wa-color-swatch" data-color-bind="baselineUpFill"></div></div></div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Đường Dưới / Nền Dưới</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="baselineDownColor"></div><div class="wa-color-swatch" data-color-bind="baselineDownFill"></div></div></div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Độ mờ nền chung</div><div class="wa-csm-control"><input type="range" class="wa-csm-slider" min="0" max="1" step="0.05" data-bind="baselineFillOpacity" data-type="number"></div></div>
+                                <div class="wa-csm-divider">Thông số Baseline</div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Mức cơ sở (%)</div><div class="wa-csm-control"><input type="number" class="wa-csm-select" style="width:80px; text-align:center;" min="0" max="100" data-bind="baselineValue" data-type="number"></div></div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Nguồn giá</div><select class="wa-csm-select" data-bind="baselinePriceSource"><option value="close">Đóng cửa</option><option value="hl2">TB (H+L)/2</option><option value="ohlc4">TB Toàn phần</option></select></div>
                             </div>
 
                             <div class="wa-csm-divider">Trục Y</div>
@@ -1738,13 +1764,22 @@ window.closeProChart = function() {
     document.addEventListener('click', (e) => { if (!colorPicker.contains(e.target) && !e.target.classList.contains('wa-color-swatch')) colorPicker.style.display = 'none'; });
     function rgb2hex(rgb) { if (rgb.search("rgb") === -1) return rgb; rgb = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/); return "#" + ("0" + parseInt(rgb[1]).toString(16)).slice(-2) + ("0" + parseInt(rgb[2]).toString(16)).slice(-2) + ("0" + parseInt(rgb[3]).toString(16)).slice(-2); }
 
+    // 🚀 HÀM NÀY ĐÃ ĐƯỢC DẠY ĐỂ HIỂU CÁC LOẠI BIỂU ĐỒ PRO MỚI!
     function updateDynamicUI(config) {
-        const t = parseInt(config.chartType); const isLineOrArea = (t === 6 || t === 9);
-        document.getElementById('csm-ui-candles').style.display = isLineOrArea ? 'none' : 'flex';
-        document.getElementById('csm-ui-lines').style.display = isLineOrArea ? 'flex' : 'none';
+        const t = parseInt(config.chartType); 
+        
+        const isCandles = (t === 1 || t === 2 || t === 3 || t === 4 || t === 5 || t === 12);
+        const isLines = (t === 6 || t === 7 || t === 8 || t === 9);
+        const isHLC = (t === 10);
+        const isBaseline = (t === 11);
+
+        document.getElementById('csm-ui-candles').style.display = isCandles ? 'flex' : 'none';
+        document.getElementById('csm-ui-lines').style.display = isLines ? 'flex' : 'none';
+        document.getElementById('csm-ui-hlc').style.display = isHLC ? 'flex' : 'none';
+        document.getElementById('csm-ui-baseline').style.display = isBaseline ? 'flex' : 'none';
+        
         document.getElementById('csm-bg2-swatch').style.display = config.bgType === 'gradient' ? 'block' : 'none';
         
-        // 🚀 BẬT TẮT SỰ KIỆN CLICK CHUẨN XÁC CHO BOX MÀU
         document.getElementById('csm-wick-swatches').style.opacity = config.wickIndependent ? '1' : '0.5';
         document.getElementById('csm-wick-swatches').style.pointerEvents = config.wickIndependent ? 'auto' : 'none';
         document.getElementById('csm-border-swatches').style.opacity = config.borderIndependent ? '1' : '0.5';
@@ -1768,6 +1803,7 @@ window.closeProChart = function() {
 
     document.getElementById('btn-wa-csm-close').onclick = () => modal.classList.remove('show');
     
+    // Động cơ tự động bắt sự thay đổi mọi input (Tự khớp với config V7)
     modal.querySelectorAll('[data-bind]').forEach(el => {
         const eventType = el.type === 'range' ? 'input' : 'change';
         el.addEventListener(eventType, (e) => {
@@ -1780,12 +1816,9 @@ window.closeProChart = function() {
     });
 
     const checkToolbar = setInterval(() => {
-        // Tìm thẳng cái Group chứa nút Chart Type vừa tạo ở trên
         const targetGroup = document.getElementById('wa-chart-controls-group');
-        
         if (targetGroup) {
             clearInterval(checkToolbar);
-            // Bơm trực tiếp nút HTML vào trong Group đó (nằm cạnh nút Chart Type)
             const btnHTML = `
                 <button id="btn-wa-chart-settings" data-wa-tip="Cài đặt Biểu đồ" style="background: rgba(255,255,255,0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
