@@ -234,7 +234,7 @@ window.klinecharts.registerIndicator({
     }
 });
 
-// 5. CHỈ BÁO VẼ VÙNG HLC (HIGH-LOW-CLOSE AREA - ID 10) 🚀 [MỚI THÊM]
+// 5. CHỈ BÁO VẼ VÙNG HLC (HIGH-LOW-CLOSE AREA - ID 10) 🚀 [CẬP NHẬT CHUẨN TRADINGVIEW]
 window.klinecharts.registerIndicator({
     name: 'WA_HLC_AREA',
     shortName: ' ',
@@ -248,37 +248,55 @@ window.klinecharts.registerIndicator({
         ctx.save();
         ctx.setLineDash([]); 
 
-        // BƯỚC 1: Vẽ dải lụa mờ (Kéo dài từ đỉnh High xuống đáy Low)
+        // 🚀 BƯỚC 1: TÔ MÀU VÙNG KHOẢNG CÁCH GIỮA HIGH VÀ LOW
         ctx.beginPath(); 
-        // Dùng hàm _dimColor có sẵn để giảm độ trong suốt của màu Nến Tăng xuống 15%
-        ctx.fillStyle = window.WaveChartEngine._dimColor(c.upColor, 0.15); 
+        ctx.fillStyle = window.WaveChartEngine._dimColor(c.upColor, 0.15); // Độ mờ 15%
         
         const start = Math.max(0, from - 1);
         
-        // Đi chiều xuôi (Nối các đỉnh High từ trái qua phải)
+        // Nối các đỉnh High
         for (let i = start; i < to; i++) {
             const kd = dataList[i];
             if (!kd || kd.high === undefined) continue;
-            const x = xAxis.convertToPixel(i); 
-            const y = yAxis.convertToPixel(kd.high);
+            const x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(kd.high);
             if (i === start) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
-        
-        // Đi chiều ngược (Vòng về nối các đáy Low từ phải qua trái để khép kín hình)
+        // Vòng về nối các đáy Low
         for (let i = to - 1; i >= start; i--) {
             const kd = dataList[i];
             if (!kd || kd.low === undefined) continue;
-            const x = xAxis.convertToPixel(i); 
-            const y = yAxis.convertToPixel(kd.low);
+            const x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(kd.low);
             ctx.lineTo(x, y);
         }
         ctx.closePath(); 
         ctx.fill();
 
-        // BƯỚC 2: Vẽ đường Close sắc nét ở giữa dải lụa
+        // 🚀 BƯỚC 2: VẼ 2 ĐƯỜNG BIÊN HIGH & LOW (Mỏng & mờ để làm nền)
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = window.WaveChartEngine._dimColor(c.upColor, 0.35); // Đường biên mờ 35%
+        
+        // Vẽ đường High
+        ctx.beginPath();
+        for (let i = start; i < to; i++) {
+            const kd = dataList[i]; if (!kd || kd.high === undefined) continue;
+            const x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(kd.high);
+            if (i === start) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // Vẽ đường Low
+        ctx.beginPath();
+        for (let i = start; i < to; i++) {
+            const kd = dataList[i]; if (!kd || kd.low === undefined) continue;
+            const x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(kd.low);
+            if (i === start) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // 🚀 BƯỚC 3: VẼ ĐƯỜNG ĐÓNG CỬA (CLOSE) - DÀY VÀ SẮC NÉT NHẤT
         ctx.beginPath(); 
         ctx.strokeStyle = c.upColor; 
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2; // Dày gấp đôi đường biên
         ctx.lineCap = 'round'; ctx.lineJoin = 'round';
         
         let isFirst = true;
