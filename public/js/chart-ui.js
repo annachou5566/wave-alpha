@@ -41,56 +41,55 @@ window.currentTheme = localStorage.getItem('wave_theme') || 'cyber';
 
 window.isProSoundOn = true; 
 // ==========================================
-// 🚀 INIT CUSTOM TOOLTIP (MINIMALIST)
+// 🚀 INIT GLOBAL TOOLTIP (BULLETPROOF FIX)
 // ==========================================
-(function initCustomTooltips() {
-    if (document.getElementById('wa-custom-tooltip-style')) return;
-    const style = document.createElement('style');
-    style.id = 'wa-custom-tooltip-style';
-    style.textContent = `
-        [data-wa-tip] {
-            position: relative;
-        }
-        [data-wa-tip]::after {
-            content: attr(data-wa-tip);
-            position: absolute;
-            top: calc(100% + 8px);
-            left: 50%;
-            transform: translateX(-50%) translateY(4px);
-            background: #1e222d !important;
-            color: #EAECEF !important;
-            padding: 5px 10px !important;
-            font-size: 11px !important;
-            font-weight: 700 !important;
-            font-family: var(--font-main, sans-serif) !important;
-            border-radius: 4px !important;
-            border: 1px solid rgba(255,255,255,0.1) !important;
-            white-space: nowrap !important;
-            opacity: 0;
-            visibility: hidden;
-            transition: 0.15s ease-in-out !important;
-            z-index: 9999999 !important;
-            pointer-events: none !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
-        }
-        [data-wa-tip]:hover::after {
-            opacity: 1 !important;
-            visibility: visible !important;
-            transform: translateX(-50%) translateY(0) !important;
-        }
-        /* Mở khóa chống cắt viền */
-        .sc-toolbar, 
-        .sc-tools-left, 
-        .wa-topbar-container,
-        #wa-chart-controls-group {
-            overflow: visible !important;
-        }
-        /* Đẩy layer */
-        [data-wa-tip]:hover {
-            z-index: 999999 !important;
-        }
+(function initGlobalTooltip() {
+    if (document.getElementById('wa-global-tooltip')) return;
+
+    // 1. Tạo một Tooltip duy nhất gắn thẳng vào Body (Né mọi lỗi bị che/cắt)
+    const tooltip = document.createElement('div');
+    tooltip.id = 'wa-global-tooltip';
+    tooltip.style.cssText = `
+        position: fixed; background: #1e222d; color: #EAECEF; padding: 5px 10px;
+        font-size: 11px; font-weight: 700; font-family: var(--font-main, sans-serif);
+        border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); white-space: nowrap;
+        pointer-events: none; z-index: 2147483647; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        opacity: 0; visibility: hidden; transition: opacity 0.15s, transform 0.15s;
+        transform: translate(-50%, 4px);
     `;
-    document.head.appendChild(style);
+    document.body.appendChild(tooltip);
+
+    const hideTooltip = () => {
+        tooltip.style.opacity = '0'; tooltip.style.visibility = 'hidden';
+        tooltip.style.transform = 'translate(-50%, 4px)';
+    };
+
+    // 2. Bám theo chuột để bật Tooltip
+    document.addEventListener('mouseover', (e) => {
+        // Hỗ trợ cả 2 định dạng: data-wa-tip (UI) và data-tip (Indicator)
+        const target = e.target.closest('[data-wa-tip], [data-tip]');
+        if (!target) return hideTooltip();
+
+        const text = target.getAttribute('data-wa-tip') || target.getAttribute('data-tip');
+        if (!text) return;
+
+        tooltip.innerText = text;
+        const rect = target.getBoundingClientRect();
+        
+        // Tính toán tọa độ và ghim nó chính giữa phía dưới nút
+        tooltip.style.left = (rect.left + rect.width / 2) + 'px';
+        tooltip.style.top = (rect.bottom + 8) + 'px';
+        
+        tooltip.style.visibility = 'visible'; tooltip.style.opacity = '1';
+        tooltip.style.transform = 'translate(-50%, 0)';
+    }, true);
+
+    // 3. Tắt Tooltip khi chuột rời đi, click, hoặc cuộn trang
+    document.addEventListener('mouseout', (e) => {
+        if (!e.relatedTarget || !e.target.closest('[data-wa-tip], [data-tip]')) hideTooltip();
+    }, true);
+    document.addEventListener('mousedown', hideTooltip, true);
+    window.addEventListener('scroll', hideTooltip, true);
 })();
 // ==========================================
 // 🌊 HFT TAPE ENGINE (DOM RECYCLING & BATCHING)
