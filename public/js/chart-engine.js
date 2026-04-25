@@ -957,16 +957,14 @@ window.startFuturesEngine = async function(symbol) {
                 } catch(e) { window.quantStats.fundingInterval = 8; }
             }
             
-            let endpointFund = encodeURIComponent(`/fapi/v1/premiumIndex?symbol=${fSymbol}`);
-            let fundData = await fetchWithTimeout(`${RENDER_BASE_URL}/api/binance-fapi?endpoint=${endpointFund}`);
+            let fundData = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${fSymbol}`);
             if (window.activeFuturesSession !== currentSession) return false;
             if (fundData && fundData.lastFundingRate) {
                 window.quantStats.fundingRateObj = { rate: parseFloat(fundData.lastFundingRate) * 100, nextTime: fundData.nextFundingTime, interval: window.quantStats.fundingInterval };
             }
             
             try {
-                let endpointOI = encodeURIComponent(`/fapi/v1/openInterest?symbol=${fSymbol}`);
-                let oiData = await fetchWithTimeout(`${RENDER_BASE_URL}/api/binance-fapi?endpoint=${endpointOI}`);
+                let oiData = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${fSymbol}`);
                 if (window.activeFuturesSession === currentSession && oiData && oiData.openInterest) {
                     window.quantStats.openInterest = parseFloat(oiData.openInterest);
                 }
