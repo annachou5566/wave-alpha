@@ -22,7 +22,8 @@ window.bookmapHistory = [];
 window.isHeatmapOn = true; 
 
 // =========================================================================
-// 🧠 BƯỚC 1: WAVE CHART ENGINE (BẢN V8 - ĐỈNH CAO TÙY BIẾN MÀU SẮC)
+// 🧠 BƯỚC 1: WAVE CHART ENGINE (BẢN V8.1 - FINAL PRODUCTION)
+// ✅ All 4 remaining bugs patched
 // =========================================================================
 const DEFAULT_CHART_CONFIG = {
     chartType: 1, upColor: '#0ECB81', downColor: '#F6465D',
@@ -33,17 +34,17 @@ const DEFAULT_CHART_CONFIG = {
     bgType: 'solid', bgColor: '#131722', bgColor2: '#000000',
     gridVertical: true, gridHorizontal: true, gridColor: 'rgba(255,255,255,0.06)',
     sessionBreaks: false, crosshairMode: 'normal', rightMargin: 10, timezone: 'Asia/Ho_Chi_Minh',
-    
+
     // 🚀 STEP LINE SETTING
     stepLineSingleColor: false,
-    
+
     // 🚀 HLC AREA SETTINGS
-    hlcCloseColor: '#00F0FF', hlcHighColor: '#0ECB81', hlcLowColor: '#F6465D', 
-    hlcUpFillColor: '#0ECB81', hlcDownFillColor: '#F6465D', // Đã tách thành 2 màu nền
+    hlcCloseColor: '#00F0FF', hlcHighColor: '#0ECB81', hlcLowColor: '#F6465D',
+    hlcUpFillColor: '#0ECB81', hlcDownFillColor: '#F6465D',
     hlcHighLowOpacity: 0.35, hlcFillOpacity: 0.15, hlcShowHighLow: true,
-    
+
     // 🚀 BASELINE SETTINGS
-    baselineUpColor: '#0ECB81', baselineDownColor: '#F6465D', 
+    baselineUpColor: '#0ECB81', baselineDownColor: '#F6465D',
     baselineUpFill: '#0ECB81', baselineDownFill: '#F6465D',
     baselineFillOpacity: 0.2, baselineValue: 50, baselinePriceSource: 'close'
 };
@@ -56,188 +57,486 @@ window.WaveChartEngine = {
     chartInstance: null, config: { ...DEFAULT_CHART_CONFIG }, _debounceTimer: null,
 
     init: function (chart) {
-        this.chartInstance = chart; this._registerCustomIndicators(); 
-        this.loadConfig(); this.applyNow(); window.__wa_onChartReady = () => this.applyNow();
+        this.chartInstance = chart;
+        this._registerCustomIndicators();
+        this.loadConfig();
+        this.applyNow();
+        window.__wa_onChartReady = () => this.applyNow();
     },
 
-    _registerCustomIndicators: function() {
+    _registerCustomIndicators: function () {
         if (window.__wa_indicators_registered) return;
         window.__wa_indicators_registered = true;
         if (!window.klinecharts || !window.klinecharts.registerIndicator) return;
 
         try {
-            window.klinecharts.registerIndicator({ name: 'WA_COL_CHART', shortName: ' ', series: 'price', calc: (d) => d, draw: ({ ctx, indicator, visibleRange, bounding, barSpace, xAxis, yAxis }) => { const c = window.WaveChartEngine.config; const { from, to } = visibleRange; const bottomY = bounding.height; const dataList = indicator.result; if (!dataList || dataList.length === 0) return true; ctx.save(); const bSpace = barSpace.gapBar || barSpace.bar || 6; const colWidth = Math.max(1, bSpace * 0.6); for (let i = from; i < to; i++) { const kd = dataList[i]; if (!kd || kd.close === undefined) continue; ctx.fillStyle = kd.close >= kd.open ? c.upColor : c.downColor; ctx.fillRect(xAxis.convertToPixel(i) - colWidth / 2, yAxis.convertToPixel(kd.close), colWidth, bottomY - yAxis.convertToPixel(kd.close)); } ctx.restore(); return true; } });
-            window.klinecharts.registerIndicator({ name: 'WA_HL_CHART', shortName: ' ', series: 'price', calc: (d) => d, draw: ({ ctx, indicator, visibleRange, barSpace, xAxis, yAxis }) => { const c = window.WaveChartEngine.config; const { from, to } = visibleRange; const dataList = indicator.result; if (!dataList || dataList.length === 0) return true; ctx.save(); const bSpace = barSpace.gapBar || barSpace.bar || 6; const colWidth = Math.max(1, bSpace * 0.6); const isTextVisible = bSpace > 30; for (let i = from; i < to; i++) { const kd = dataList[i]; if (!kd || kd.high === undefined || kd.low === undefined) continue; ctx.fillStyle = kd.close >= kd.open ? c.upColor : c.downColor; const x = xAxis.convertToPixel(i); const rectY = Math.min(yAxis.convertToPixel(kd.high), yAxis.convertToPixel(kd.low)); const rectH = Math.max(1, Math.abs(yAxis.convertToPixel(kd.high) - yAxis.convertToPixel(kd.low))); ctx.fillRect(x - colWidth / 2, rectY, colWidth, rectH); if (isTextVisible) { ctx.font = '10px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#848e9c'; ctx.textBaseline = 'bottom'; ctx.fillText(kd.high.toString(), x, rectY - 3); ctx.textBaseline = 'top'; ctx.fillText(kd.low.toString(), x, rectY + rectH + 3); } } ctx.restore(); return true; } });
-            
-            // 🚀 BẬC THANG (Hỗ trợ 1 màu tĩnh hoặc 2 màu động)
-            window.klinecharts.registerIndicator({ name: 'WA_STEP_LINE', shortName: ' ', series: 'price', calc: (d) => d, draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => { const c = window.WaveChartEngine.config; const { from, to } = visibleRange; const dataList = indicator.result; if (!dataList || dataList.length === 0) return true; ctx.save(); ctx.setLineDash([]); ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; const start = Math.max(0, from - 1); let lastDrawnX = null, lastDrawnY = null, lastClose = null; for (let i = start; i < to; i++) { const kd = dataList[i]; if (!kd || kd.close === undefined) continue; const x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(kd.close); if (lastDrawnX === null) { lastDrawnX = x; lastDrawnY = y; lastClose = kd.close; continue; } ctx.strokeStyle = c.stepLineSingleColor ? c.upColor : (kd.close >= lastClose ? c.upColor : c.downColor); ctx.beginPath(); ctx.moveTo(lastDrawnX, lastDrawnY); ctx.lineTo(x, lastDrawnY); ctx.lineTo(x, y); ctx.stroke(); lastDrawnX = x; lastDrawnY = y; lastClose = kd.close; } ctx.restore(); return true; } });
-            
-            // 🚀 ĐƯỜNG CÓ ĐIỂM MARKER
-            window.klinecharts.registerIndicator({ name: 'WA_LINE_MARKER', shortName: ' ', series: 'price', calc: (d) => d, draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => { const c = window.WaveChartEngine.config; const { from, to } = visibleRange; const dataList = indicator.result; if (!dataList || dataList.length === 0) return true; ctx.save(); ctx.setLineDash([]); ctx.lineWidth = 2; ctx.strokeStyle = c.upColor; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); const start = Math.max(0, from - 1); let isFirst = true; for (let i = start; i < to; i++) { const kd = dataList[i]; if (!kd || kd.close === undefined) continue; const x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(kd.close); if (isFirst) { ctx.moveTo(x, y); isFirst = false; } else { ctx.lineTo(x, y); } } ctx.stroke(); for (let i = from; i < to; i++) { const kd = dataList[i]; if (!kd || kd.close === undefined) continue; const x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(kd.close); ctx.strokeStyle = kd.close >= kd.open ? c.upColor : c.downColor; ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fillStyle = c.bgColor; ctx.fill(); ctx.stroke(); } ctx.restore(); return true; } });
 
-            // 🚀 VÙNG HLC (TÁCH BIỆT NỀN TRÊN & DƯỚI)
+            // ─────────────────────────────────────────────────────────────
+            // 1. CỘT (COLUMNS - ID 4)
+            // ─────────────────────────────────────────────────────────────
+            window.klinecharts.registerIndicator({
+                name: 'WA_COL_CHART', shortName: ' ', series: 'price', calc: (d) => d,
+                draw: ({ ctx, indicator, visibleRange, bounding, barSpace, xAxis, yAxis }) => {
+                    const c = window.WaveChartEngine.config;
+                    const { from, to } = visibleRange;
+                    const bottomY = bounding.height;
+                    const dataList = indicator.result;
+                    if (!dataList || dataList.length === 0) return true;
+
+                    ctx.save();
+                    const bSpace = barSpace.gapBar || barSpace.bar || 6;
+                    const colWidth = Math.max(1, bSpace * 0.6);
+
+                    for (let i = from; i < to; i++) {
+                        const kd = dataList[i];
+                        if (!kd || kd.close === undefined) continue;
+                        // ✅ FIX #1: Cache pixel coords, tránh gọi convertToPixel 2 lần
+                        const x      = xAxis.convertToPixel(i);
+                        const closeY = yAxis.convertToPixel(kd.close);
+                        ctx.fillStyle = kd.close >= kd.open ? c.upColor : c.downColor;
+                        ctx.fillRect(x - colWidth / 2, closeY, colWidth, bottomY - closeY);
+                    }
+
+                    ctx.restore();
+                    return true;
+                }
+            });
+
+            // ─────────────────────────────────────────────────────────────
+            // 2. ĐỈNH-ĐÁY (HIGH-LOW - ID 5)
+            // ─────────────────────────────────────────────────────────────
+            window.klinecharts.registerIndicator({
+                name: 'WA_HL_CHART', shortName: ' ', series: 'price', calc: (d) => d,
+                draw: ({ ctx, indicator, visibleRange, barSpace, xAxis, yAxis }) => {
+                    const c = window.WaveChartEngine.config;
+                    const { from, to } = visibleRange;
+                    const dataList = indicator.result;
+                    if (!dataList || dataList.length === 0) return true;
+
+                    ctx.save();
+                    const bSpace = barSpace.gapBar || barSpace.bar || 6;
+                    const colWidth    = Math.max(1, bSpace * 0.6);
+                    const isTextVisible = bSpace > 30;
+
+                    for (let i = from; i < to; i++) {
+                        const kd = dataList[i];
+                        if (!kd || kd.high === undefined || kd.low === undefined) continue;
+
+                        const x     = xAxis.convertToPixel(i);
+                        const highY = yAxis.convertToPixel(kd.high);
+                        const lowY  = yAxis.convertToPixel(kd.low);
+                        const rectY = Math.min(highY, lowY);
+                        const rectH = Math.max(1, Math.abs(highY - lowY));
+
+                        ctx.fillStyle = kd.close >= kd.open ? c.upColor : c.downColor;
+                        ctx.fillRect(x - colWidth / 2, rectY, colWidth, rectH);
+
+                        if (isTextVisible) {
+                            ctx.font         = '10px Arial';
+                            ctx.textAlign    = 'center';
+                            ctx.fillStyle    = '#848e9c';
+                            ctx.textBaseline = 'bottom';
+                            ctx.fillText(kd.high.toString(), x, rectY - 3);
+                            ctx.textBaseline = 'top';
+                            ctx.fillText(kd.low.toString(),  x, rectY + rectH + 3);
+                        }
+                    }
+
+                    ctx.restore();
+                    return true;
+                }
+            });
+
+            // ─────────────────────────────────────────────────────────────
+            // 3. BẬC THANG (STEP LINE - ID 8)
+            //    Hỗ trợ 1 màu tĩnh (stepLineSingleColor=true) hoặc 2 màu động
+            // ─────────────────────────────────────────────────────────────
+            window.klinecharts.registerIndicator({
+                name: 'WA_STEP_LINE', shortName: ' ', series: 'price', calc: (d) => d,
+                draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
+                    const c = window.WaveChartEngine.config;
+                    const { from, to } = visibleRange;
+                    const dataList = indicator.result;
+                    if (!dataList || dataList.length === 0) return true;
+
+                    ctx.save();
+                    ctx.setLineDash([]);
+                    ctx.lineWidth  = 2;
+                    ctx.lineCap    = 'round';
+                    ctx.lineJoin   = 'round';
+
+                    const start = Math.max(0, from - 1);
+                    let lastDrawnX = null, lastDrawnY = null, lastClose = null;
+
+                    for (let i = start; i < to; i++) {
+                        const kd = dataList[i];
+                        if (!kd || kd.close === undefined) continue;
+
+                        const x = xAxis.convertToPixel(i);
+                        const y = yAxis.convertToPixel(kd.close);
+
+                        if (lastDrawnX === null) {
+                            // Điểm đầu: ghi nhớ, chưa vẽ
+                            lastDrawnX = x; lastDrawnY = y; lastClose = kd.close;
+                            continue;
+                        }
+
+                        // Màu đoạn theo chiều giá (hoặc màu cố định nếu bật single color)
+                        ctx.strokeStyle = c.stepLineSingleColor
+                            ? c.upColor
+                            : (kd.close >= lastClose ? c.upColor : c.downColor);
+
+                        ctx.beginPath();
+                        ctx.moveTo(lastDrawnX, lastDrawnY); // điểm đầu đoạn
+                        ctx.lineTo(x, lastDrawnY);           // ngang (giữ Y cũ)
+                        ctx.lineTo(x, y);                    // dọc chốt giá mới
+                        ctx.stroke();
+
+                        lastDrawnX = x; lastDrawnY = y; lastClose = kd.close;
+                    }
+
+                    ctx.restore();
+                    return true;
+                }
+            });
+
+            // ─────────────────────────────────────────────────────────────
+            // 4. ĐƯỜNG + ĐIỂM MARKER (LINE MARKER - ID 7)
+            // ─────────────────────────────────────────────────────────────
+            window.klinecharts.registerIndicator({
+                name: 'WA_LINE_MARKER', shortName: ' ', series: 'price', calc: (d) => d,
+                draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
+                    const c = window.WaveChartEngine.config;
+                    const { from, to } = visibleRange;
+                    const dataList = indicator.result;
+                    if (!dataList || dataList.length === 0) return true;
+
+                    ctx.save();
+                    ctx.setLineDash([]);
+                    ctx.lineWidth   = 2;
+                    ctx.strokeStyle = c.upColor;
+                    ctx.lineCap     = 'round';
+                    ctx.lineJoin    = 'round';
+
+                    // Vẽ đường nối liền mạch
+                    ctx.beginPath();
+                    const start = Math.max(0, from - 1);
+                    let isFirst = true;
+                    for (let i = start; i < to; i++) {
+                        const kd = dataList[i];
+                        if (!kd || kd.close === undefined) continue;
+                        const x = xAxis.convertToPixel(i);
+                        const y = yAxis.convertToPixel(kd.close);
+                        if (isFirst) { ctx.moveTo(x, y); isFirst = false; }
+                        else         { ctx.lineTo(x, y); }
+                    }
+                    ctx.stroke();
+
+                    // Vẽ marker hình tròn rỗng, màu theo chiều nến
+                    for (let i = from; i < to; i++) {
+                        const kd = dataList[i];
+                        if (!kd || kd.close === undefined) continue;
+                        const x = xAxis.convertToPixel(i);
+                        const y = yAxis.convertToPixel(kd.close);
+
+                        ctx.strokeStyle = kd.close >= kd.open ? c.upColor : c.downColor;
+                        ctx.beginPath();
+                        ctx.arc(x, y, 3, 0, Math.PI * 2);
+                        ctx.fillStyle = c.bgColor; // lõi nền tạo hiệu ứng rỗng
+                        ctx.fill();
+                        ctx.stroke();
+                    }
+
+                    ctx.restore();
+                    return true;
+                }
+            });
+
+            // ─────────────────────────────────────────────────────────────
+            // 5. VÙNG HLC AREA (ID 10) — Tách nền trên & dưới đường Close
+            // ─────────────────────────────────────────────────────────────
             window.klinecharts.registerIndicator({
                 name: 'WA_HLC_AREA', shortName: ' ', series: 'price', calc: (d) => d,
                 draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
-                    const { from, to } = visibleRange; const dataList = indicator.result;
+                    const { from, to } = visibleRange;
+                    const dataList = indicator.result;
                     if (!dataList || dataList.length === 0) return true;
 
-                    ctx.save(); ctx.setLineDash([]); const start = Math.max(0, from - 1);
+                    ctx.save();
+                    ctx.setLineDash([]);
+                    const start = Math.max(0, from - 1);
+
+                    // Pre-build 3 mảng điểm — tránh polygon lệch khi data gap
                     const highPts = [], lowPts = [], closePts = [];
                     for (let i = start; i < to; i++) {
-                        const kd = dataList[i]; if (!kd || kd.high === undefined || kd.low === undefined) continue;
+                        const kd = dataList[i];
+                        if (!kd || kd.high === undefined || kd.low === undefined || kd.close === undefined) continue;
                         const x = xAxis.convertToPixel(i);
-                        highPts.push({ x, y: yAxis.convertToPixel(kd.high) });
-                        lowPts.push({ x, y: yAxis.convertToPixel(kd.low) });
-                        closePts.push({ x, y: yAxis.convertToPixel(kd.close) });
+                        highPts.push ({x, y: yAxis.convertToPixel(kd.high)});
+                        lowPts.push  ({x, y: yAxis.convertToPixel(kd.low)});
+                        closePts.push({x, y: yAxis.convertToPixel(kd.close)});
                     }
                     if (highPts.length < 2) { ctx.restore(); return true; }
 
-                    // Nền Nửa Trên (High -> Close)
-                    ctx.beginPath(); ctx.fillStyle = window.WaveChartEngine._dimColor(c.hlcUpFillColor, c.hlcFillOpacity);
+                    // Nền nửa trên: High → Close
+                    ctx.beginPath();
+                    ctx.fillStyle = window.WaveChartEngine._dimColor(c.hlcUpFillColor, c.hlcFillOpacity);
                     highPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
                     [...closePts].reverse().forEach(p => ctx.lineTo(p.x, p.y));
-                    ctx.closePath(); ctx.fill();
+                    ctx.closePath();
+                    ctx.fill();
 
-                    // Nền Nửa Dưới (Close -> Low)
-                    ctx.beginPath(); ctx.fillStyle = window.WaveChartEngine._dimColor(c.hlcDownFillColor, c.hlcFillOpacity);
+                    // Nền nửa dưới: Close → Low
+                    ctx.beginPath();
+                    ctx.fillStyle = window.WaveChartEngine._dimColor(c.hlcDownFillColor, c.hlcFillOpacity);
                     closePts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
                     [...lowPts].reverse().forEach(p => ctx.lineTo(p.x, p.y));
-                    ctx.closePath(); ctx.fill();
+                    ctx.closePath();
+                    ctx.fill();
 
-                    // Vẽ viền Đỉnh Đáy (Nếu bật)
+                    // Viền High & Low (nếu bật)
                     if (c.hlcShowHighLow) {
-                        ctx.lineWidth = 1; 
+                        ctx.lineWidth = 1;
                         ctx.strokeStyle = window.WaveChartEngine._dimColor(c.hlcHighColor, c.hlcHighLowOpacity);
-                        ctx.beginPath(); highPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)); ctx.stroke();
-                        
+                        ctx.beginPath();
+                        highPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+                        ctx.stroke();
+
                         ctx.strokeStyle = window.WaveChartEngine._dimColor(c.hlcLowColor, c.hlcHighLowOpacity);
-                        ctx.beginPath(); lowPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)); ctx.stroke();
+                        ctx.beginPath();
+                        lowPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+                        ctx.stroke();
                     }
 
-                    // Đường Close sắc nét
-                    ctx.beginPath(); ctx.strokeStyle = c.hlcCloseColor; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                    // Đường Close — dày & sắc nét nhất
+                    ctx.beginPath();
+                    ctx.strokeStyle = c.hlcCloseColor;
+                    ctx.lineWidth   = 2;
+                    ctx.lineCap     = 'round';
+                    ctx.lineJoin    = 'round';
                     closePts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
-                    ctx.stroke(); ctx.restore(); return true;
+                    ctx.stroke();
+
+                    ctx.restore();
+                    return true;
                 }
             });
 
-            // 🚀 ĐƯỜNG CƠ SỞ (BASELINE)
+            // ─────────────────────────────────────────────────────────────
+            // 6. ĐƯỜNG CƠ SỞ (BASELINE - ID 11)
+            // ─────────────────────────────────────────────────────────────
             window.klinecharts.registerIndicator({
                 name: 'WA_BASELINE', shortName: ' ', series: 'price', calc: (d) => d,
                 draw: ({ ctx, indicator, visibleRange, bounding, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
-                    const { from, to } = visibleRange; const dataList = indicator.result;
+                    const { from, to } = visibleRange;
+                    const dataList = indicator.result;
                     if (!dataList || dataList.length === 0) return true;
 
+                    // ✅ baselineValue = 0 không bị override thành 50
                     const basePercent = (c.baselineValue !== null && c.baselineValue !== undefined) ? c.baselineValue : 50;
+                    // Canvas Y đảo ngược: 0 ở trên, height ở dưới
                     const baseY = bounding.height * (1 - basePercent / 100);
 
+                    // 🚀 Price source linh hoạt
                     const getPrice = (kd) => {
                         switch (c.baselinePriceSource) {
-                            case 'hl2': return (kd.high + kd.low) / 2;
+                            case 'hl2':   return (kd.high + kd.low) / 2;
                             case 'ohlc4': return (kd.open + kd.high + kd.low + kd.close) / 4;
-                            default: return kd.close;
+                            default:      return kd.close;
                         }
                     };
 
-                    ctx.save(); ctx.setLineDash([]);
+                    ctx.save();
+                    ctx.setLineDash([]);
+
+                    // Hàm vẽ path — track firstValidX / lastValidX để đóng vùng đúng
                     const drawPath = (isArea) => {
                         ctx.beginPath();
-                        const startIdx = Math.max(0, from - 1); let firstValidX = null, lastValidX = null;
+                        const startIdx = Math.max(0, from - 1);
+                        let firstValidX = null, lastValidX = null;
+
                         for (let i = startIdx; i < to; i++) {
-                            const kd = dataList[i]; if (!kd || kd.close === undefined) continue;
-                            const x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(getPrice(kd));
-                            if (firstValidX === null) { ctx.moveTo(x, y); firstValidX = x; } else { ctx.lineTo(x, y); }
+                            const kd = dataList[i];
+                            // ✅ FIX #3: Guard đủ cho cả 3 price source (close / hl2 / ohlc4)
+                            if (!kd || kd.close === undefined || kd.high === undefined || kd.low === undefined) continue;
+                            const x = xAxis.convertToPixel(i);
+                            const y = yAxis.convertToPixel(getPrice(kd));
+                            if (firstValidX === null) { ctx.moveTo(x, y); firstValidX = x; }
+                            else                      { ctx.lineTo(x, y); }
                             lastValidX = x;
                         }
+
                         if (isArea && firstValidX !== null && lastValidX !== null) {
-                            ctx.lineTo(lastValidX, baseY); ctx.lineTo(firstValidX, baseY); ctx.closePath();
+                            // ✅ Dùng toạ độ X thực, không dùng index to-1
+                            ctx.lineTo(lastValidX,  baseY);
+                            ctx.lineTo(firstValidX, baseY);
+                            ctx.closePath();
                         }
                     };
 
-                    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, bounding.width, baseY); ctx.clip();
-                    drawPath(true); ctx.fillStyle = window.WaveChartEngine._dimColor(c.baselineUpFill, c.baselineFillOpacity); ctx.fill();
-                    drawPath(false); ctx.lineWidth = 2; ctx.strokeStyle = c.baselineUpColor; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+                    // Nửa trên baseline — màu tăng
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(0, 0, bounding.width, baseY);
+                    ctx.clip();
+                    drawPath(true);
+                    ctx.fillStyle = window.WaveChartEngine._dimColor(c.baselineUpFill, c.baselineFillOpacity);
+                    ctx.fill();
+                    drawPath(false);
+                    ctx.lineWidth = 2; ctx.strokeStyle = c.baselineUpColor;
+                    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                    ctx.stroke();
                     ctx.restore();
 
-                    ctx.save(); ctx.beginPath(); ctx.rect(0, baseY, bounding.width, bounding.height - baseY); ctx.clip();
-                    drawPath(true); ctx.fillStyle = window.WaveChartEngine._dimColor(c.baselineDownFill, c.baselineFillOpacity); ctx.fill();
-                    drawPath(false); ctx.lineWidth = 2; ctx.strokeStyle = c.baselineDownColor; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+                    // Nửa dưới baseline — màu giảm
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(0, baseY, bounding.width, bounding.height - baseY);
+                    ctx.clip();
+                    drawPath(true);
+                    ctx.fillStyle = window.WaveChartEngine._dimColor(c.baselineDownFill, c.baselineFillOpacity);
+                    ctx.fill();
+                    drawPath(false);
+                    ctx.lineWidth = 2; ctx.strokeStyle = c.baselineDownColor;
+                    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                    ctx.stroke();
                     ctx.restore();
 
-                    ctx.beginPath(); ctx.setLineDash([5, 5]); ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-                    ctx.lineWidth = 1; ctx.moveTo(0, baseY); ctx.lineTo(bounding.width, baseY); ctx.stroke();
-                    ctx.restore(); return true;
+                    // Đường ranh giới (nét đứt nằm ngang)
+                    ctx.beginPath();
+                    ctx.setLineDash([5, 5]);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                    ctx.lineWidth   = 1;
+                    ctx.moveTo(0,              baseY);
+                    ctx.lineTo(bounding.width, baseY);
+                    ctx.stroke();
+
+                    ctx.restore();
+                    return true;
                 }
             });
 
-        } catch(e) { console.error('Lỗi nạp Custom Indicator:', e); }
+            console.log('[WaveChartEngine] Custom Chart V8.1 loaded ✅');
+        } catch (e) { console.error('Lỗi nạp Custom Indicator:', e); }
     },
 
     update: function (newProps, instant = false) {
-        this.config = { ...this.config, ...newProps }; this.saveConfig();
+        this.config = { ...this.config, ...newProps };
+        this.saveConfig();
         if (instant) this.applyNow();
         else { clearTimeout(this._debounceTimer); this._debounceTimer = setTimeout(() => this.applyNow(), 50); }
     },
 
-    getConfig: function () { return this.config; },
+    getConfig:  function () { return this.config; },
     saveConfig: function () { localStorage.setItem(LS_CONFIG_KEY, JSON.stringify(this.config)); },
-    loadConfig: function () { try { const saved = JSON.parse(localStorage.getItem(LS_CONFIG_KEY)); if (saved) this.config = { ...this.config, ...saved }; } catch (e) {} },
+    loadConfig: function () {
+        try { const saved = JSON.parse(localStorage.getItem(LS_CONFIG_KEY)); if (saved) this.config = { ...this.config, ...saved }; }
+        catch (e) {}
+    },
 
     applyNow: function () {
         if (!this.chartInstance) return;
         const c = this.config;
         let kcChartType = 'candle_solid', isLine = false, hideCandle = false;
 
-        CUSTOM_CHART_IDS.forEach(id => { try { this.chartInstance.removeIndicator('candle_pane', id); } catch(e) {} });
+        // Dọn rác: xóa sạch custom chart trước khi vẽ mới
+        CUSTOM_CHART_IDS.forEach(id => { try { this.chartInstance.removeIndicator('candle_pane', id); } catch (e) {} });
 
-        if (c.chartType === 2) kcChartType = 'candle_stroke';
+        // Loại native
+        if      (c.chartType === 2) kcChartType = 'candle_stroke';
         else if (c.chartType === 3) kcChartType = 'ohlc';
         else if (c.chartType === 6 || c.chartType === 9) { kcChartType = 'area'; isLine = (c.chartType === 6); }
 
-        if (c.chartType === 4) { this.chartInstance.createIndicator('WA_COL_CHART', false, { id: 'candle_pane' }); hideCandle = true; }
-        else if (c.chartType === 5) { this.chartInstance.createIndicator('WA_HL_CHART', false, { id: 'candle_pane' }); hideCandle = true; }
-        else if (c.chartType === 7) { this.chartInstance.createIndicator('WA_LINE_MARKER', false, { id: 'candle_pane' }); hideCandle = true; }
-        else if (c.chartType === 8) { this.chartInstance.createIndicator('WA_STEP_LINE', false, { id: 'candle_pane' }); hideCandle = true; }
-        else if (c.chartType === 10) { this.chartInstance.createIndicator('WA_HLC_AREA', false, { id: 'candle_pane' }); hideCandle = true; }
-        else if (c.chartType === 11) { this.chartInstance.createIndicator('WA_BASELINE', false, { id: 'candle_pane' }); hideCandle = true; }
+        // Loại custom
+        if      (c.chartType === 4)  { this.chartInstance.createIndicator('WA_COL_CHART',   false, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 5)  { this.chartInstance.createIndicator('WA_HL_CHART',    false, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 7)  { this.chartInstance.createIndicator('WA_LINE_MARKER', false, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 8)  { this.chartInstance.createIndicator('WA_STEP_LINE',   false, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 10) { this.chartInstance.createIndicator('WA_HLC_AREA',    false, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 11) { this.chartInstance.createIndicator('WA_BASELINE',    false, {id: 'candle_pane'}); hideCandle = true; }
 
-        const isHollow = (c.chartType === 2);
-        const finalUpColor = hideCandle ? 'transparent' : c.upColor;
+        const isHollow       = (c.chartType === 2);
+        const finalUpColor   = hideCandle ? 'transparent' : c.upColor;
         const finalDownColor = hideCandle ? 'transparent' : c.downColor;
-        const finalUpBorder = hideCandle ? 'transparent' : (c.showBorder ? (c.borderIndependent ? c.borderUpColor : c.upColor) : (isHollow ? c.upColor : 'transparent'));
+        // ✅ FIX #2: noChangeColor dùng màu xám cho nến doji, không hardcode transparent
+        const finalNoChange  = hideCandle ? 'transparent' : '#787b86';
+        const finalUpBorder   = hideCandle ? 'transparent' : (c.showBorder ? (c.borderIndependent ? c.borderUpColor   : c.upColor)   : (isHollow ? c.upColor   : 'transparent'));
         const finalDownBorder = hideCandle ? 'transparent' : (c.showBorder ? (c.borderIndependent ? c.borderDownColor : c.downColor) : (isHollow ? c.downColor : 'transparent'));
-        const finalUpWick = hideCandle ? 'transparent' : (c.showWick ? (c.wickIndependent ? c.wickUpColor : c.upColor) : 'transparent');
-        const finalDownWick = hideCandle ? 'transparent' : (c.showWick ? (c.wickIndependent ? c.wickDownColor : c.downColor) : 'transparent');
+        const finalUpWick     = hideCandle ? 'transparent' : (c.showWick ? (c.wickIndependent ? c.wickUpColor   : c.upColor)   : 'transparent');
+        const finalDownWick   = hideCandle ? 'transparent' : (c.showWick ? (c.wickIndependent ? c.wickDownColor : c.downColor) : 'transparent');
 
         const styles = {
-            grid: { horizontal: { show: c.gridHorizontal, color: c.gridColor, style: 'dashed' }, vertical: { show: c.gridVertical, color: c.gridColor, style: 'dashed' } },
+            grid: {
+                horizontal: { show: c.gridHorizontal, color: c.gridColor, style: 'dashed' },
+                vertical:   { show: c.gridVertical,   color: c.gridColor, style: 'dashed' }
+            },
             candle: {
-                type: kcChartType, tooltip: { showRule: c.showOHLC ? 'always' : 'none' },
-                bar: { upColor: finalUpColor, downColor: finalDownColor, noChangeColor: 'transparent', upBorderColor: finalUpBorder, downBorderColor: finalDownBorder, upWickColor: finalUpWick, downWickColor: finalDownWick },
-                area: { lineSize: 2, lineColor: hideCandle ? 'transparent' : c.upColor, backgroundColor: (isLine || hideCandle) ? 'transparent' : [{ offset: 0, color: this._dimColor(c.upColor, 0.25) }, { offset: 1, color: 'transparent' }] },
+                type:    kcChartType,
+                tooltip: { showRule: c.showOHLC ? 'always' : 'none' },
+                bar: {
+                    upColor:        finalUpColor,   downColor:        finalDownColor,
+                    noChangeColor:  finalNoChange,
+                    upBorderColor:  finalUpBorder,  downBorderColor:  finalDownBorder,
+                    upWickColor:    finalUpWick,    downWickColor:    finalDownWick
+                },
+                area: {
+                    lineSize:        2,
+                    lineColor:       hideCandle ? 'transparent' : c.upColor,
+                    backgroundColor: (isLine || hideCandle)
+                        ? 'transparent'
+                        : [{offset: 0, color: this._dimColor(c.upColor, 0.25)}, {offset: 1, color: 'transparent'}]
+                },
                 priceMark: { show: c.showLastPriceLine, high: { show: false }, low: { show: false } }
             },
-            crosshair: { show: c.crosshairMode !== 'hidden' }, indicator: { lastValueMark: { show: true } }
+            crosshair: { show: c.crosshairMode !== 'hidden' },
+            indicator:  { lastValueMark: { show: true } }
         };
 
-        try { this.chartInstance.setStyles(styles); this.chartInstance.setOffsetRightDistance(c.rightMargin); this.chartInstance.setPaneOptions({ id: 'candle_pane', axisOptions: { type: c.yAxisMode } }); } catch(e) {}
+        try {
+            this.chartInstance.setStyles(styles);
+            this.chartInstance.setOffsetRightDistance(c.rightMargin);
+            this.chartInstance.setPaneOptions({ id: 'candle_pane', axisOptions: { type: c.yAxisMode } });
+        } catch (e) {}
+
         const container = document.getElementById('sc-chart-container');
-        if (container) container.style.background = c.bgType === 'solid' ? c.bgColor : `linear-gradient(to bottom, ${c.bgColor} 0%, ${c.bgColor2} 100%)`; 
+        if (container) container.style.background = c.bgType === 'solid'
+            ? c.bgColor
+            : `linear-gradient(to bottom, ${c.bgColor} 0%, ${c.bgColor2} 100%)`;
+
         window.dispatchEvent(new CustomEvent('wa_chart_config_updated', { detail: c }));
     },
 
-    _dimColor: function(hex, opacity) {
+    // ✅ FIX #4: Cache cả rgba + memo cache đầy đủ
+    _dimColor: function (hex, opacity) {
         if (!hex) return 'transparent';
-        const cacheKey = hex + '_' + opacity; if (_WA_COLOR_CACHE[cacheKey]) return _WA_COLOR_CACHE[cacheKey];
-        let r = 0, g = 0, b = 0, result;
-        if (hex.startsWith('rgba')) return hex;
-        if (hex.startsWith('rgb(')) { const m = hex.match(/rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)/); if (m) { r = +m[1]; g = +m[2]; b = +m[3]; } } 
-        else if (hex.length === 4) { r = parseInt(hex[1] + hex[1], 16); g = parseInt(hex[2] + hex[2], 16); b = parseInt(hex[3] + hex[3], 16); } 
-        else if (hex.length === 7) { r = parseInt(hex.substring(1, 3), 16); g = parseInt(hex.substring(3, 5), 16); b = parseInt(hex.substring(5, 7), 16); }
-        result = `rgba(${r}, ${g}, ${b}, ${opacity})`; _WA_COLOR_CACHE[cacheKey] = result; return result;
+        const cacheKey = hex + '_' + opacity;
+        if (_WA_COLOR_CACHE[cacheKey]) return _WA_COLOR_CACHE[cacheKey];
+
+        let r = 0, g = 0, b = 0;
+
+        if (hex.startsWith('rgba')) {
+            // Cache luôn rgba thay vì bypass
+            _WA_COLOR_CACHE[cacheKey] = hex;
+            return hex;
+        }
+        if (hex.startsWith('rgb(')) {
+            const m = hex.match(/rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)/);
+            if (m) { r = +m[1]; g = +m[2]; b = +m[3]; }
+        } else if (hex.length === 4) {
+            r = parseInt(hex[1] + hex[1], 16);
+            g = parseInt(hex[2] + hex[2], 16);
+            b = parseInt(hex[3] + hex[3], 16);
+        } else if (hex.length === 7) {
+            r = parseInt(hex.substring(1, 3), 16);
+            g = parseInt(hex.substring(3, 5), 16);
+            b = parseInt(hex.substring(5, 7), 16);
+        }
+
+        const result = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        _WA_COLOR_CACHE[cacheKey] = result;
+        return result;
     }
 };
 
