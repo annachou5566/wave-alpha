@@ -3613,12 +3613,42 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 .eb-capsule-label.passed { color: rgba(0, 240, 255, 0.5); }
 
 
-#wa-timeframe-menu .wa-tf-item:hover {
-    background: rgba(0, 240, 255, 0.1) !important;
-    color: #00F0FF !important;
-}
-
 /* Ẩn các nút timeframe cũ nếu chúng vẫn còn trên giao diện */
 .sc-time-btn {
     display: none !important;
+}
+
+/* =========================================
+   WAVE ALPHA CUSTOM TOOLTIP (MINIMALIST)
+   ========================================= */
+   [data-wa-tip] {
+    position: relative;
+}
+[data-wa-tip]::after {
+    content: attr(data-wa-tip);
+    position: absolute;
+    top: calc(100% + 8px); /* Nằm cách dưới đáy nút 8px */
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: #1e222d;
+    color: #EAECEF;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--font-main, sans-serif);
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.1);
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: 0.15s ease-in-out;
+    z-index: 100000;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+/* Hiệu ứng trượt nhẹ lên khi hover */
+[data-wa-tip]:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
 }

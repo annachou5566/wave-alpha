@@ -1399,9 +1399,9 @@ window.closeProChart = function() {
             // Thêm gap: 6px để các nút cách nhau một chút cho đẹp
             btnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; gap: 6px; margin-left: 8px;';
             btnWrap.innerHTML = `
-                <button id="btn-wa-chart-type" title="Chart Type">
+                <button id="btn-wa-chart-type" data-wa-tip="Loại Biểu Đồ" style="background: rgba(255,255,255,0.03); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px 8px; height: 26px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; transition: 0.2s;">
                     <span id="wa-ct-btn-icon" style="display:flex; align-items:center;">${CHART_TYPES[0].icon}</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
                 </button>
             `;
             
@@ -1736,7 +1736,7 @@ window.closeProChart = function() {
             clearInterval(checkToolbar);
             // Bơm trực tiếp nút HTML vào trong Group đó (nằm cạnh nút Chart Type)
             const btnHTML = `
-                <button id="btn-wa-chart-settings" title="Cài đặt Biểu đồ" style="background: rgba(255,255,255,0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;">
+                <button id="btn-wa-chart-settings" data-wa-tip="Cài đặt Biểu đồ" style="background: rgba(255,255,255,0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 </button>
             `;
@@ -1896,10 +1896,10 @@ window.closeProChart = function() {
             const tfBtnWrap = document.createElement('div');
             tfBtnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; margin-right: 8px;';
             tfBtnWrap.innerHTML = `
-                <button id="btn-wa-timeframe-master" style="background: rgba(255,255,255,0.03); color: #00F0FF; border: 1px solid rgba(0,240,255,0.2); border-radius: 4px; padding: 4px 8px; height: 26px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; font-family: var(--font-num); font-weight: 800; font-size: 12px;">
-                    <span id="wa-current-tf-label">1D</span>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                </button>
+    <button id="btn-wa-timeframe-master" data-wa-tip="Khung Thời Gian" style="background: rgba(255,255,255,0.03); color: #00F0FF; border: 1px solid rgba(0,240,255,0.2); border-radius: 4px; padding: 4px 8px; height: 26px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; font-family: var(--font-num); font-weight: 800; font-size: 12px;">
+        <span id="wa-current-tf-label">${(window.currentChartInterval || '1D').toUpperCase()}</span>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    </button>
             `;
             
             // Chèn vào đầu Group để nó nằm bên trái nút Chart Type
@@ -1990,7 +1990,7 @@ window.closeProChart = function() {
             const btnWrap = document.createElement('div');
             btnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; margin-left: 8px;';
             btnWrap.innerHTML = `
-                <button id="sc-filter-btn" title="Lọc Dấu Chân Cá Mập" style="background: rgba(255,255,255,0.03); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px 10px; height: 26px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s;">
+                <button id="sc-filter-btn" data-wa-tip="Lọc Dấu Chân Cá Mập" style="background: rgba(255,255,255,0.03); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px 10px; height: 26px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s;">
                     <i class="fas fa-filter" style="font-size: 10px;"></i>
                     <span style="font-size: 11px; font-weight: 700; font-family: var(--font-main); letter-spacing: 0.5px;">LỌC CÁ</span>
                 </button>
