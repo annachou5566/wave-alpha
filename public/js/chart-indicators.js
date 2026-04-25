@@ -3858,17 +3858,6 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                   }
                   .wa-topbtn:hover { background: rgba(255,255,255,0.08); color: #EAECEF; }
                   .wa-topbtn.active { background: rgba(0,240,255,0.1); color: #00F0FF; }
-                  
-                  /* Tooltip Custom siêu nhạy */
-                  .wa-topbtn::after {
-                      content: attr(data-tip);
-                      position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
-                      background: #1e2329; border: 1px solid rgba(255,255,255,0.1); color: #b7bdc6;
-                      padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
-                      white-space: nowrap; opacity: 0; visibility: hidden; pointer-events: none;
-                      transition: all 0.2s ease; z-index: 100000; box-shadow: 0 8px 16px rgba(0,0,0,0.6);
-                  }
-                  .wa-topbtn:hover::after { opacity: 1; visibility: visible; top: calc(100% + 8px); }
               `;
               document.head.appendChild(style);
           }
