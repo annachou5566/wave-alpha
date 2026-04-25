@@ -39,7 +39,7 @@ const DEFAULT_CHART_CONFIG = {
 const LS_CONFIG_KEY = 'wave_alpha_chart_config';
 
 // 🚀 Danh sách các Custom Chart để tự động dọn dẹp khi chuyển đổi
-const CUSTOM_CHART_IDS = ['WA_COL_CHART', 'WA_HL_CHART', 'WA_STEP_LINE'];
+const CUSTOM_CHART_IDS = ['WA_COL_CHART', 'WA_HL_CHART', 'WA_STEP_LINE', 'WA_LINE_MARKER', 'WA_HLC_AREA'];
 
 window.WaveChartEngine = {
     chartInstance: null, config: { ...DEFAULT_CHART_CONFIG }, _debounceTimer: null,
@@ -234,6 +234,67 @@ window.klinecharts.registerIndicator({
     }
 });
 
+// 5. CHỈ BÁO VẼ VÙNG HLC (HIGH-LOW-CLOSE AREA - ID 10) 🚀 [MỚI THÊM]
+window.klinecharts.registerIndicator({
+    name: 'WA_HLC_AREA',
+    shortName: ' ',
+    series: 'price',
+    calc: (dataList) => dataList,
+    draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
+        const c = window.WaveChartEngine.config;
+        const { from, to } = visibleRange;
+        const dataList = indicator.result;
+        
+        ctx.save();
+        ctx.setLineDash([]); 
+
+        // BƯỚC 1: Vẽ dải lụa mờ (Kéo dài từ đỉnh High xuống đáy Low)
+        ctx.beginPath(); 
+        // Dùng hàm _dimColor có sẵn để giảm độ trong suốt của màu Nến Tăng xuống 15%
+        ctx.fillStyle = window.WaveChartEngine._dimColor(c.upColor, 0.15); 
+        
+        const start = Math.max(0, from - 1);
+        
+        // Đi chiều xuôi (Nối các đỉnh High từ trái qua phải)
+        for (let i = start; i < to; i++) {
+            const kd = dataList[i];
+            if (!kd || kd.high === undefined) continue;
+            const x = xAxis.convertToPixel(i); 
+            const y = yAxis.convertToPixel(kd.high);
+            if (i === start) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        
+        // Đi chiều ngược (Vòng về nối các đáy Low từ phải qua trái để khép kín hình)
+        for (let i = to - 1; i >= start; i--) {
+            const kd = dataList[i];
+            if (!kd || kd.low === undefined) continue;
+            const x = xAxis.convertToPixel(i); 
+            const y = yAxis.convertToPixel(kd.low);
+            ctx.lineTo(x, y);
+        }
+        ctx.closePath(); 
+        ctx.fill();
+
+        // BƯỚC 2: Vẽ đường Close sắc nét ở giữa dải lụa
+        ctx.beginPath(); 
+        ctx.strokeStyle = c.upColor; 
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        
+        let isFirst = true;
+        for (let i = start; i < to; i++) {
+            const kd = dataList[i];
+            if (!kd || kd.close === undefined) continue;
+            const x = xAxis.convertToPixel(i); 
+            const y = yAxis.convertToPixel(kd.close);
+            if (isFirst) { ctx.moveTo(x, y); isFirst = false; } else { ctx.lineTo(x, y); }
+        }
+        ctx.stroke(); 
+        ctx.restore(); 
+        return true;
+    }
+});
+
             console.log('[WaveChartEngine] Đã nạp Custom Chart V5 (Columns, High-Low, Step-Line) ✅');
         } catch(e) { console.error("Lỗi nạp Custom Indicator:", e); }
     },
@@ -262,7 +323,7 @@ window.klinecharts.registerIndicator({
         // Nến mặc định hoặc Line Native
         if (c.chartType === 2) kcChartType = 'candle_stroke';
         else if (c.chartType === 3) kcChartType = 'ohlc';     
-        else if (c.chartType === 6 || c.chartType === 9 || c.chartType === 10 || c.chartType === 11) {
+        else if (c.chartType === 6 || c.chartType === 9 || c.chartType === 11) {
             kcChartType = 'area'; isLine = (c.chartType !== 9); 
         } 
 
@@ -283,6 +344,13 @@ window.klinecharts.registerIndicator({
             this.chartInstance.createIndicator('WA_LINE_MARKER', false, { id: 'candle_pane' });
             hideCandle = true;
         }
+
+        else if (c.chartType === 10) { // 🚀 Router đến Vùng HLC (ID 10)
+            this.chartInstance.createIndicator('WA_HLC_AREA', false, { id: 'candle_pane' });
+            hideCandle = true;
+        }
+
+
         const isHollow = (c.chartType === 2);
         
         const finalUpColor = hideCandle ? 'transparent' : c.upColor;
