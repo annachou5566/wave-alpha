@@ -2016,13 +2016,13 @@ window.closeProChart = function() {
 (function initFishFilterMenu() {
     'use strict';
 
-    // Dữ liệu các mốc lọc cá (Đã loại bỏ số gán cứng vì AI tự động scale theo Vol Token)
+    // Đã thêm trường statId để hứng dữ liệu từ hàm đếm cá flushSmartTape
     const FISH_FILTERS = [
-        { id: 'whale', name: '🐋 Cá Voi', defaultChecked: true },
-        { id: 'shark', name: '🦈 Cá Mập', defaultChecked: true },
-        { id: 'dolphin', name: '🐬 Cá Heo', defaultChecked: true },
-        { id: 'bot', name: '🤖 Bot Sweep', defaultChecked: true },
-        { id: 'liq', name: '🩸 Thanh Lý', defaultChecked: true }
+        { id: 'whale', name: '🐋 Cá Voi', statId: 'sc-stat-whale', defaultChecked: true },
+        { id: 'shark', name: '🦈 Cá Mập', statId: 'sc-stat-shark', defaultChecked: true },
+        { id: 'dolphin', name: '🐬 Cá Heo', statId: 'sc-stat-dolphin', defaultChecked: true },
+        { id: 'bot', name: '🤖 Bot Sweep', statId: 'sc-stat-sweep', defaultChecked: true },
+        { id: 'liq', name: '🩸 Thanh Lý', statId: null, defaultChecked: true } // Thanh lý không đếm số lần
     ];
 
     const checkToolbar = setInterval(() => {
@@ -2031,13 +2031,12 @@ window.closeProChart = function() {
         if (targetGroup) {
             clearInterval(checkToolbar);
 
-            // 1. Dọn dẹp
             const oldBtn = document.getElementById('sc-filter-btn');
             if (oldBtn) oldBtn.remove();
             const oldMenu = document.getElementById('sc-filter-menu');
             if (oldMenu) oldMenu.remove();
 
-            // 2. Tạo nút Lọc Cá (Tone Basic Xám/Trắng)
+            // Nút bấm có thêm data-wa-tip chuẩn mượt
             const btnWrap = document.createElement('div');
             btnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; margin-left: 8px;';
             btnWrap.innerHTML = `
@@ -2046,15 +2045,14 @@ window.closeProChart = function() {
                     <span style="font-size: 11px; font-weight: 700; font-family: var(--font-main); letter-spacing: 0.5px;">LỌC CÁ</span>
                 </button>
             `;
-            
             targetGroup.appendChild(btnWrap);
 
-            // 3. Tạo Menu Dropdown
             const menu = document.createElement('div');
             menu.id = 'sc-filter-menu';
+            // Tăng nhẹ chiều rộng lên 185px để chứa đẹp cái thẻ Badge đếm số
             menu.style.cssText = `
                 display: none; position: fixed; background: #1e222d; border: 1px solid rgba(255,255,255,0.1); 
-                border-radius: 8px; width: 150px; z-index: 999999; box-shadow: 0 16px 40px rgba(0,0,0,0.8);
+                border-radius: 8px; width: 185px; z-index: 999999; box-shadow: 0 16px 40px rgba(0,0,0,0.8);
                 padding: 8px; flex-direction: column; gap: 2px; user-select: none;
             `;
 
@@ -2066,19 +2064,32 @@ window.closeProChart = function() {
                     border-radius: 4px; cursor: pointer; color: #EAECEF; font-size: 12px; font-weight: 600;
                     margin: 0; transition: background 0.2s;
                 `;
+                
+                // Khởi tạo thẻ Badge đếm số (Màu xanh dương dạ quang nổi bật)
+                let currentCount = 0;
+                if (fish.statId === 'sc-stat-whale') currentCount = window.scCWhale || 0;
+                if (fish.statId === 'sc-stat-shark') currentCount = window.scCShark || 0;
+                if (fish.statId === 'sc-stat-dolphin') currentCount = window.scCDolphin || 0;
+                if (fish.statId === 'sc-stat-sweep') currentCount = window.scCSweep || 0;
+
+                const badgeHtml = fish.statId ? 
+                    `<span id="${fish.statId}" style="background: rgba(0, 240, 255, 0.1); color: #00F0FF; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-family: var(--font-num); font-weight: 800; margin-left: 8px; min-width: 20px; text-align: center; border: 1px solid rgba(0, 240, 255, 0.2);">${currentCount}</span>` : 
+                    '';
+
                 item.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="display: flex; align-items: center;">
                         <span>${fish.name}</span>
+                        ${badgeHtml}
                     </div>
                     <input type="checkbox" class="marker-filter-cb" value="${fish.id}" ${fish.defaultChecked ? 'checked' : ''} style="display: none;">
                     <div class="custom-checkbox" style="width: 16px; height: 16px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: 0.2s;"></div>
                 `;
 
-                // Hover effect
+                // Hiệu ứng Hover
                 item.onmouseenter = () => item.style.background = 'rgba(255,255,255,0.05)';
                 item.onmouseleave = () => item.style.background = 'transparent';
 
-                // Handle Checkbox UI (Trắng xám)
+                // Xử lý Giao diện Checkbox (Trắng xám)
                 const checkbox = item.querySelector('input');
                 const checkBoxUI = item.querySelector('.custom-checkbox');
                 
@@ -2107,7 +2118,7 @@ window.closeProChart = function() {
 
             document.body.appendChild(menu);
 
-            // 4. Logic Đóng/Mở mượt mà
+            // Logic Đóng/Mở mượt mà
             const filterBtn = document.getElementById('sc-filter-btn');
             filterBtn.onclick = (e) => {
                 e.stopPropagation();
@@ -2115,8 +2126,8 @@ window.closeProChart = function() {
                 if (isHidden) {
                     const rect = filterBtn.getBoundingClientRect();
                     menu.style.top = (rect.bottom + 6) + 'px';
-                    // Menu nhỏ lại một chút (width 150px) nên lề phải cũng chỉnh lại
-                    menu.style.left = (rect.right - 150) + 'px'; 
+                    // Canh lề trái menu trừ đi 185px chiều rộng mới
+                    menu.style.left = (rect.right - 185) + 'px'; 
                     menu.style.display = 'flex';
                     filterBtn.style.background = 'rgba(255,255,255,0.08)';
                     filterBtn.style.color = '#EAECEF';
