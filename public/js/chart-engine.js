@@ -131,7 +131,7 @@ window.WaveChartEngine = {
                 }
             });
 
-            // 3. CHỈ BÁO VẼ ĐƯỜNG BẬC THANG (STEP LINE - ID 8) 🚀 [MỚI THÊM]
+            // 3. CHỈ BÁO VẼ ĐƯỜNG BẬC THANG (STEP LINE - ID 8) 🚀 [FIX NÉT LIỀN TUYỆT ĐỐI]
             window.klinecharts.registerIndicator({
                 name: 'WA_STEP_LINE',
                 shortName: ' ',
@@ -143,14 +143,20 @@ window.WaveChartEngine = {
                     const dataList = indicator.result;
                     
                     ctx.save();
+                    // 🚀 BẮT BUỘC: Xóa mọi trạng thái nét đứt bị "dính" từ Grid/Crosshair
+                    ctx.setLineDash([]); 
+                    
                     ctx.lineWidth = 2;
-                    ctx.strokeStyle = c.upColor; // Lấy màu Nến Tăng làm màu chủ đạo cho đường line
+                    ctx.strokeStyle = c.upColor; // Line mặc định lấy màu Nến Tăng
                     ctx.lineCap = 'round';
                     ctx.lineJoin = 'round';
                     ctx.beginPath();
                     
+                    // 🚀 Kéo lùi lại 1 nến (from - 1) để nối liền mạch với phần bị khuất ngoài màn hình
+                    const start = Math.max(0, from - 1);
+                    
                     let isFirst = true;
-                    for (let i = from; i < to; i++) {
+                    for (let i = start; i < to; i++) {
                         const kd = dataList[i];
                         if (!kd || kd.close === undefined) continue;
                         
@@ -161,10 +167,15 @@ window.WaveChartEngine = {
                             ctx.moveTo(x, y); 
                             isFirst = false;
                         } else {
-                            // Cốt lõi của Step Line: Kéo ngang sang cột mới trước (theo giá cũ), rồi mới kéo dọc lên/xuống (giá mới)
-                            const prevY = yAxis.convertToPixel(dataList[i - 1].close);
-                            ctx.lineTo(x, prevY);
-                            ctx.lineTo(x, y);
+                            // Lấy tọa độ Y của nến trước đó để vẽ bậc thang đi ngang
+                            const prevKd = dataList[i - 1];
+                            if (prevKd && prevKd.close !== undefined) {
+                                const prevY = yAxis.convertToPixel(prevKd.close);
+                                ctx.lineTo(x, prevY); // Kéo ngang sang phải
+                                ctx.lineTo(x, y);     // Kéo dọc chốt giá
+                            } else {
+                                ctx.moveTo(x, y); // Đề phòng mất data thì nhấc bút vẽ lại
+                            }
                         }
                     }
                     ctx.stroke();
