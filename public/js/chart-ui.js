@@ -534,25 +534,7 @@ window.changeTheme = function() {
     }
 };
 
-window.toggleMarkerFilterMenu = function(e) {
-    if(e) e.stopPropagation();
-    let menu = document.getElementById('sc-filter-menu');
-    let btn = document.getElementById('sc-filter-btn');
-    if(menu) {
-        menu.classList.toggle('show');
-        if (btn) btn.classList.toggle('active', menu.classList.contains('show'));
-    }
-};
 
-// Tự động đóng menu khi click ra ngoài
-document.addEventListener('click', function(e) {
-    let menu = document.getElementById('sc-filter-menu');
-    let btn = document.getElementById('sc-filter-btn');
-    if (menu && menu.classList.contains('show') && !menu.contains(e.target) && e.target !== btn) {
-        menu.classList.remove('show');
-        if (btn) btn.classList.remove('active');
-    }
-});
 
 window.applyFishFilter = function() {
     if (!window.tvChart) return;
@@ -1977,4 +1959,134 @@ window.closeProChart = function() {
             document.addEventListener('click', () => menu.style.display = 'none');
         }
     }, 200);
+})();
+
+(function initFishFilterMenu() {
+    'use strict';
+
+    // Dữ liệu các mốc lọc cá
+    const FISH_FILTERS = [
+        { id: 'whale', name: '🐋 Voi (> 15k)', defaultChecked: true },
+        { id: 'shark', name: '🦈 Mập (> 5k)', defaultChecked: true },
+        { id: 'dolphin', name: '🐬 Heo (> 2k)', defaultChecked: true },
+        { id: 'bot', name: '🤖 Bot Sweep', defaultChecked: true },
+        { id: 'liq', name: '🩸 Thanh Lý', defaultChecked: true }
+    ];
+
+    const checkToolbar = setInterval(() => {
+        // Tìm Group chứa các nút công cụ để gắn vào (nằm cạnh nút Timeframe/Chart Type)
+        const targetGroup = document.getElementById('wa-chart-controls-group') || document.querySelector('.sc-toolbar');
+        
+        if (targetGroup) {
+            clearInterval(checkToolbar);
+
+            // 1. Dọn dẹp nút và menu cũ (nếu có bị dính lại từ HTML)
+            const oldBtn = document.getElementById('sc-filter-btn');
+            if (oldBtn) oldBtn.remove();
+            const oldMenu = document.getElementById('sc-filter-menu');
+            if (oldMenu) oldMenu.remove();
+
+            // 2. Tạo nút Lọc Cá (Fish Filter Button)
+            const btnWrap = document.createElement('div');
+            btnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; margin-left: 8px;';
+            btnWrap.innerHTML = `
+                <button id="sc-filter-btn" title="Lọc Dấu Chân Cá Mập" style="background: rgba(255,255,255,0.03); color: #0ECB81; border: 1px solid rgba(14, 203, 129, 0.2); border-radius: 4px; padding: 4px 10px; height: 26px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s;">
+                    <i class="fas fa-filter" style="font-size: 10px;"></i>
+                    <span style="font-size: 11px; font-weight: 800; font-family: var(--font-main); letter-spacing: 0.5px;">LỌC CÁ</span>
+                </button>
+            `;
+            
+            targetGroup.appendChild(btnWrap);
+
+            // 3. Tạo Menu Dropdown Minimalist
+            const menu = document.createElement('div');
+            menu.id = 'sc-filter-menu';
+            menu.style.cssText = `
+                display: none; position: fixed; background: #1e222d; border: 1px solid rgba(255,255,255,0.1); 
+                border-radius: 8px; width: 170px; z-index: 999999; box-shadow: 0 16px 40px rgba(0,0,0,0.8);
+                padding: 8px; flex-direction: column; gap: 2px; user-select: none;
+            `;
+
+            FISH_FILTERS.forEach(fish => {
+                const item = document.createElement('label');
+                item.className = 'minimal-filter-item';
+                item.style.cssText = `
+                    display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; 
+                    border-radius: 4px; cursor: pointer; color: #EAECEF; font-size: 12px; font-weight: 600;
+                    margin: 0; transition: background 0.2s;
+                `;
+                item.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>${fish.name}</span>
+                    </div>
+                    <input type="checkbox" class="marker-filter-cb" value="${fish.id}" ${fish.defaultChecked ? 'checked' : ''} style="display: none;">
+                    <div class="custom-checkbox" style="width: 16px; height: 16px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: 0.2s;"></div>
+                `;
+
+                // Hover effect
+                item.onmouseenter = () => item.style.background = 'rgba(255,255,255,0.05)';
+                item.onmouseleave = () => item.style.background = 'transparent';
+
+                // Handle Checkbox UI
+                const checkbox = item.querySelector('input');
+                const checkBoxUI = item.querySelector('.custom-checkbox');
+                
+                const updateUI = () => {
+                    if (checkbox.checked) {
+                        checkBoxUI.style.background = 'rgba(14, 203, 129, 0.2)';
+                        checkBoxUI.style.borderColor = '#0ECB81';
+                        checkBoxUI.innerHTML = '<i class="fas fa-check" style="color: #0ECB81; font-size: 9px;"></i>';
+                    } else {
+                        checkBoxUI.style.background = 'transparent';
+                        checkBoxUI.style.borderColor = 'rgba(255,255,255,0.2)';
+                        checkBoxUI.innerHTML = '';
+                    }
+                };
+                updateUI();
+
+                // Trigger filter action when checked/unchecked
+                checkbox.addEventListener('change', (e) => {
+                    updateUI();
+                    if (typeof window.applyFishFilter === 'function') {
+                        window.applyFishFilter();
+                    }
+                });
+
+                menu.appendChild(item);
+            });
+
+            document.body.appendChild(menu);
+
+            // 4. Logic Đóng/Mở mượt mà
+            const filterBtn = document.getElementById('sc-filter-btn');
+            filterBtn.onclick = (e) => {
+                e.stopPropagation();
+                const isHidden = menu.style.display === 'none' || menu.style.display === '';
+                if (isHidden) {
+                    const rect = filterBtn.getBoundingClientRect();
+                    menu.style.top = (rect.bottom + 6) + 'px';
+                    // Căn lề phải menu ôm sát với nút bấm
+                    menu.style.left = (rect.right - 170) + 'px'; 
+                    menu.style.display = 'flex';
+                    filterBtn.style.background = 'rgba(14, 203, 129, 0.1)';
+                } else {
+                    menu.style.display = 'none';
+                    filterBtn.style.background = 'rgba(255,255,255,0.03)';
+                }
+            };
+
+            // Chặn click bên trong menu làm đóng menu
+            menu.onclick = (e) => e.stopPropagation(); 
+        }
+    }, 200);
+    
+    // Lắng nghe click ngoài màn hình để tự động đóng menu
+    document.addEventListener('click', (e) => {
+        const menu = document.getElementById('sc-filter-menu');
+        const btn = document.getElementById('sc-filter-btn');
+        if (menu && menu.style.display === 'flex' && !menu.contains(e.target) && (!btn || !btn.contains(e.target))) {
+            menu.style.display = 'none';
+            if (btn) btn.style.background = 'rgba(255,255,255,0.03)';
+        }
+    });
 })();
