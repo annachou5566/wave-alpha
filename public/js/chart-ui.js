@@ -2158,3 +2158,173 @@ window.closeProChart = function() {
         }
     });
 })();
+
+// =========================================================================
+// 🚀 SUPER SETTINGS MODAL: BẢNG CÀI ĐẶT TRADINGVIEW ĐỘNG (BẢN CHUẨN)
+// Dán vào cuối cùng file chart-ui.js, nó sẽ tự động ghi đè lệnh cũ!
+// =========================================================================
+window.openChartSettings = function() {
+    let oldModal = document.getElementById('wa-super-settings-modal');
+    if (oldModal) oldModal.remove();
+
+    const engine = window.WaveChartEngine;
+    if (!engine) return;
+    const c = engine.getConfig();
+
+    const modal = document.createElement('div');
+    modal.id = 'wa-super-settings-modal';
+    modal.style.cssText = `
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        background: #1e2329; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
+        width: 340px; z-index: 999999; box-shadow: 0 16px 40px rgba(0,0,0,0.8);
+        font-family: Arial, sans-serif; display: flex; flex-direction: column;
+    `;
+
+    modal.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <select id="cfg-chart-type" style="background:#2b3139; border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:#EAECEF; font-size:14px; font-weight:bold; outline:none; cursor:pointer; padding:6px 10px;">
+                <option value="1">Nến Nhật (Candles)</option>
+                <option value="2">Nến Rỗng (Hollow)</option>
+                <option value="3">Thanh (Bars)</option>
+                <option value="4">Cột (Columns)</option>
+                <option value="5">Đỉnh - Đáy (High-Low)</option>
+                <option value="6">Đường (Line)</option>
+                <option value="7">Đường + Điểm (Marker)</option>
+                <option value="8">Bậc Thang (Step Line)</option>
+                <option value="9">Vùng (Area)</option>
+                <option value="10">Vùng HLC (HLC Area)</option>
+                <option value="11">Đường Cơ Sở (Baseline)</option>
+            </select>
+            <button id="cfg-close-btn" style="background:transparent; border:none; color:#848e9c; cursor:pointer; font-size:20px; line-height:1;">&times;</button>
+        </div>
+        <div id="cfg-dynamic-body" style="padding: 16px; max-height: 450px; overflow-y: auto;">
+            </div>
+    `;
+    document.body.appendChild(modal);
+
+    const typeSelect = document.getElementById('cfg-chart-type');
+    typeSelect.value = c.chartType;
+
+    function renderDynamicPanel() {
+        const type = parseInt(typeSelect.value);
+        let html = '';
+
+        if (type === 1 || type === 2 || type === 3 || type === 4 || type === 5) {
+            html = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+                    <span style="color:#b7bdc6; font-size:13px;">Màu Tăng</span>
+                    <input type="color" data-key="upColor" value="${c.upColor}" style="cursor:pointer;">
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+                    <span style="color:#b7bdc6; font-size:13px;">Màu Giảm</span>
+                    <input type="color" data-key="downColor" value="${c.downColor}" style="cursor:pointer;">
+                </div>
+            `;
+        } 
+        else if (type === 6 || type === 7 || type === 8 || type === 9) {
+            html = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+                    <span style="color:#b7bdc6; font-size:13px;">Màu Đường</span>
+                    <input type="color" data-key="upColor" value="${c.upColor}" style="cursor:pointer;">
+                </div>
+            `;
+        }
+        else if (type === 10) { // HLC AREA
+            html = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <span style="color:#b7bdc6; font-size:13px;">Đường Đóng Cửa</span>
+                    <input type="color" data-key="hlcCloseColor" value="${c.hlcCloseColor}">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <label style="color:#b7bdc6; font-size:13px; cursor:pointer;"><input type="checkbox" id="cfg-hlc-show" ${c.hlcShowHighLow?'checked':''}> Viền Đỉnh (High)</label>
+                    <input type="color" data-key="hlcHighColor" value="${c.hlcHighColor}">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <span style="color:#b7bdc6; font-size:13px; margin-left:22px;">Viền Đáy (Low)</span>
+                    <input type="color" data-key="hlcLowColor" value="${c.hlcLowColor}">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span style="color:#b7bdc6; font-size:13px;">Màu Nền (Fill)</span>
+                    <input type="color" data-key="hlcFillColor" value="${c.hlcFillColor}">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <span style="color:#6b7280; font-size:11px; margin-left:22px;">Độ mờ nền</span>
+                    <input type="range" id="cfg-hlc-op" min="0" max="1" step="0.05" value="${c.hlcFillOpacity}" style="width:100px;">
+                </div>
+            `;
+        }
+        else if (type === 11) { // BASELINE
+            html = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <span style="color:#b7bdc6; font-size:13px;">Đường Nửa Trên</span>
+                    <input type="color" data-key="baselineUpColor" value="${c.baselineUpColor}">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <span style="color:#b7bdc6; font-size:13px;">Đường Nửa Dưới</span>
+                    <input type="color" data-key="baselineDownColor" value="${c.baselineDownColor}">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span style="color:#b7bdc6; font-size:13px;">Nền Nửa Trên</span>
+                    <input type="color" data-key="baselineUpFill" value="${c.baselineUpFill}">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span style="color:#b7bdc6; font-size:13px;">Nền Nửa Dưới</span>
+                    <input type="color" data-key="baselineDownFill" value="${c.baselineDownFill}">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <span style="color:#6b7280; font-size:11px; margin-left:22px;">Độ mờ nền chung</span>
+                    <input type="range" id="cfg-base-op" min="0" max="1" step="0.05" value="${c.baselineFillOpacity}" style="width:100px;">
+                </div>
+
+                <div style="margin-top:16px; border-top:1px solid rgba(255,255,255,0.05); padding-top:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <span style="color:#b7bdc6; font-size:13px;">Mức cơ sở (%)</span>
+                        <input type="number" id="cfg-base-val" value="${c.baselineValue}" min="0" max="100" style="width:50px; background:#111; color:#fff; border:1px solid #333; text-align:center; border-radius:4px;">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="color:#b7bdc6; font-size:13px;">Nguồn giá</span>
+                        <select id="cfg-base-src" style="background:#111; color:#fff; border:1px solid #333; padding:4px; border-radius:4px;">
+                            <option value="close" ${c.baselinePriceSource==='close'?'selected':''}>Đóng cửa</option>
+                            <option value="hl2" ${c.baselinePriceSource==='hl2'?'selected':''}>TB (H+L)/2</option>
+                            <option value="ohlc4" ${c.baselinePriceSource==='ohlc4'?'selected':''}>TB Toàn phần</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+        }
+
+        document.getElementById('cfg-dynamic-body').innerHTML = html;
+
+        // Bắt sự kiện đổi màu
+        document.getElementById('cfg-dynamic-body').querySelectorAll('input[type="color"]').forEach(input => {
+            input.addEventListener('input', (e) => engine.update({ [e.target.dataset.key]: e.target.value }, true));
+        });
+
+        // Bắt sự kiện HLC
+        const hlcShow = document.getElementById('cfg-hlc-show');
+        if (hlcShow) hlcShow.addEventListener('change', (e) => engine.update({ hlcShowHighLow: e.target.checked }, true));
+        const hlcOp = document.getElementById('cfg-hlc-op');
+        if (hlcOp) hlcOp.addEventListener('input', (e) => engine.update({ hlcFillOpacity: parseFloat(e.target.value) }, true));
+
+        // Bắt sự kiện Baseline
+        const baseOp = document.getElementById('cfg-base-op');
+        if (baseOp) baseOp.addEventListener('input', (e) => engine.update({ baselineFillOpacity: parseFloat(e.target.value) }, true));
+        const baseVal = document.getElementById('cfg-base-val');
+        if (baseVal) baseVal.addEventListener('change', (e) => engine.update({ baselineValue: parseInt(e.target.value) }, true));
+        const baseSrc = document.getElementById('cfg-base-src');
+        if (baseSrc) baseSrc.addEventListener('change', (e) => engine.update({ baselinePriceSource: e.target.value }, true));
+    }
+
+    renderDynamicPanel();
+
+    typeSelect.addEventListener('change', (e) => {
+        engine.update({ chartType: parseInt(e.target.value) }, true);
+        renderDynamicPanel(); 
+        
+        // Cập nhật icon trên thanh Toolbar nếu cần
+        const btnIcon = document.getElementById('wa-ct-btn-icon');
+        if (btnIcon) btnIcon.innerHTML = `<span style="font-size:12px; font-weight:bold; color:#0ECB81;">Type ${e.target.value}</span>`;
+    });
+
+    document.getElementById('cfg-close-btn').onclick = () => modal.remove();
+};
