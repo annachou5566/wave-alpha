@@ -1756,12 +1756,21 @@ window.closeProChart = function() {
 
     function applyColorToSwatch(hexCode, opacity) {
         if (!activeSwatchBtn) return;
-        let finalColor = hexCode;
-        if (opacity < 1 && hexCode.startsWith('#')) {
-            let r = parseInt(hexCode.slice(1,3), 16), g = parseInt(hexCode.slice(3,5), 16), b = parseInt(hexCode.slice(5,7), 16);
-            finalColor = `rgba(${r},${g},${b},${opacity})`;
+        
+        // Làm sạch chuỗi hex: nếu user gõ dư ký tự, chỉ lấy đúng chuẩn #RRGGBB
+        if (hexCode.startsWith('#') && hexCode.length >= 7) {
+            hexCode = hexCode.substring(0, 7);
         }
-        activeSwatchBtn.style.background = finalColor; hexInp.value = finalColor;
+
+        let finalColor = hexCode;
+        if (opacity < 1 && hexCode.startsWith('#') && hexCode.length === 7) {
+            let r = parseInt(hexCode.slice(1,3), 16), g = parseInt(hexCode.slice(3,5), 16), b = parseInt(hexCode.slice(5,7), 16);
+            if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+                finalColor = `rgba(${r},${g},${b},${opacity})`;
+            }
+        }
+        activeSwatchBtn.style.background = finalColor; 
+        hexInp.value = hexCode; // Giữ ô input luôn là mã Hex gọn gàng
         if (window.WaveChartEngine) window.WaveChartEngine.update({ [activeBindKey]: finalColor });
     }
 
@@ -1769,16 +1778,34 @@ window.closeProChart = function() {
         swatch.onclick = (e) => {
             e.stopPropagation(); activeSwatchBtn = swatch; activeBindKey = swatch.dataset.colorBind;
             let curColor = swatch.style.background || '#ffffff';
-            hexInp.value = curColor.startsWith('rgb') ? curColor : rgb2hex(curColor);
+            
+            // FIX: Bóc tách Opacity hiện tại đưa lên thanh trượt, và ép màu vào ô Input thành chuẩn Hex
+            let currentOpacity = 1;
+            if (curColor.startsWith('rgba')) {
+                const m = curColor.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/);
+                if (m) currentOpacity = parseFloat(m[1]);
+            }
+            opSlider.value = currentOpacity;
+            hexInp.value = rgb2hex(curColor); 
+            
             const rect = swatch.getBoundingClientRect();
             colorPicker.style.display = 'block'; colorPicker.style.left = rect.left + 'px'; colorPicker.style.top = (rect.bottom + 10) + 'px';
         };
     });
 
     hexInp.oninput = (e) => applyColorToSwatch(e.target.value, opSlider.value);
-    opSlider.oninput = (e) => applyColorToSwatch(hexInp.value.substring(0,7), e.target.value);
+    // FIX: Bỏ substring(0,7) ở đây vì hexInp.value giờ luôn là chuẩn Hex do hàm rgb2hex xử lý
+    opSlider.oninput = (e) => applyColorToSwatch(hexInp.value, e.target.value);
+    
     document.addEventListener('click', (e) => { if (!colorPicker.contains(e.target) && !e.target.classList.contains('wa-color-swatch')) colorPicker.style.display = 'none'; });
-    function rgb2hex(rgb) { if (rgb.search("rgb") === -1) return rgb; rgb = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/); return "#" + ("0" + parseInt(rgb[1]).toString(16)).slice(-2) + ("0" + parseInt(rgb[2]).toString(16)).slice(-2) + ("0" + parseInt(rgb[3]).toString(16)).slice(-2); }
+    
+    // Tối ưu hàm rgb2hex an toàn hơn (thêm check fallback)
+    function rgb2hex(rgb) { 
+        if (rgb.search("rgb") === -1) return rgb; 
+        rgb = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/); 
+        if (!rgb) return '#ffffff'; 
+        return "#" + ("0" + parseInt(rgb[1]).toString(16)).slice(-2) + ("0" + parseInt(rgb[2]).toString(16)).slice(-2) + ("0" + parseInt(rgb[3]).toString(16)).slice(-2); 
+    }
 
     function updateDynamicUI(config) {
         const t = parseInt(config.chartType); 
