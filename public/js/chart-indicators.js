@@ -4391,50 +4391,21 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                     }
 
                     if (options.length > 1) {
-                      let selectedText = options.find(o => o.val === val)?.text || options[0].text;
-                      let optsHTML = options.map(o => `<div class="wa-select-option ${val === o.val ? 'active' : ''}" data-value="${o.val}">${o.text}</div>`).join('');
-                      
+                      // Tạo 1 thẻ div trống làm bệ phóng, và 1 thẻ input ẩn để hàm liveUpdateChart có thể đọc dữ liệu dễ dàng
                       row.innerHTML = `<div class="wa-ism-label">${cleanLbl}${descHTML}</div>
                                        <div class="wa-ism-control">
-                                           <div class="wa-custom-select">
-                                               <div class="wa-select-trigger">
-                                                   <span class="wa-select-text">${selectedText}</span>
-                                                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                                               </div>
-                                               <div class="wa-select-dropdown">${optsHTML}</div>
-                                           </div>
+                                           <div id="wa-dropdown-wrapper-${idx}"></div>
                                            <input type="hidden" id="wa-param-${idx}" value="${val}">
                                        </div>`;
 
-                      const trigger = row.querySelector('.wa-select-trigger');
-                      const dropdown = row.querySelector('.wa-select-dropdown');
+                      // Lôi công cụ từ file Core ra dùng
+                      const wrapper = row.querySelector(`#wa-dropdown-wrapper-${idx}`);
                       const hiddenInput = row.querySelector(`#wa-param-${idx}`);
-                      const optionNodes = row.querySelectorAll('.wa-select-option');
-
-                      trigger.onclick = (e) => {
-                          e.stopPropagation();
-                          // Đóng các dropdown khác đang mở để không bị đè lên nhau
-                          document.querySelectorAll('.wa-select-dropdown.show').forEach(el => { if(el !== dropdown) el.classList.remove('show'); });
-                          document.querySelectorAll('.wa-select-trigger.active').forEach(el => { if(el !== trigger) el.classList.remove('active'); });
-                          
-                          dropdown.classList.toggle('show');
-                          trigger.classList.toggle('active');
-                      };
-
-                      optionNodes.forEach(opt => {
-                          opt.onclick = (e) => {
-                              e.stopPropagation();
-                              // Cập nhật màu sắc UI
-                              optionNodes.forEach(n => n.classList.remove('active'));
-                              opt.classList.add('active');
-                              row.querySelector('.wa-select-text').innerText = opt.innerText;
-                              dropdown.classList.remove('show');
-                              trigger.classList.remove('active');
-                              
-                              // Gán giá trị vào thẻ ẩn & Kích hoạt Update Chart
-                              hiddenInput.value = opt.dataset.value;
-                              liveUpdateChart();
-                          };
+                      
+                      window.WaveDropdown.create(wrapper, options, val, (newVal) => {
+                          // Khi user click chọn, nó sẽ tự update input ẩn và gọi hàm update chart
+                          hiddenInput.value = newVal;
+                          liveUpdateChart(); 
                       });
                   } else {
                         row.innerHTML = `<div class="wa-ism-label">${lbl}${descHTML}</div>

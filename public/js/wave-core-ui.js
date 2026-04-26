@@ -120,3 +120,104 @@
     };
     overlay.onclick = window.WaveColorPicker.close;
 })();
+
+// =========================================================================
+// 🎛️ WAVE ALPHA CORE: UNIVERSAL CUSTOM DROPDOWN (DÙNG CHUNG TOÀN WEB)
+// =========================================================================
+(function initGlobalDropdown() {
+    if (window.WaveDropdown) return;
+
+    // 1. Nhúng CSS 1 lần duy nhất cho toàn bộ hệ thống
+    const style = document.createElement('style');
+    style.textContent = `
+        .wa-custom-select { position: relative; width: 140px; font-size: 12px; user-select: none; }
+        .wa-select-trigger { background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
+        .wa-select-trigger:hover { border-color: rgba(255,255,255,0.2); }
+        .wa-select-trigger.active { border-color: #26a69a; }
+        .wa-select-dropdown { position: absolute; top: calc(100% + 4px); left: 0; width: 100%; background: #1e222d; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); z-index: 100; display: none; flex-direction: column; max-height: 200px; overflow-y: auto; }
+        .wa-select-dropdown.show { display: flex; }
+        .wa-select-dropdown::-webkit-scrollbar { width: 4px; }
+        .wa-select-dropdown::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        .wa-select-option { padding: 8px 12px; color: #b7bdc6; cursor: pointer; transition: 0.2s; }
+        .wa-select-option:hover { background: rgba(255,255,255,0.05); color: #EAECEF; }
+        .wa-select-option.active { color: #26a69a; background: rgba(38,166,154,0.1); font-weight: 600; }
+    `;
+    document.head.appendChild(style);
+
+    // 2. Định nghĩa API toàn cục để gọi
+    window.WaveDropdown = {
+        /**
+         * Tạo Dropdown xịn sò vào một thẻ div bất kỳ
+         * @param {HTMLElement} targetEl - Thẻ div sẽ chứa dropdown
+         * @param {Array} options - Mảng object { val, text }
+         * @param {number|string} currentVal - Giá trị đang chọn mặc định
+         * @param {Function} onChange - Callback trả về giá trị khi user click chọn
+         */
+        create: function(targetEl, options, currentVal, onChange) {
+            let selectedText = options.find(o => o.val === currentVal)?.text || options[0]?.text || '';
+            let optsHTML = options.map(o => 
+                `<div class="wa-select-option ${currentVal === o.val ? 'active' : ''}" data-value="${o.val}">${o.text}</div>`
+            ).join('');
+            
+            // Render HTML
+            targetEl.innerHTML = `
+                <div class="wa-custom-select">
+                    <div class="wa-select-trigger">
+                        <span class="wa-select-text">${selectedText}</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                    <div class="wa-select-dropdown">${optsHTML}</div>
+                </div>
+            `;
+
+            const trigger = targetEl.querySelector('.wa-select-trigger');
+            const dropdown = targetEl.querySelector('.wa-select-dropdown');
+            const optionNodes = targetEl.querySelectorAll('.wa-select-option');
+            const textSpan = targetEl.querySelector('.wa-select-text');
+
+            // Click mở menu
+            trigger.onclick = (e) => {
+                e.stopPropagation();
+                const isCurrentlyOpen = dropdown.classList.contains('show');
+                window.WaveDropdown.closeAll(); // Đóng tất cả menu khác trước
+                if (!isCurrentlyOpen) {
+                    dropdown.classList.add('show');
+                    trigger.classList.add('active');
+                }
+            };
+
+            // Click chọn option
+            optionNodes.forEach(opt => {
+                opt.onclick = (e) => {
+                    e.stopPropagation();
+                    // Đổi giao diện
+                    optionNodes.forEach(n => n.classList.remove('active'));
+                    opt.classList.add('active');
+                    textSpan.innerText = opt.innerText;
+                    
+                    // Thu menu lại
+                    dropdown.classList.remove('show');
+                    trigger.classList.remove('active');
+                    
+                    // Bắn dữ liệu ra ngoài
+                    if (typeof onChange === 'function') {
+                        onChange(opt.dataset.value);
+                    }
+                };
+            });
+        },
+
+        // Hàm tiện ích: Đóng tất cả dropdown đang mở
+        closeAll: function() {
+            document.querySelectorAll('.wa-select-dropdown.show').forEach(el => el.classList.remove('show'));
+            document.querySelectorAll('.wa-select-trigger.active').forEach(el => el.classList.remove('active'));
+        }
+    };
+
+    // 3. Logic tự động thu menu khi click ra ngoài vùng menu
+    document.addEventListener('mousedown', (e) => {
+        if (!e.target.closest('.wa-custom-select')) {
+            window.WaveDropdown.closeAll();
+        }
+    });
+})();
