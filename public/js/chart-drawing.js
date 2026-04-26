@@ -3133,6 +3133,10 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
 
         if (p && p.contains(e.target)) return;
         if (f && f.contains(e.target)) return;
+
+        // ✅ FIX: Không đóng bảng cài đặt nếu người dùng đang tương tác với Bảng màu HSV hoặc Overlay của nó
+        if (e.target.closest('#wa-ucp') || e.target.id === 'wa-ucp-overlay') return;
+        
         if (e.target.closest('._pop')) return;
         
         // Nếu click thẳng vào vùng vẽ của biểu đồ -> Kệ biểu đồ tự xử, ta lui ra
