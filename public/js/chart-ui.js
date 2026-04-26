@@ -1634,13 +1634,19 @@ window.__wa_chart_settings_modal_initialized = true;
             .wa-csm-header { padding-top: 24px; position: relative; border-bottom: none; }
             .wa-csm-header::before { content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 40px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 4px; }
             /* 3. Bẻ cột Menu dọc thành thanh Cuộn ngang (Scrollable Tabs) */
-            .wa-csm-sidebar { width: 100% !important; flex-direction: row; padding: 10px 16px 0; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+            .wa-csm-sidebar { width: 100% !important; flex-direction: row; padding: 10px 16px 0; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); overflow-x: auto; white-space: nowrap; scrollbar-width: none; align-items: flex-start; }
             .wa-csm-sidebar::-webkit-scrollbar { display: none; }
-            .wa-csm-sidebar > div:first-child { display: flex; gap: 8px; width: 100%; }
+            .wa-csm-sidebar > div:first-child { display: flex; gap: 8px; }
             .wa-csm-tab { padding: 10px 16px; border-left: none; border-bottom: 2px solid transparent; border-radius: 4px 4px 0 0; font-size: 14px; }
             .wa-csm-tab.active { border-bottom-color: #26a69a; background: transparent; }
-            /* Ẩn nút Reset ở cột trái */
-            .wa-csm-sidebar > div:last-child { display: none; }
+            
+            /* Khóa khoảng trống (spacer) */
+            .wa-csm-sidebar > div:nth-child(2) { display: none; }
+            
+            /* HIỂN THỊ NÚT KHÔI PHỤC: Đặt ở cuối thanh cuộn ngang, có vạch ngăn cách */
+            .wa-csm-sidebar > div:last-child { display: block !important; padding: 0 0 0 12px !important; border-top: none !important; border-left: 1px solid rgba(255,255,255,0.1) !important; margin-left: 4px; }
+            .wa-csm-sidebar > div:last-child button { padding: 8px 12px !important; font-size: 10px !important; margin-top: 2px; }
+            
             /* 4. Tối ưu chạm cho ngón tay */
             .wa-csm-row { padding: 6px 0; }
             
