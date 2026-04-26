@@ -255,34 +255,18 @@ window.WaveChartEngine = {
             // ─────────────────────────────────────────────────────────────
             // 5. VÙNG HLC AREA (ID 10) — Tách nền trên & dưới đường Close
             // ─────────────────────────────────────────────────────────────
-            // ─────────────────────────────────────────────────────────────
-            // 5. VÙNG HLC AREA (ID 10) — Tách nền trên & dưới đường Close
-            // ─────────────────────────────────────────────────────────────
             window.klinecharts.registerIndicator({
                 name: 'WA_HLC_AREA', 
-                shortName: '', // Đổi thành chuỗi rỗng hoàn toàn
+                shortName: '', 
                 series: 'price', 
                 calc: (d) => d,
                 
-                // 1. GHI ĐÈ STYLE CỤC BỘ DÀNH RIÊNG CHO CHỈ BÁO NÀY
-                styles: {
-                    tooltip: {
-                        showRule: 'none', // Tắt hoàn toàn việc hiển thị rule
-                        showName: false,  // Tắt tên
-                        showParams: false // Tắt thông số
-                    }
+                // --- THÊM 2 BLOCK NÀY ĐỂ ẨN TOOLTIP MÀ KHÔNG CRASH ---
+                styles: { tooltip: { showRule: 'none' } },
+                createTooltipDataSource: ({ defaultStyles }) => {
+                    return { name: '', calcParamsText: '', values: [], icons: defaultStyles.tooltip.icons || [] };
                 },
-                
-                // 2. DIỆT TẬN GỐC DỮ LIỆU TOOLTIP (TRÁNH LỖI KẸT KHOẢNG TRẮNG)
-                createTooltipDataSource: () => {
-                    return { 
-                        name: '', 
-                        calcParamsText: '', 
-                        values: [], 
-                        icons: [] // Xóa luôn các nút icon (mắt, bánh răng, thùng rác)
-                    };
-                },
-
+                // -----------------------------------------------------
                 draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
