@@ -1549,8 +1549,8 @@ if (window.__wa_chart_settings_modal_initialized) return;
 window.__wa_chart_settings_modal_initialized = true;
     const style = document.createElement('style');
     style.textContent = `
-        #wa-chart-settings-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999999; pointer-events: none; opacity: 0; transition: opacity 0.15s ease; transform: translateZ(0); }
-        #wa-chart-settings-modal.show { display: block; opacity: 1; }
+        #wa-chart-settings-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999999; pointer-events: none; opacity: 0; visibility: hidden; transition: all 0.15s ease; transform: translateZ(0); }
+        #wa-chart-settings-modal.show { opacity: 1; visibility: visible; pointer-events: auto; }
         .wa-csm-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e222d; width: 680px; height: 500px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; pointer-events: auto; }
         .wa-csm-box.is-dragging { transition: none !important; will-change: left, top; }
         .wa-csm-sidebar { width: 200px; background: #131722; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 20px 0 0 0; }
@@ -2029,8 +2029,9 @@ document.addEventListener('click', () => {
             const key = swatch.dataset.colorBind; if (config[key]) swatch.style.background = config[key];
         });
         
-        // Đặt lại tọa độ tâm hoàn hảo để không bị lật trái
-        modalBox.style.transform = 'translate(-50%, -50%)'; 
+        // Đặt lại tọa độ tâm hoàn hảo bằng 3D
+        modalBox.classList.remove('is-dragging');
+        modalBox.style.transform = 'translate3d(-50%, -50%, 0)'; 
         modalBox.style.left = '50%'; 
         modalBox.style.top = '50%';
         
@@ -2039,13 +2040,23 @@ document.addEventListener('click', () => {
         modal.classList.add('show');
     };
 
-    document.getElementById('btn-wa-csm-close').onclick = () => modal.classList.remove('show');
+    // Hàm đóng mượt mà
+    window.closeChartSettings = function() {
+        colorPicker.style.display = 'none'; // Đóng bảng màu nếu đang lơ lửng
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modalBox.classList.remove('is-dragging');
+            modalBox.style.transform = 'translate3d(-50%, -50%, 0)';
+            modalBox.style.left = '50%';
+            modalBox.style.top = '50%';
+        }, 150);
+    };
+
+    document.getElementById('btn-wa-csm-close').onclick = window.closeChartSettings;
+
     // BỔ SUNG UX: Bấm ra ngoài vùng tối để đóng Modal
     modal.addEventListener('mousedown', (e) => {
-        if (e.target === modal) {
-            modal.classList.remove('show');
-            colorPicker.style.display = 'none'; // Đóng luôn picker nếu đang mở
-        }
+        if (e.target === modal) window.closeChartSettings();
     });
 
     // BỔ SUNG UX: Đóng Color Picker khi lăn chuột để tránh picker lơ lửng
@@ -2076,7 +2087,14 @@ document.addEventListener('click', () => {
                 `;
                 typeBtn.parentNode.insertAdjacentHTML('beforeend', btnHTML);
             }
-            document.getElementById('btn-wa-chart-settings').onclick = (e) => { e.stopPropagation(); window.openChartSettings(); };
+            document.getElementById('btn-wa-chart-settings').onclick = (e) => { 
+                e.stopPropagation(); 
+                if (modal.classList.contains('show')) {
+                    window.closeChartSettings();
+                } else {
+                    window.openChartSettings();
+                }
+            };
         }
     }, 200);
 
