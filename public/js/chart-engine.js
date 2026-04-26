@@ -441,8 +441,15 @@ window.WaveChartEngine = {
         const c = this.config;
         let kcChartType = 'candle_solid', isLine = false, hideCandle = false;
 
-        // Dọn rác: xóa sạch custom chart trước khi vẽ mới
-        CUSTOM_CHART_IDS.forEach(id => { try { this.chartInstance.removeIndicator('candle_pane', id); } catch (e) {} });
+        // ✅ BẢN FIX: Nhắm chính xác mục tiêu. 
+        // Thay vì xóa theo pane ('candle_pane') khiến các chỉ báo EMA/MA bị văng theo,
+        // ta sẽ xóa chính xác bằng tên Indicator thông qua vòng lặp.
+        CUSTOM_CHART_IDS.forEach(id => { 
+            try { 
+                // Xóa theo đúng name của indicator để không chạm vào các chỉ báo khác
+                this.chartInstance.removeIndicator('candle_pane', id); 
+            } catch (e) {} 
+        });
 
         // Loại native
         if      (c.chartType === 2) kcChartType = 'candle_stroke';
@@ -471,6 +478,18 @@ window.WaveChartEngine = {
             grid: {
                 horizontal: { show: c.gridHorizontal, color: c.gridColor, style: 'dashed' },
                 vertical:   { show: c.gridVertical,   color: c.gridColor, style: 'dashed' }
+            },
+            // ✅ BẢN FIX: Hạ z-index của biểu đồ chính xuống dưới các Indicator
+            indicator: {
+                lastValueMark: { show: true },
+                // Đảm bảo chỉ báo luôn nổi lên trên cùng dù là nến hay Line
+                zLevel: 2 
+            },
+            candle: {
+                type:    kcChartType,
+                tooltip: { showRule: c.showOHLC ? 'always' : 'none' },
+                // Hạ z-index của nến/line xuống 1
+                zLevel: 1,
             },
             candle: {
                 type:    kcChartType,

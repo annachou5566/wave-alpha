@@ -2560,7 +2560,7 @@ document.addEventListener('click', () => {
             btnWrap.innerHTML = `
                 <button id="sc-filter-btn" data-wa-tip="Lọc Dấu Chân Cá Mập" style="background: rgba(255,255,255,0.03); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px 10px; height: 26px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s;">
                     <i class="fas fa-filter" style="font-size: 10px;"></i>
-                    <span style="font-size: 11px; font-weight: 700; font-family: var(--font-main); letter-spacing: 0.5px;">LỌC CÁ</span>
+                    <span style="font-size: 11px; font-weight: 700; font-family: var(--font-main); letter-spacing: 0.5px;">LỌC</span>
                 </button>
             `;
             targetGroup.appendChild(btnWrap);
