@@ -261,25 +261,22 @@ window.WaveChartEngine = {
                 series: 'price', 
                 calc: (d) => d,
                 
-                // 🚀 BÍ QUYẾT TRIỆT TIÊU 100% KHOẢNG TRỐNG (GAP TRỤC Y)
-                // Ép margin, padding, size về 0 và xóa mảng icons của riêng chỉ báo này
+                // 🚀 BÍ QUYẾT TRIỆT TIÊU 100% CHIỀU CAO (KHÔNG CHỪA KHOẢNG TRỐNG)
                 styles: { 
                     tooltip: { 
                         showRule: 'none', 
                         showName: false, 
                         showParams: false,
                         text: { 
-                            size: 0, 
-                            marginTop: 0, 
-                            marginBottom: 0, 
-                            paddingTop: 0, 
-                            paddingBottom: 0 
+                            size: 0, // Đưa font chữ về 0
+                            marginTop: 0, // Xóa lề trên
+                            marginBottom: 0 // Xóa lề dưới
                         },
-                        icons: [] // <== ĐÂY LÀ CHÌA KHÓA: Giết chết bộ icon (mắt, bánh răng) chiếm diện tích
+                        icons: [] // <== CHÌA KHÓA: Diệt sạch mảng icon (mắt, cài đặt) để nó không chiếm diện tích
                     } 
                 },
 
-                // Vẫn giữ data rỗng để an toàn tuyệt đối khi chuyển Timeframe
+                // Giữ nguyên Data rỗng để an toàn tuyệt đối khi đổi Timeframe
                 createTooltipDataSource: function() { 
                     return { name: '', calcParamsText: '', values: [] }; 
                 },
