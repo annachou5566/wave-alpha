@@ -3131,6 +3131,9 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     window.currentSelectedOverlay = null; // ← sync cả hai
 }
 function hideFloatToolbar() {
+  var ucp = document.getElementById('wa-ucp');
+  if (ucp && ucp.classList.contains('show')) return; 
+
   var b = document.getElementById('wa-float-bar');
   if (b && b.parentNode) b.parentNode.removeChild(b);
 }
