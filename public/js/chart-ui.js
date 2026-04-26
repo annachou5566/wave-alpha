@@ -2000,7 +2000,7 @@ applyCustomSelects();
         }
     }, 200);
 
-    // ✅ FIX RESET: Cập nhật lại biểu đồ mà KHÔNG reload trang
+    // ✅ FIX RESET: Cập nhật lại biểu đồ mà KHÔNG reload trang (Tích hợp Custom Confirm)
     const btnReset = document.getElementById('wa-btn-reset-cfg');
     if (btnReset) {
         btnReset.onmouseenter = () => btnReset.style.background = 'rgba(246, 70, 93, 0.2)';
@@ -2031,6 +2031,7 @@ applyCustomSelects();
                     window.WaveChartEngine.applyNow();
                     
                     // Đồng bộ lại UI trong bảng Cài đặt
+                    const modal = document.getElementById('wa-chart-settings-modal');
                     modal.querySelectorAll('[data-bind]').forEach(el => {
                         const key = el.dataset.bind;
                         if (defaultCfg[key] !== undefined) { 
@@ -2043,8 +2044,18 @@ applyCustomSelects();
                         if (defaultCfg[key]) swatch.style.background = defaultCfg[key];
                     });
                     updateDynamicUI(defaultCfg);
+
+                    // Đồng bộ chữ hiển thị cho các thẻ Select vừa được Custom
+                    document.querySelectorAll('.wa-custom-select-wrapper').forEach(wrapper => {
+                        const select = wrapper.querySelector('select');
+                        const triggerSpan = wrapper.querySelector('.wa-custom-select-trigger span');
+                        if (select && triggerSpan) triggerSpan.innerText = select.options[select.selectedIndex].text;
+                        wrapper.querySelectorAll('.wa-custom-select-option').forEach(opt => {
+                            opt.classList.toggle('selected', opt.dataset.value == select.value);
+                        });
+                    });
                 }
-            }); 
+            });
         };
     }
 })();
