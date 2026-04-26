@@ -4164,67 +4164,70 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         trash: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`
     };
 
-    // 2. CSS SẠCH (ĐÃ XÓA MÃ CSS CỦA COLOR PICKER CŨ)
-    const style = document.createElement('style');
-    style.textContent = `
-        #wa-ind-settings-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999999; pointer-events: none; opacity: 0; visibility: hidden; transition: all 0.15s ease; transform: translateZ(0); }
-        #wa-ind-settings-modal.show { opacity: 1; visibility: visible; pointer-events: auto; }
-        .wa-ism-box { position: absolute; top: 50%; left: 50%; transform: translate3d(-50%, -50%, 0); background: #1e222d; width: 680px; height: 500px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; overflow: hidden; font-family: 'Inter', sans-serif; pointer-events: auto; }
-        .wa-ism-box.is-dragging { transition: none !important; will-change: left, top; }
-        
-        .wa-ism-sidebar { width: 220px; background: #131722; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 20px 0 0 0; overflow-y: auto; flex-shrink: 0; }
-        .wa-ism-sidebar::-webkit-scrollbar { width: 4px; }
-        .wa-ism-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
-        .wa-ism-tab { padding: 12px 20px; color: #848e9c; font-size: 13px; font-weight: 500; cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s; display: flex; align-items: center; justify-content: space-between; }
-        .wa-ism-tab-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 10px; }
-        .wa-ism-tab:hover { background: rgba(255,255,255,0.03); color: #EAECEF; }
-        .wa-ism-tab.active { background: rgba(38,166,154,0.1); color: #26a69a; border-left-color: #26a69a; font-weight: 700; }
-        
-        .wa-ism-actions { display: none; gap: 6px; align-items: center; flex-shrink: 0; }
-        .wa-ism-tab:hover .wa-ism-actions, .wa-ism-tab.active .wa-ism-actions { display: flex; }
-        .wa-ism-btn { background: transparent; border: none; color: #848e9c; cursor: pointer; padding: 4px; border-radius: 4px; display: flex; transition: 0.2s; }
-        .wa-ism-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
-        .wa-ism-btn.delete:hover { color: #f6465d; background: rgba(246,70,93,0.1); }
+    // 2. CSS SẠCH (ĐÃ XÓA MÃ CSS CỦA COLOR PICKER VÀ SELECT CŨ)
+    if (!document.getElementById('wa-ism-styles')) {
+      const style = document.createElement('style');
+      style.id = 'wa-ism-styles';
+      style.textContent = `
+          #wa-ind-settings-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999999; pointer-events: none; opacity: 0; visibility: hidden; transition: all 0.15s ease; transform: translateZ(0); }
+          #wa-ind-settings-modal.show { opacity: 1; visibility: visible; pointer-events: auto; }
+          .wa-ism-box { position: absolute; top: 50%; left: 50%; transform: translate3d(-50%, -50%, 0); background: #1e222d; width: 680px; height: 500px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; overflow: hidden; font-family: 'Inter', sans-serif; pointer-events: auto; }
+          .wa-ism-box.is-dragging { transition: none !important; will-change: left, top; }
+          
+          .wa-ism-sidebar { width: 220px; background: #131722; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 20px 0 0 0; overflow-y: auto; flex-shrink: 0; }
+          .wa-ism-sidebar::-webkit-scrollbar { width: 4px; }
+          .wa-ism-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+          .wa-ism-tab { padding: 12px 20px; color: #848e9c; font-size: 13px; font-weight: 500; cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s; display: flex; align-items: center; justify-content: space-between; }
+          .wa-ism-tab-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 10px; }
+          .wa-ism-tab:hover { background: rgba(255,255,255,0.03); color: #EAECEF; }
+          .wa-ism-tab.active { background: rgba(38,166,154,0.1); color: #26a69a; border-left-color: #26a69a; font-weight: 700; }
+          
+          .wa-ism-actions { display: none; gap: 6px; align-items: center; flex-shrink: 0; }
+          .wa-ism-tab:hover .wa-ism-actions, .wa-ism-tab.active .wa-ism-actions { display: flex; }
+          .wa-ism-btn { background: transparent; border: none; color: #848e9c; cursor: pointer; padding: 4px; border-radius: 4px; display: flex; transition: 0.2s; }
+          .wa-ism-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+          .wa-ism-btn.delete:hover { color: #f6465d; background: rgba(246,70,93,0.1); }
 
-        .wa-ism-content { flex: 1; display: flex; flex-direction: column; background: #1e222d; min-width: 0; min-height: 0; overflow: hidden; }
-        .wa-ism-header { padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; cursor: grab; user-select: none; flex-shrink: 0; }
-        .wa-ism-header:active { cursor: grabbing; }
-        .wa-ism-title { font-size: 16px; font-weight: 700; color: #EAECEF; display: flex; align-items: center; gap: 8px; pointer-events: none; text-transform: uppercase; letter-spacing: 0.5px; }
-        .wa-ism-close { color: #848e9c; cursor: pointer; display: flex; padding: 4px; margin: -4px; transition: 0.2s; }
-        .wa-ism-close:hover { color: #F6465D; }
-        
-        .wa-ism-panels { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; -webkit-overflow-scrolling: touch; }
-        .wa-ism-panels::-webkit-scrollbar { width: 4px; }
-        .wa-ism-panels::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
-        
-        .wa-ism-group-title { font-size: 11px; font-weight: 800; color: #527c82; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; margin-top: 4px; margin-bottom: 8px; }
-        .wa-ism-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; gap: 16px; }
-        .wa-ism-label { font-size: 13px; color: #b7bdc6; display: flex; flex-direction: column; flex: 1; min-width: 0; }
-        .wa-ism-desc { font-size: 10px; color: #527c82; margin-top: 4px; }
-        .wa-ism-control { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-        
-        .wa-ism-input { background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 4px; font-size: 12px; outline: none; transition: 0.2s; width: 100px; text-align: center; }
-        .wa-ism-input:focus { border-color: #26a69a; }
-        .wa-ism-select { background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 4px; font-size: 12px; outline: none; cursor: pointer; width: 140px; }
-        .wa-ism-swatch { width: 28px; height: 28px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; transition: 0.2s; background: transparent; }
-        .wa-ism-swatch:hover { border-color: #00F0FF; box-shadow: 0 0 5px rgba(0,240,255,0.3); }
-        .wa-is-transparent { background-image: conic-gradient(#333 0.25turn, #444 0.25turn 0.5turn, #333 0.5turn 0.75turn, #444 0.75turn); background-size: 8px 8px; }
-        
-        .wa-ism-reset { background: rgba(246, 70, 93, 0.05); color: #F6465D; border: 1px dashed rgba(246, 70, 93, 0.3); padding: 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.2s; text-align: center; margin-top: 10px; width: 100%; display: flex; justify-content: center; align-items: center; letter-spacing: 0.5px; }
-        .wa-ism-reset:hover { background: rgba(246, 70, 93, 0.15); border-color: rgba(246, 70, 93, 0.6); }
+          .wa-ism-content { flex: 1; display: flex; flex-direction: column; background: #1e222d; min-width: 0; min-height: 0; overflow: hidden; }
+          .wa-ism-header { padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; cursor: grab; user-select: none; flex-shrink: 0; }
+          .wa-ism-header:active { cursor: grabbing; }
+          .wa-ism-title { font-size: 16px; font-weight: 700; color: #EAECEF; display: flex; align-items: center; gap: 8px; pointer-events: none; text-transform: uppercase; letter-spacing: 0.5px; }
+          .wa-ism-close { color: #848e9c; cursor: pointer; display: flex; padding: 4px; margin: -4px; transition: 0.2s; }
+          .wa-ism-close:hover { color: #F6465D; }
+          
+          .wa-ism-panels { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; -webkit-overflow-scrolling: touch; }
+          .wa-ism-panels::-webkit-scrollbar { width: 4px; }
+          .wa-ism-panels::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+          
+          .wa-ism-group-title { font-size: 11px; font-weight: 800; color: #527c82; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; margin-top: 4px; margin-bottom: 8px; }
+          .wa-ism-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; gap: 16px; }
+          .wa-ism-label { font-size: 13px; color: #b7bdc6; display: flex; flex-direction: column; flex: 1; min-width: 0; }
+          .wa-ism-desc { font-size: 10px; color: #527c82; margin-top: 4px; }
+          .wa-ism-control { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+          
+          .wa-ism-input { background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 4px; font-size: 12px; outline: none; transition: 0.2s; width: 100px; text-align: center; }
+          .wa-ism-input:focus { border-color: #26a69a; }
+          
+          .wa-ism-swatch { width: 28px; height: 28px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; transition: 0.2s; background: transparent; }
+          .wa-ism-swatch:hover { border-color: #00F0FF; box-shadow: 0 0 5px rgba(0,240,255,0.3); }
+          .wa-is-transparent { background-image: conic-gradient(#333 0.25turn, #444 0.25turn 0.5turn, #333 0.5turn 0.75turn, #444 0.75turn); background-size: 8px 8px; }
+          
+          .wa-ism-reset { background: rgba(246, 70, 93, 0.05); color: #F6465D; border: 1px dashed rgba(246, 70, 93, 0.3); padding: 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.2s; text-align: center; margin-top: 10px; width: 100%; display: flex; justify-content: center; align-items: center; letter-spacing: 0.5px; }
+          .wa-ism-reset:hover { background: rgba(246, 70, 93, 0.15); border-color: rgba(246, 70, 93, 0.6); }
 
-        @media (max-width: 768px) {
-            .wa-ism-box { top: auto !important; bottom: 0 !important; left: 50% !important; transform: translate3d(-50%, 100%, 0) !important; width: 92vw !important; height: 85vh !important; border-radius: 24px 24px 0 0 !important; flex-direction: column !important; transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important; }
-            #wa-ind-settings-modal.show .wa-ism-box { transform: translate3d(-50%, 0, 0) !important; }
-            .wa-ism-header { padding-top: 24px; position: relative; border-bottom: none; }
-            .wa-ism-header::before { content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 40px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 4px; }
-            .wa-ism-sidebar { width: 100% !important; flex-direction: row; padding: 10px 16px 0; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); overflow-x: auto; white-space: nowrap; flex-shrink: 0; }
-            .wa-ism-tab { padding: 10px 16px; border-left: none; border-bottom: 2px solid transparent; border-radius: 4px 4px 0 0; font-size: 14px; }
-            .wa-ism-tab.active { border-bottom-color: #26a69a; background: transparent; }
-            .wa-ism-actions { display: none !important; }
-        }
-    `;
-    document.head.appendChild(style);
+          @media (max-width: 768px) {
+              .wa-ism-box { top: auto !important; bottom: 0 !important; left: 50% !important; transform: translate3d(-50%, 100%, 0) !important; width: 92vw !important; height: 85vh !important; border-radius: 24px 24px 0 0 !important; flex-direction: column !important; transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important; }
+              #wa-ind-settings-modal.show .wa-ism-box { transform: translate3d(-50%, 0, 0) !important; }
+              .wa-ism-header { padding-top: 24px; position: relative; border-bottom: none; }
+              .wa-ism-header::before { content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 40px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 4px; }
+              .wa-ism-sidebar { width: 100% !important; flex-direction: row; padding: 10px 16px 0; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); overflow-x: auto; white-space: nowrap; flex-shrink: 0; }
+              .wa-ism-tab { padding: 10px 16px; border-left: none; border-bottom: 2px solid transparent; border-radius: 4px 4px 0 0; font-size: 14px; }
+              .wa-ism-tab.active { border-bottom-color: #26a69a; background: transparent; }
+              .wa-ism-actions { display: none !important; }
+          }
+      `;
+      document.head.appendChild(style);
+  }
 
     // 3. HTML SẠCH (KHÔNG CÒN POPUP BẢNG MÀU NỮA)
     const modalHTML = `
@@ -4391,27 +4394,28 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                     }
 
                     if (options.length > 1) {
-                      // Tạo 1 thẻ div trống làm bệ phóng, và 1 thẻ input ẩn để hàm liveUpdateChart có thể đọc dữ liệu dễ dàng
+                      // Gọi chung một mối từ thư viện Wave Core UI
                       row.innerHTML = `<div class="wa-ism-label">${cleanLbl}${descHTML}</div>
                                        <div class="wa-ism-control">
                                            <div id="wa-dropdown-wrapper-${idx}"></div>
                                            <input type="hidden" id="wa-param-${idx}" value="${val}">
                                        </div>`;
 
-                      // Lôi công cụ từ file Core ra dùng
                       const wrapper = row.querySelector(`#wa-dropdown-wrapper-${idx}`);
                       const hiddenInput = row.querySelector(`#wa-param-${idx}`);
                       
-                      window.WaveDropdown.create(wrapper, options, val, (newVal) => {
-                          // Khi user click chọn, nó sẽ tự update input ẩn và gọi hàm update chart
-                          hiddenInput.value = newVal;
-                          liveUpdateChart(); 
-                      });
+                      if (window.WaveDropdown) {
+                          window.WaveDropdown.create(wrapper, options, val, (newVal) => {
+                              hiddenInput.value = newVal;
+                              liveUpdateChart(); 
+                          });
+                      }
                   } else {
-                        row.innerHTML = `<div class="wa-ism-label">${lbl}${descHTML}</div>
-                                         <div class="wa-ism-control"><input type="number" id="wa-param-${idx}" class="wa-ism-input" value="${val}" step="any"></div>`;
-                        row.querySelector('input').oninput = liveUpdateChart;
-                    }
+                      // Render ô nhập số
+                      row.innerHTML = `<div class="wa-ism-label">${lbl}${descHTML}</div>
+                                       <div class="wa-ism-control"><input type="number" id="wa-param-${idx}" class="wa-ism-input" value="${val}" step="any"></div>`;
+                      row.querySelector('input').oninput = liveUpdateChart;
+                  }
                 }
                 grpDiv.appendChild(row);
             });
