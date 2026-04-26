@@ -2051,20 +2051,19 @@ document.addEventListener('click', () => {
 
     modal.querySelectorAll('.wa-color-swatch').forEach(swatch => {
         swatch.onclick = (e) => {
-            e.stopPropagation(); activeSwatchBtn = swatch; activeBindKey = swatch.dataset.colorBind;
-            let curColor = swatch.style.background || '#ffffff';
+            e.stopPropagation();
+            const key = swatch.dataset.colorBind;
+            const curColor = swatch.style.background || '#ffffff';
             
-            // FIX: Bóc tách Opacity hiện tại đưa lên thanh trượt, và ép màu vào ô Input thành chuẩn Hex
-            let currentOpacity = 1;
-            if (curColor.startsWith('rgba')) {
-                const m = curColor.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/);
-                if (m) currentOpacity = parseFloat(m[1]);
+            // ✅ Gọi Bảng màu HSV Toàn cục
+            if (window.WaveColorPicker) {
+                window.WaveColorPicker.open(swatch, curColor, (newColor) => {
+                    swatch.style.background = newColor;
+                    if (window.WaveChartEngine) {
+                        window.WaveChartEngine.update({ [key]: newColor });
+                    }
+                });
             }
-            opSlider.value = currentOpacity;
-            hexInp.value = rgb2hex(curColor); 
-            
-            const rect = swatch.getBoundingClientRect();
-            colorPicker.style.display = 'block'; colorPicker.style.left = rect.left + 'px'; colorPicker.style.top = (rect.bottom + 10) + 'px';
         };
     });
 
