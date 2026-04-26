@@ -3477,355 +3477,262 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
    * Category definitions for tab rendering
    */
   const CATEGORIES = [
-    { key: 'all',        label: 'Tất cả'   },
-    { key: 'wave_alpha', label: '⚡ Wave Alpha' },
-    { key: 'trend',      label: 'Xu hướng'  },
-    { key: 'oscillator', label: 'Dao động'  },
-    { key: 'volume',     label: 'Khối lượng'},
-    { key: 'volatility', label: 'Biến động' },
+    { key: 'all',        label: 'TẤT CẢ'   },
+    { key: 'wave_alpha', label: '⚡ WAVE ALPHA' },
+    { key: 'trend',      label: 'XU HƯỚNG'  },
+    { key: 'oscillator', label: 'DAO ĐỘNG'  },
+    { key: 'volume',     label: 'KHỐI LƯỢNG'},
+    { key: 'volatility', label: 'BIẾN ĐỘNG' },
   ];
 
-  /**
-   * Build the indicator library modal HTML
-   */
   function buildIndicatorModalHTML() {
-    const tabsHTML = CATEGORIES.map((cat, i) => {
-      return `<button class="wa-tab ${i === 0 ? 'active' : ''}" data-cat="${cat.key}">${cat.label}</button>`;
-    }).join('');
-  
+    const catTabsHTML = CATEGORIES.map((cat, i) => `<button class="wa-cat-tab ${i === 0 ? 'active' : ''}" data-cat="${cat.key}">${cat.label}</button>`).join('');
+    
     return `
-      <!-- Đã bỏ lớp mờ đen (backdrop-filter/rgba), chỉ giữ lại đúng cái khung nội dung -->
-      <div id="sc-indicator-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:${COLOR.bg}; width:640px; height:520px; max-width:92vw; max-height:86vh; border-radius:14px; border:1px solid ${COLOR.border}; box-shadow:0 20px 60px rgba(0,0,0,0.6); z-index:99999; flex-direction:column; overflow:hidden;">
-        
-        <!-- Header -->
-        <div style="padding:14px 20px; border-bottom:1px solid ${COLOR.border}; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
-          <h5 style="margin:0; color:${COLOR.white}; font-size:15px; font-weight:700; display:flex; align-items:center; gap:8px;">
-            <span style="color:${COLOR.cyan}; font-size:18px;">∿</span> Thư viện Chỉ báo
-          </h5>
-          <button id="wa-ind-modal-close" aria-label="Đóng" style="background:transparent; border:none; color:${COLOR.muted}; cursor:pointer; font-size:18px; line-height:1; padding:2px 6px; border-radius:4px; transition:color .15s;">✕</button>
-        </div>
-  
-        <!-- Search -->
-        <div style="padding:12px 20px; border-bottom:1px solid ${COLOR.border}; flex-shrink:0;">
-          <div style="position:relative;">
-            <span style="position:absolute; left:11px; top:50%; transform:translateY(-50%); color:${COLOR.muted}; font-size:13px; pointer-events:none;">🔍</span>
-            <input id="wa-ind-search" type="text" placeholder="Tìm kiếm chỉ báo..." autocomplete="off" style="width:100%; box-sizing:border-box; background:rgba(0,0,0,0.35); border:1px solid ${COLOR.border}; border-radius:8px; padding:8px 12px 8px 34px; color:${COLOR.white}; outline:none; font-size:13px; transition:border-color .15s;">
+      <div id="sc-indicator-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:9999999; background:transparent; justify-content:center; align-items:center; opacity:0; visibility:hidden; transition:all 0.15s ease;">
+        <div id="wa-ind-modal-box" class="wa-imm-box">
+          
+          <div class="wa-imm-header">
+            <div style="font-size:16px; font-weight:700; color:#EAECEF;">Chỉ Báo Kỹ Thuật</div>
+            <button id="wa-ind-modal-close" style="background:transparent; border:none; color:#848e9c; cursor:pointer; font-size:18px; line-height:1; transition:0.2s;">✕</button>
           </div>
-        </div>
-  
-        <!-- Tabs -->
-        <div id="wa-ind-tabs" style="display:flex; gap:4px; padding:10px 20px 0; overflow-x:auto; flex-shrink:0; scrollbar-width:none;">
-          ${tabsHTML}
-        </div>
-  
-        <!-- List -->
-        <div id="wa-ind-list" style="flex:1; overflow-y:auto; padding:10px 14px 14px; display:grid; grid-template-columns:1fr 1fr; gap:6px; align-content: start;"></div>
-        
-        <!-- Empty state -->
-        <div id="wa-ind-empty" style="display:none; flex:1; align-items:center; justify-content:center; padding:30px; color:${COLOR.muted}; font-size:13px; text-align:center;">
-          Không tìm thấy chỉ báo phù hợp
+
+          <div style="padding:16px 24px; background:#131722; border-bottom:1px solid rgba(255,255,255,0.05);">
+            <div style="position:relative; display:flex; align-items:center;">
+              <span style="position:absolute; left:12px; color:#848e9c; font-size:14px;">🔍</span>
+              <input id="wa-ind-search" type="text" placeholder="Tìm kiếm chỉ báo..." autocomplete="off" style="width:100%; background:#1e222d; border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:10px 12px 10px 36px; color:#EAECEF; font-size:13px; outline:none; transition:0.2s;">
+            </div>
+          </div>
+
+          <div style="display:flex; padding:0 24px; background:#131722; gap:20px; border-bottom:1px solid rgba(255,255,255,0.02);">
+            <div class="wa-imm-main-tab active" data-maintab="library">THƯ VIỆN</div>
+            <div class="wa-imm-main-tab" data-maintab="active">ĐANG HOẠT ĐỘNG <span id="wa-ind-active-count" style="background:rgba(38,166,154,0.2); color:#26a69a; padding:2px 6px; border-radius:10px; font-size:10px; margin-left:4px;">0</span></div>
+          </div>
+
+          <div id="wa-ind-cat-tabs" style="display:flex; gap:6px; padding:12px 24px 0; overflow-x:auto; scrollbar-width:none; background:#1e222d;">
+            ${catTabsHTML}
+          </div>
+
+          <div id="wa-ind-list" class="wa-imm-content"></div>
+          
+          <div id="wa-ind-empty" style="display:none; flex:1; align-items:center; justify-content:center; color:#527c82; font-size:13px;">Không tìm thấy chỉ báo phù hợp</div>
         </div>
       </div>
     `;
   }
 
-  /**
-   * Build the settings modal HTML
-   */
-  function buildSettingsModalHTML() {
-    return `
-    <div id="sc-ind-settings-modal" style="display:none; position:fixed; inset:0;
-         background:rgba(0,0,0,0.75); z-index:999999; backdrop-filter:blur(6px);
-         justify-content:center; align-items:center;">
-      <div style="background:${COLOR.bg}; width:340px; max-width:90vw; border-radius:14px;
-           border:1px solid ${COLOR.border}; box-shadow:0 16px 50px rgba(0,0,0,0.9);
-           overflow:hidden; display:flex; flex-direction:column;">
+  let currentMainTab = 'library';
+  let currentCategory = 'all';
 
-        <!-- Header -->
-        <div style="padding:14px 20px; border-bottom:1px solid ${COLOR.border};
-             display:flex; justify-content:space-between; align-items:center;">
-          <h5 id="sc-ind-settings-title" style="margin:0; color:${COLOR.white}; font-size:15px; font-weight:700;">⚙️ Cài đặt</h5>
-          <button id="wa-settings-close" style="background:transparent; border:none;
-              color:${COLOR.muted}; cursor:pointer; font-size:18px; line-height:1; padding:2px 6px;">✕</button>
-        </div>
-
-        <!-- Body -->
-        <div id="sc-ind-settings-body" style="padding:18px 20px; display:flex;
-             flex-direction:column; gap:13px; overflow-y:auto; max-height:60vh;"></div>
-
-        <!-- Footer -->
-        <div style="padding:13px 20px; background:rgba(0,0,0,0.2);
-             border-top:1px solid ${COLOR.border};
-             display:flex; justify-content:space-between; align-items:center;">
-          <button id="sc-ind-btn-reset" style="background:transparent; border:1px solid ${COLOR.border};
-              color:${COLOR.muted}; padding:6px 14px; border-radius:6px; font-size:12px;
-              cursor:pointer; transition:.15s;">↩ Mặc định</button>
-          <button id="sc-ind-btn-save" style="background:${COLOR.cyan}; color:#000;
-              border:none; padding:6px 22px; border-radius:6px; font-weight:800;
-              font-size:13px; cursor:pointer; transition:opacity .15s;">LƯU</button>
-        </div>
-      </div>
-    </div>`;
-  }
-
-  /**
-   * Render indicator cards into #wa-ind-list based on filter
-   * @param {string} query
-   * @param {string} category
-   */
-  function renderIndicatorList(query, category) {
-    const list    = document.getElementById('wa-ind-list');
-    const empty   = document.getElementById('wa-ind-empty');
+  function renderIndicatorList(query) {
+    const list = document.getElementById('wa-ind-list');
+    const empty = document.getElementById('wa-ind-empty');
+    const catTabs = document.getElementById('wa-ind-cat-tabs');
     if (!list) return;
 
-    const q = (query || '').toLowerCase().trim();
-    const filtered = INDICATOR_REGISTRY.filter(function (ind) {
-      const matchCat = category === 'all' || ind.category === category;
-      const matchQ   = !q ||
-        ind.name.toLowerCase().includes(q) ||
-        ind.shortName.toLowerCase().includes(q) ||
-        ind.description.toLowerCase().includes(q);
-      return matchCat && matchQ;
-    });
-
     list.innerHTML = '';
+    const activeCount = global.scActiveIndicators ? global.scActiveIndicators.length : 0;
+    const countBadge = document.getElementById('wa-ind-active-count');
+    if (countBadge) countBadge.innerText = activeCount;
 
-    if (filtered.length === 0) {
-      list.style.display = 'none';
-      empty.style.display = 'flex';
-      return;
-    }
-    list.style.display = 'grid';
-    empty.style.display = 'none';
-
-    filtered.forEach(function (ind) {
-      const isActive = global.scActiveIndicators &&
-        global.scActiveIndicators.some(function (x) { return x.name === ind.name; });
-      const isWave   = ind.category === 'wave_alpha';
-
-      const card = document.createElement('div');
-      card.className = 'wa-ind-card';
-      card.dataset.name = ind.name;
-      card.style.cssText = [
-        'padding:11px 13px',
-        'border-radius:9px',
-        'cursor:pointer',
-        'border:1px solid ' + (isActive ? COLOR.cyanMid : COLOR.border),
-        'background:' + (isActive ? COLOR.cyanFaint : 'rgba(255,255,255,0.02)'),
-        'transition:border-color .15s, background .15s',
-        'position:relative',
-        'display:flex',
-        'flex-direction:column',
-        'gap:4px',
-      ].join(';');
-
-      const badge = isActive
-        ? '<span style="font-size:10px; background:' + COLOR.cyan + '; color:#000;' +
-          ' border-radius:4px; padding:1px 6px; font-weight:700; margin-left:6px;">Đang dùng</span>'
-        : '';
-      const waveTag = isWave
-        ? '<span style="font-size:10px; color:' + COLOR.gold + '; margin-left:4px;">★</span>'
-        : '';
-
-      card.innerHTML = [
-        '<div style="display:flex; justify-content:space-between; align-items:flex-start;">',
-          '<span style="color:' + (isWave ? COLOR.cyan : COLOR.white) + '; font-size:13px; font-weight:700; display:flex; align-items:center;">',
-            ind.shortName, waveTag, badge,
-          '</span>',
-          isActive
-            ? '<div style="display:flex; gap:14px; align-items:center;">' +
-              '<button class="wa-settings-btn" data-name="' + ind.name + '" ' +
-              'title="Cài đặt" style="background:transparent; border:none; ' +
-              'color:' + COLOR.muted + '; cursor:pointer; font-size:15px; padding:4px; margin:-4px; ' +
-              'line-height:1; transition:color .15s; touch-action:manipulation;" onmouseover="this.style.color=\'' + COLOR.gold + '\'" ' +
-              'onmouseout="this.style.color=\'' + COLOR.muted + '\'">⚙</button>' +
-              '<button class="wa-remove-btn" data-name="' + ind.name + '" ' +
-              'title="Xóa khỏi chart" style="background:transparent; border:none; ' +
-              'color:' + COLOR.muted + '; cursor:pointer; font-size:14px; padding:4px; margin:-4px; ' +
-              'line-height:1; transition:color .15s; touch-action:manipulation;" onmouseover="this.style.color=\'' + COLOR.red + '\'" ' +
-              'onmouseout="this.style.color=\'' + COLOR.muted + '\'">✕</button>' +
-              '</div>'
-            : '',
-        '</div>',
-        '<div style="color:' + COLOR.muted + '; font-size:11px; line-height:1.4;">' + ind.description + '</div>',
-      ].join('');
-
-      // Ngăn ấn nhầm khi bấm nút Setting/Delete
-      card.addEventListener('click', function (e) {
-        if (e.target.closest('.wa-remove-btn') || e.target.closest('.wa-settings-btn')) return;
-        global.addIndicatorToChart(ind.name);
+    if (currentMainTab === 'library') {
+      catTabs.style.display = 'flex';
+      const q = (query || '').toLowerCase().trim();
+      const filtered = INDICATOR_REGISTRY.filter(ind => {
+        const matchCat = currentCategory === 'all' || ind.category === currentCategory;
+        const matchQ = !q || ind.name.toLowerCase().includes(q) || ind.shortName.toLowerCase().includes(q) || ind.description.toLowerCase().includes(q);
+        return matchCat && matchQ;
       });
 
-      card.addEventListener('mouseenter', function () {
-        if (!isActive) card.style.borderColor = COLOR.borderHover;
-        card.style.background = isActive ? COLOR.cyanMid : 'rgba(255,255,255,0.05)';
-      });
-      card.addEventListener('mouseleave', function () {
-        card.style.borderColor = isActive ? COLOR.cyanMid : COLOR.border;
-        card.style.background  = isActive ? COLOR.cyanFaint : 'rgba(255,255,255,0.02)';
-      });
+      if (filtered.length === 0) {
+        list.style.display = 'none'; empty.style.display = 'flex'; empty.innerText = 'Không tìm thấy chỉ báo phù hợp'; return;
+      }
+      list.style.display = 'block'; empty.style.display = 'none';
 
-      list.appendChild(card);
-    });
+      filtered.forEach(ind => {
+        const isActive = global.scActiveIndicators && global.scActiveIndicators.some(x => x.name === ind.name);
+        const isWave = ind.category === 'wave_alpha';
 
-    // ==========================================
-    // LẮNG NGHE SỰ KIỆN: XÓA CHỈ BÁO
-    // ==========================================
-    list.querySelectorAll('.wa-remove-btn').forEach(function (btn) {
-      const removeInd = function(e) {
-        e.stopPropagation(); e.preventDefault();
-        const name = btn.dataset.name;
-        global.removeIndicatorFromChart(name);
-      };
-      btn.addEventListener('click', removeInd);
-      btn.addEventListener('touchend', removeInd, { passive: false });
-    });
+        const item = document.createElement('div');
+        item.className = 'wa-imm-item';
+        item.innerHTML = `
+          <div class="wa-imm-item-info">
+            <div class="wa-imm-item-name" style="color: ${isWave ? COLOR.cyan : COLOR.white};">${ind.shortName} ${isWave ? '<span style="color:#F0B90B;font-size:10px;">★</span>' : ''}</div>
+            <div class="wa-imm-item-desc">${ind.description}</div>
+          </div>
+          ${isActive 
+            ? '<span style="font-size:10px; background:rgba(0,240,255,0.1); color:#00F0FF; padding:4px 8px; border-radius:4px; border:1px solid rgba(0,240,255,0.2);">Đang dùng</span>'
+            : '<button class="wa-imm-add-btn">+ Thêm</button>'
+          }
+        `;
 
-    // ==========================================
-    // LẮNG NGHE SỰ KIỆN: MỞ CÀI ĐẶT
-    // ==========================================
-    list.querySelectorAll('.wa-settings-btn').forEach(function (btn) {
-      const openSettings = function(e) {
-        e.stopPropagation(); e.preventDefault();
-        const name = btn.dataset.name;
-        
-        
-        if (global.WaveIndicatorAPI && typeof global.WaveIndicatorAPI.openSettingsByName === 'function') {
-            global.WaveIndicatorAPI.openSettingsByName(name);
-        } else {
-            const ind = global.scActiveIndicators.find(i => i.name === name);
-            if (ind && typeof global.openIndicatorSettings === 'function') {
-                global.openIndicatorSettings({ name: ind.name, calcParams: ind.params }, ind.paneId);
-            }
+        if (!isActive) {
+          item.onclick = () => {
+            global.addIndicatorToChart(ind.name);
+            renderIndicatorList(document.getElementById('wa-ind-search').value);
+          };
         }
-      };
-      btn.addEventListener('click', openSettings);
-      btn.addEventListener('touchend', openSettings, { passive: false });
-    });
+        list.appendChild(item);
+      });
+    } else {
+      catTabs.style.display = 'none';
+      if (activeCount === 0) {
+        list.style.display = 'none'; empty.style.display = 'flex'; empty.innerText = 'Không có chỉ báo nào đang hoạt động'; return;
+      }
+      list.style.display = 'block'; empty.style.display = 'none';
+
+      global.scActiveIndicators.forEach(ind => {
+        const meta = INDICATOR_REGISTRY.find(x => x.name === ind.name);
+        const isVisible = ind.visible !== false;
+        const item = document.createElement('div');
+        item.className = 'wa-imm-item';
+        item.innerHTML = `
+          <div class="wa-imm-item-info">
+            <div class="wa-imm-item-name">${meta ? meta.shortName : ind.name}</div>
+            <div class="wa-imm-item-desc">Đang chạy trên biểu đồ</div>
+          </div>
+          <div class="wa-imm-actions">
+            <button class="wa-imm-action-btn toggle-vis" title="Ẩn/Hiện" style="color: ${isVisible ? '#848e9c' : '#f6465d'};">${isVisible ? '👁' : '🚫'}</button>
+            <button class="wa-imm-action-btn open-set" title="Cài đặt">⚙</button>
+            <button class="wa-imm-action-btn remove" title="Xóa">✖</button>
+          </div>
+        `;
+
+        item.querySelector('.toggle-vis').onclick = (e) => {
+          e.stopPropagation();
+          ind.visible = !isVisible;
+          if (window.tvChart) window.tvChart.overrideIndicator({ name: ind.name, visible: ind.visible }, ind.paneId);
+          renderIndicatorList(document.getElementById('wa-ind-search').value);
+        };
+        item.querySelector('.open-set').onclick = (e) => {
+          e.stopPropagation();
+          document.getElementById('wa-ind-modal-close').click();
+          if (typeof global.openIndicatorSettings === 'function') global.openIndicatorSettings({ name: ind.name, calcParams: ind.params }, ind.paneId);
+        };
+        item.querySelector('.remove').onclick = (e) => {
+          e.stopPropagation();
+          if (typeof global.removeIndicatorFromChart === 'function') global.removeIndicatorFromChart(ind.name);
+          renderIndicatorList(document.getElementById('wa-ind-search').value);
+        };
+        list.appendChild(item);
+      });
+    }
   }
 
-  /**
-   * Inject shared CSS for tabs and other reusable styles
-   */
   function injectStyles() {
     if (document.getElementById('wa-ind-styles')) return;
     const style = document.createElement('style');
     style.id = 'wa-ind-styles';
     style.textContent = `
-      .wa-tab {
-        background: transparent;
-        border: 1px solid transparent;
-        border-radius: 6px;
-        color: ${COLOR.muted};
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 600;
-        padding: 5px 12px;
-        white-space: nowrap;
-        transition: color .15s, background .15s, border-color .15s;
-        flex-shrink: 0;
-      }
-      .wa-tab:hover { color: ${COLOR.white}; background: rgba(255,255,255,0.06); }
-      .wa-tab.active { color: ${COLOR.cyan}; border-color: ${COLOR.cyanMid}; background: ${COLOR.cyanFaint}; }
-      #wa-ind-search:focus { border-color: ${COLOR.cyan} !important; }
-      #wa-ind-tabs::-webkit-scrollbar { display: none; }
-      #wa-ind-list::-webkit-scrollbar { width: 4px; }
-      #wa-ind-list::-webkit-scrollbar-track { background: transparent; }
-      #wa-ind-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
-      #sc-ind-settings-modal input[type=number]:focus {
-        border-color: ${COLOR.cyan} !important;
-        outline: none;
-      }
-      @media (max-width: 850px) {
-        #wa-ind-modal-box { width: 96vw !important; max-height: 92vh !important; }
-        #wa-ind-list { grid-template-columns: 1fr !important; }
-        .wa-label { display: none !important; }
-        /* Thu nhỏ paddings của nút thời gian để vừa vặn hơn khi rớt dòng */
-        .sc-time-btn { padding: 4px 6px !important; font-size: 11px !important; }
+      #sc-indicator-modal.show { background: rgba(0,0,0,0.55) !important; opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; }
+      
+      .wa-imm-box { position: absolute; top: 50%; left: 50%; transform: translate3d(-50%, -50%, 0); background: #1e222d; width: 560px; height: 600px; max-height: 85vh; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; flex-direction: column; overflow: hidden; font-family: 'Inter', sans-serif; pointer-events: auto; }
+      
+      .wa-imm-header { padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
+      #wa-ind-modal-close:hover { color: #f6465d !important; }
+      
+      #wa-ind-search:focus { border-color: #26a69a !important; }
+
+      .wa-imm-main-tab { padding: 12px 0; font-size: 12px; font-weight: 700; color: #848e9c; cursor: pointer; border-bottom: 2px solid transparent; transition: 0.2s; }
+      .wa-imm-main-tab.active { color: #26a69a; border-bottom-color: #26a69a; }
+
+      .wa-cat-tab { background: transparent; border: 1px solid transparent; border-radius: 6px; color: #848e9c; cursor: pointer; font-size: 11px; font-weight: 600; padding: 6px 12px; white-space: nowrap; transition: 0.2s; flex-shrink: 0; }
+      .wa-cat-tab:hover { color: #EAECEF; background: rgba(255,255,255,0.06); }
+      .wa-cat-tab.active { color: #00F0FF; border-color: rgba(0,240,255,0.3); background: rgba(0,240,255,0.05); }
+      
+      #wa-ind-cat-tabs::-webkit-scrollbar { display: none; }
+
+      .wa-imm-content::-webkit-scrollbar { width: 4px; }
+      .wa-imm-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+      .wa-imm-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; transition: 0.2s; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.02); }
+      .wa-imm-item:last-child { border-bottom: none; }
+      .wa-imm-item:hover { background: rgba(255,255,255,0.03); }
+      
+      .wa-imm-item-info { display: flex; flex-direction: column; gap: 4px; }
+      .wa-imm-item-name { font-size: 13px; font-weight: 600; }
+      .wa-imm-item-desc { font-size: 11px; color: #527c82; }
+
+      .wa-imm-add-btn { background: transparent; border: none; color: #26a69a; font-size: 12px; font-weight: 700; cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: 0.2s; }
+      .wa-imm-item:hover .wa-imm-add-btn { background: rgba(38,166,154,0.1); }
+
+      .wa-imm-actions { display: flex; gap: 8px; }
+      .wa-imm-action-btn { background: transparent; border: none; color: #848e9c; cursor: pointer; padding: 6px; font-size: 14px; transition: 0.2s; border-radius: 4px; }
+      .wa-imm-action-btn:hover { background: rgba(255,255,255,0.08); color: #EAECEF; }
+      .wa-imm-action-btn.remove:hover { color: #f6465d !important; background: rgba(246,70,93,0.1) !important; }
+
+      /* MOBILE BOTTOM SHEET */
+      @media (max-width: 768px) {
+        .wa-imm-box {
+          top: auto !important; bottom: 0 !important; left: 50% !important;
+          transform: translate3d(-50%, 100%, 0) !important;
+          width: 92vw !important; height: 85vh !important;
+          border-radius: 24px 24px 0 0 !important;
+          transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+        }
+        #sc-indicator-modal.show .wa-imm-box { transform: translate3d(-50%, 0, 0) !important; }
+        .wa-imm-header { padding-top: 24px; position: relative; border-bottom: none; }
+        .wa-imm-header::before { content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 40px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 4px; }
       }
     `;
     document.head.appendChild(style);
   }
 
-  /**
-   * Initialize and inject all UI components into the DOM
-   */
   global.initExpertUI = function () {
     injectStyles();
 
-    // ── Indicator Library Modal ──
     if (!document.getElementById('sc-indicator-modal')) {
       const wrap = document.createElement('div');
       wrap.innerHTML = buildIndicatorModalHTML();
       document.body.appendChild(wrap.firstElementChild);
 
-      // Tab click
-      document.getElementById('wa-ind-tabs').addEventListener('click', function (e) {
-        const btn = e.target.closest('.wa-tab');
+      const modal = document.getElementById('sc-indicator-modal');
+      const searchInp = document.getElementById('wa-ind-search');
+
+      // Main Tabs Click
+      document.querySelectorAll('.wa-imm-main-tab').forEach(tab => {
+        tab.onclick = () => {
+          document.querySelectorAll('.wa-imm-main-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          currentMainTab = tab.dataset.maintab;
+          renderIndicatorList(searchInp.value);
+        };
+      });
+
+      // Category Tabs Click
+      document.getElementById('wa-ind-cat-tabs').addEventListener('click', function (e) {
+        const btn = e.target.closest('.wa-cat-tab');
         if (!btn) return;
-        document.querySelectorAll('.wa-tab').forEach(function (t) { t.classList.remove('active'); });
+        document.querySelectorAll('.wa-cat-tab').forEach(t => t.classList.remove('active'));
         btn.classList.add('active');
-        const q = (document.getElementById('wa-ind-search') || {}).value || '';
-        renderIndicatorList(q, btn.dataset.cat);
+        currentCategory = btn.dataset.cat;
+        renderIndicatorList(searchInp.value);
       });
 
-      // Search
-      document.getElementById('wa-ind-search').addEventListener('input', function (e) {
-        const activeTab = document.querySelector('.wa-tab.active');
-        renderIndicatorList(e.target.value, activeTab ? activeTab.dataset.cat : 'all');
-      });
+      searchInp.addEventListener('input', (e) => renderIndicatorList(e.target.value));
 
-          // Search
-    document.getElementById('wa-ind-search').addEventListener('input', function(e) {
-      const activeTab = document.querySelector('.wa-tab.active');
-      renderIndicatorList(e.target.value, activeTab ? activeTab.dataset.cat : 'all');
-    });
+      // Đóng Mượt
+      const closeBox = () => {
+        modal.classList.remove('show');
+        setTimeout(() => { modal.style.display = 'none'; }, 150);
+      };
 
-    /* ====== BẠN DÁN CODE VÀO ĐÂY ====== */
-    const indModal = document.getElementById('sc-indicator-modal');
-    
-    // Nút X để đóng
-    const closeBtn = document.getElementById('wa-ind-modal-close');
-    if (closeBtn) {
-      closeBtn.addEventListener('click', function(e) {
-        if (indModal) indModal.style.display = 'none';
-      });
-    }
+      document.getElementById('wa-ind-modal-close').onclick = closeBox;
+      modal.addEventListener('mousedown', (e) => { if (e.target === modal) closeBox(); });
 
-        // Click chuột ra ngoài giao diện thì tắt (phiên bản chống lỗi tải lại DOM)
-        document.addEventListener('click', function(e) {
-          // Nhớ thay 'btn-fx-indicator' bằng ID nút mở popup của bạn nếu có
-          const btnInd = document.getElementById('btn-fx-indicator'); 
-          
-          if (indModal && indModal.style.display === 'flex') {
-            // Sử dụng e.composedPath() để truy vết luồng click chuột
-            // Giúp nhận diện chuẩn xác bạn đang click bên trong popup kể cả khi thẻ vừa bị đổi màu
-            const path = e.composedPath ? e.composedPath() : [];
-            const isClickInsideModal = path.includes(indModal);
-            const isClickOnButton = btnInd && path.includes(btnInd);
-    
-            // Chỉ ẩn popup khi vị trí click KHÔNG nằm trong popup VÀ KHÔNG nằm trên nút bật
-            if (!isClickInsideModal && !isClickOnButton) {
-              indModal.style.display = 'none';
-            }
-          }
-        });
-
-    
-    }
-
-    // ── Settings Modal ──
-    if (!document.getElementById('sc-ind-settings-modal')) {
-      const wrap2 = document.createElement('div');
-      wrap2.innerHTML = buildSettingsModalHTML();
-      document.body.appendChild(wrap2.firstElementChild);
-
-      document.getElementById('wa-settings-close').addEventListener('click', function () {
-        document.getElementById('sc-ind-settings-modal').style.display = 'none';
-      });
-      document.getElementById('sc-ind-settings-modal').addEventListener('click', function (e) {
-        if (e.target === this) this.style.display = 'none';
-      });
+      // Override global func để gán lại logic bật
+      global.openIndicatorModal = function () {
+        currentMainTab = 'library';
+        currentCategory = 'all';
+        document.querySelectorAll('.wa-imm-main-tab').forEach(t => t.classList.toggle('active', t.dataset.maintab === 'library'));
+        document.querySelectorAll('.wa-cat-tab').forEach(t => t.classList.toggle('active', t.dataset.cat === 'all'));
+        searchInp.value = '';
+        
+        renderIndicatorList('');
+        modal.style.display = 'flex';
+        void modal.offsetWidth; // Ép reflow để CSS kịp áp dụng
+        modal.classList.add('show');
+      };
     }
 
     // ── Topbar Buttons ──
