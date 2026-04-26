@@ -456,13 +456,15 @@ window.WaveChartEngine = {
         else if (c.chartType === 3) kcChartType = 'ohlc';
         else if (c.chartType === 6 || c.chartType === 9) { kcChartType = 'area'; isLine = (c.chartType === 6); }
 
-        // Loại custom
-        if      (c.chartType === 4)  { this.chartInstance.createIndicator('WA_COL_CHART',   true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 5)  { this.chartInstance.createIndicator('WA_HL_CHART',    true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 7)  { this.chartInstance.createIndicator('WA_LINE_MARKER', true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 8)  { this.chartInstance.createIndicator('WA_STEP_LINE',   true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 10) { this.chartInstance.createIndicator('WA_HLC_AREA',    true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 11) { this.chartInstance.createIndicator('WA_BASELINE',    true, {id: 'candle_pane'}); hideCandle = true; }
+        // Loại custom - 🚀 BẢN FIX PRO: Tàng hình riêng cho 6 loại này, không ảnh hưởng MACD/EMA
+        const ghostStyle = { tooltip: { showRule: 'none', showName: false, showParams: false } };
+
+        if      (c.chartType === 4)  { this.chartInstance.createIndicator({ name: 'WA_COL_CHART',   styles: ghostStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 5)  { this.chartInstance.createIndicator({ name: 'WA_HL_CHART',    styles: ghostStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 7)  { this.chartInstance.createIndicator({ name: 'WA_LINE_MARKER', styles: ghostStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 8)  { this.chartInstance.createIndicator({ name: 'WA_STEP_LINE',   styles: ghostStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 10) { this.chartInstance.createIndicator({ name: 'WA_HLC_AREA',    styles: ghostStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 11) { this.chartInstance.createIndicator({ name: 'WA_BASELINE',    styles: ghostStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
 
         const isHollow       = (c.chartType === 2);
         const finalUpColor   = hideCandle ? 'transparent' : c.upColor;
@@ -481,12 +483,7 @@ window.WaveChartEngine = {
             },
             indicator: {
                 lastValueMark: { show: true },
-                zLevel: 2, // 🚀 BẢN FIX: Ép tất cả các chỉ báo (EMA, MACD...) luôn nổi lên lớp trên cùng
-                tooltip: { 
-                    showName: false, 
-                    showParams: false, 
-                    showRule: 'none' 
-                }
+                zLevel: 2 // 🚀 BẢN FIX: Ép tất cả các chỉ báo (EMA, MACD...) luôn nổi lên lớp trên cùng
             },
             candle: {
                 zLevel: 1, // 🚀 BẢN FIX: Hạ lớp nến / biểu đồ Line xuống lớp dưới
