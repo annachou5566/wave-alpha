@@ -256,7 +256,16 @@ window.WaveChartEngine = {
             // 5. VÙNG HLC AREA (ID 10) — Tách nền trên & dưới đường Close
             // ─────────────────────────────────────────────────────────────
             window.klinecharts.registerIndicator({
-                name: 'WA_HLC_AREA', shortName: ' ', series: 'price', calc: (d) => d,
+                name: 'WA_HLC_AREA', 
+                shortName: '', 
+                series: 'price', 
+                calc: (d) => d,
+                
+                // MẤU CHỐT BẢO VỆ CHỐNG CRASH: Trả về rỗng hoàn toàn, không phụ thuộc vào thư viện
+                createTooltipDataSource: function() { 
+                    return { name: '', calcParamsText: '', values: [] }; 
+                },
+
                 draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
