@@ -3669,7 +3669,18 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
       .wa-imm-action-btn { background: transparent; border: none; color: #848e9c; cursor: pointer; padding: 6px; font-size: 14px; transition: 0.2s; border-radius: 4px; }
       .wa-imm-action-btn:hover { background: rgba(255,255,255,0.08); color: #EAECEF; }
       .wa-imm-action-btn.remove:hover { color: #f6465d !important; background: rgba(246,70,93,0.1) !important; }
-
+/* CUSTOM DROPDOWN MINIMALIST */
+        .wa-custom-select { position: relative; width: 140px; font-size: 12px; user-select: none; }
+        .wa-select-trigger { background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
+        .wa-select-trigger:hover { border-color: rgba(255,255,255,0.2); }
+        .wa-select-trigger.active { border-color: #26a69a; }
+        .wa-select-dropdown { position: absolute; top: calc(100% + 4px); left: 0; width: 100%; background: #1e222d; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); z-index: 100; display: none; flex-direction: column; max-height: 200px; overflow-y: auto; }
+        .wa-select-dropdown.show { display: flex; }
+        .wa-select-dropdown::-webkit-scrollbar { width: 4px; }
+        .wa-select-dropdown::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        .wa-select-option { padding: 8px 12px; color: #b7bdc6; cursor: pointer; transition: 0.2s; }
+        .wa-select-option:hover { background: rgba(255,255,255,0.05); color: #EAECEF; }
+        .wa-select-option.active { color: #26a69a; background: rgba(38,166,154,0.1); font-weight: 600; }
       /* MOBILE BOTTOM SHEET */
       @media (max-width: 768px) {
         .wa-imm-box {
@@ -4380,11 +4391,52 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                     }
 
                     if (options.length > 1) {
-                        let optsHTML = options.map(o => `<option value="${o.val}" ${val === o.val ? 'selected' : ''}>${o.text}</option>`).join('');
-                        row.innerHTML = `<div class="wa-ism-label">${cleanLbl}${descHTML}</div>
-                                         <div class="wa-ism-control"><select id="wa-param-${idx}" class="wa-ism-select">${optsHTML}</select></div>`;
-                        row.querySelector('select').onchange = liveUpdateChart;
-                    } else {
+                      let selectedText = options.find(o => o.val === val)?.text || options[0].text;
+                      let optsHTML = options.map(o => `<div class="wa-select-option ${val === o.val ? 'active' : ''}" data-value="${o.val}">${o.text}</div>`).join('');
+                      
+                      row.innerHTML = `<div class="wa-ism-label">${cleanLbl}${descHTML}</div>
+                                       <div class="wa-ism-control">
+                                           <div class="wa-custom-select">
+                                               <div class="wa-select-trigger">
+                                                   <span class="wa-select-text">${selectedText}</span>
+                                                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                               </div>
+                                               <div class="wa-select-dropdown">${optsHTML}</div>
+                                           </div>
+                                           <input type="hidden" id="wa-param-${idx}" value="${val}">
+                                       </div>`;
+
+                      const trigger = row.querySelector('.wa-select-trigger');
+                      const dropdown = row.querySelector('.wa-select-dropdown');
+                      const hiddenInput = row.querySelector(`#wa-param-${idx}`);
+                      const optionNodes = row.querySelectorAll('.wa-select-option');
+
+                      trigger.onclick = (e) => {
+                          e.stopPropagation();
+                          // Đóng các dropdown khác đang mở để không bị đè lên nhau
+                          document.querySelectorAll('.wa-select-dropdown.show').forEach(el => { if(el !== dropdown) el.classList.remove('show'); });
+                          document.querySelectorAll('.wa-select-trigger.active').forEach(el => { if(el !== trigger) el.classList.remove('active'); });
+                          
+                          dropdown.classList.toggle('show');
+                          trigger.classList.toggle('active');
+                      };
+
+                      optionNodes.forEach(opt => {
+                          opt.onclick = (e) => {
+                              e.stopPropagation();
+                              // Cập nhật màu sắc UI
+                              optionNodes.forEach(n => n.classList.remove('active'));
+                              opt.classList.add('active');
+                              row.querySelector('.wa-select-text').innerText = opt.innerText;
+                              dropdown.classList.remove('show');
+                              trigger.classList.remove('active');
+                              
+                              // Gán giá trị vào thẻ ẩn & Kích hoạt Update Chart
+                              hiddenInput.value = opt.dataset.value;
+                              liveUpdateChart();
+                          };
+                      });
+                  } else {
                         row.innerHTML = `<div class="wa-ism-label">${lbl}${descHTML}</div>
                                          <div class="wa-ism-control"><input type="number" id="wa-param-${idx}" class="wa-ism-input" value="${val}" step="any"></div>`;
                         row.querySelector('input').oninput = liveUpdateChart;
@@ -4425,6 +4477,13 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
 
     document.getElementById('btn-wa-ism-close').onclick = window.closeIndicatorSettings;
     modal.addEventListener('mousedown', (e) => { if (e.target === modal) window.closeIndicatorSettings(); });
+    // Click ra ngoài để đóng dropdown custom
+    modalBox.addEventListener('mousedown', (e) => {
+      if (!e.target.closest('.wa-custom-select')) {
+          document.querySelectorAll('.wa-select-dropdown.show').forEach(el => el.classList.remove('show'));
+          document.querySelectorAll('.wa-select-trigger.active').forEach(el => el.classList.remove('active'));
+      }
+  });
     panels.addEventListener('scroll', () => { if (window.WaveColorPicker) window.WaveColorPicker.close(); });
 
     const header = document.getElementById('wa-ism-header');
