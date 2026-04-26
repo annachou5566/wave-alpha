@@ -261,12 +261,11 @@ window.WaveChartEngine = {
                 series: 'price', 
                 calc: (d) => d,
                 
-                // --- THÊM 2 BLOCK NÀY ĐỂ ẨN TOOLTIP MÀ KHÔNG CRASH ---
-                styles: { tooltip: { showRule: 'none' } },
-                createTooltipDataSource: ({ defaultStyles }) => {
-                    return { name: '', calcParamsText: '', values: [], icons: defaultStyles.tooltip.icons || [] };
+                // MẤU CHỐT BẢO VỆ CHỐNG CRASH: Trả về rỗng hoàn toàn, không phụ thuộc vào thư viện
+                createTooltipDataSource: function() { 
+                    return { name: '', calcParamsText: '', values: [] }; 
                 },
-                // -----------------------------------------------------
+
                 draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
