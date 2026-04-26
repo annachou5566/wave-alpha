@@ -70,11 +70,30 @@ window.WaveChartEngine = {
         if (!window.klinecharts || !window.klinecharts.registerIndicator) return;
 
         try {
+            // =====================================================================
+            // 🚀 GIẢI PHÁP CHUYÊN NGHIỆP: WRAPPER FUNCTION
+            // Tự động "tiêm" logic chém bay nút Xóa/Cài đặt cho MỌI chart đi qua nó.
+            // Sau này tạo thêm 100 chart mới cũng tự động được áp dụng.
+            // =====================================================================
+            const registerWaveChart = (config) => {
+                if (!config.createTooltipDataSource) {
+                    config.createTooltipDataSource = function({ indicator, defaultStyles }) {
+                        const icons = defaultStyles.tooltip.icons || [];
+                        return {
+                            name: indicator.shortName || config.shortName || ' ',
+                            calcParamsText: '',
+                            // Chỉ lấy duy nhất icon con mắt (visible/invisible)
+                            icons: [indicator.visible ? icons[1] : icons[0]].filter(Boolean) 
+                        };
+                    };
+                }
+                window.klinecharts.registerIndicator(config);
+            };
 
             // ─────────────────────────────────────────────────────────────
             // 1. CỘT (COLUMNS - ID 4)
             // ─────────────────────────────────────────────────────────────
-            window.klinecharts.registerIndicator({
+            registerWaveChart({ // 👉 SỬ DỤNG HÀM MỚI Ở ĐÂY
                 name: 'WA_COL_CHART', shortName: ' ', series: 'price', calc: (d) => d,
                 draw: ({ ctx, indicator, visibleRange, bounding, barSpace, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
@@ -105,7 +124,7 @@ window.WaveChartEngine = {
             // ─────────────────────────────────────────────────────────────
             // 2. ĐỈNH-ĐÁY (HIGH-LOW - ID 5)
             // ─────────────────────────────────────────────────────────────
-            window.klinecharts.registerIndicator({
+            registerWaveChart({
                 name: 'WA_HL_CHART', shortName: ' ', series: 'price', calc: (d) => d,
                 draw: ({ ctx, indicator, visibleRange, barSpace, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
@@ -151,7 +170,7 @@ window.WaveChartEngine = {
             // 3. BẬC THANG (STEP LINE - ID 8)
             //    Hỗ trợ 1 màu tĩnh (stepLineSingleColor=true) hoặc 2 màu động
             // ─────────────────────────────────────────────────────────────
-            window.klinecharts.registerIndicator({
+            registerWaveChart({
                 name: 'WA_STEP_LINE', shortName: ' ', series: 'price', calc: (d) => d,
                 draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
@@ -203,7 +222,7 @@ window.WaveChartEngine = {
             // ─────────────────────────────────────────────────────────────
             // 4. ĐƯỜNG + ĐIỂM MARKER (LINE MARKER - ID 7)
             // ─────────────────────────────────────────────────────────────
-            window.klinecharts.registerIndicator({
+            registerWaveChart({
                 name: 'WA_LINE_MARKER', shortName: ' ', series: 'price', calc: (d) => d,
                 draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
@@ -255,7 +274,7 @@ window.WaveChartEngine = {
             // ─────────────────────────────────────────────────────────────
             // 5. VÙNG HLC AREA (ID 10) — Tách nền trên & dưới đường Close
             // ─────────────────────────────────────────────────────────────
-            window.klinecharts.registerIndicator({
+            registerWaveChart({
                 name: 'WA_HLC_AREA', shortName: ' ', series: 'price', calc: (d) => d,
                 draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
@@ -326,7 +345,7 @@ window.WaveChartEngine = {
             // ─────────────────────────────────────────────────────────────
             // 6. ĐƯỜNG CƠ SỞ (BASELINE - ID 11)
             // ─────────────────────────────────────────────────────────────
-            window.klinecharts.registerIndicator({
+            registerWaveChart({
                 name: 'WA_BASELINE', shortName: ' ', series: 'price', calc: (d) => d,
                 draw: ({ ctx, indicator, visibleRange, bounding, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
