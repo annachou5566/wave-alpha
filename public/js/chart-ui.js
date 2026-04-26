@@ -1362,7 +1362,7 @@ window.closeProChart = function() {
 };
 
 // =========================================================================
-// 🧩 BƯỚC 2: CHART TYPE SELECTOR (21 LOẠI BIỂU ĐỒ - LAYOUT LƯỚI 2x2 TỐI ƯU)
+// 🧩 BƯỚC 2: CHART TYPE SELECTOR (21 LOẠI BIỂU ĐỒ - CHUẨN MODAL ĐỒNG BỘ)
 // =========================================================================
 (function initChartTypeSelector() {
     'use strict';
@@ -1370,14 +1370,13 @@ window.closeProChart = function() {
     // Hàm bọc SVG để đồng bộ style
     const _svg = (paths) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
 
-    // 1. Data 21 loại biểu đồ với Custom SVG Icons (ĐÃ MỞ KHÓA CỘT, ĐỈNH-ĐÁY, HEIKIN ASHI)
     const CHART_TYPES = [
         // Nhóm 1: Cơ bản
         { grp: 'CƠ BẢN', id: 1, name: 'Nến Nhật', icon: _svg('<path d="M9 4v16M15 4v16M7 8h4v8H7zM13 10h4v6h-4z"/>'), phase: 1, desc: 'Nến Open-High-Low-Close chuẩn' },
         { grp: 'CƠ BẢN', id: 2, name: 'Nến Rỗng', icon: _svg('<path d="M9 4v16M15 4v16"/><rect x="7" y="8" width="4" height="8"/><rect x="13" y="10" width="4" height="6"/>'), phase: 1, desc: 'Nến tăng rỗng ruột giúp giảm mỏi mắt' },
         { grp: 'CƠ BẢN', id: 3, name: 'Thanh (Bars)', icon: _svg('<path d="M9 4v16M6 8h3M9 16h3M15 4v16M12 10h3M15 18h3"/>'), phase: 1, desc: 'Thanh OHLC chuẩn thị trường Mỹ' },
-        { grp: 'CƠ BẢN', id: 4, name: 'Cột (Columns)', icon: _svg('<path d="M18 20V10M12 20V4M6 20v-4"/>'), phase: 1, desc: 'Cột hiển thị theo giá Close' }, // 🚀 Đổi thành phase 1
-        { grp: 'CƠ BẢN', id: 5, name: 'Đỉnh - Đáy', icon: _svg('<path d="M12 4v16M8 8l4-4 4 4M8 16l4 4 4-4"/>'), phase: 1, desc: 'Bỏ qua Open/Close, chỉ xem biên độ' }, // 🚀 Đổi thành phase 1
+        { grp: 'CƠ BẢN', id: 4, name: 'Cột (Columns)', icon: _svg('<path d="M18 20V10M12 20V4M6 20v-4"/>'), phase: 1, desc: 'Cột hiển thị theo giá Close' },
+        { grp: 'CƠ BẢN', id: 5, name: 'Đỉnh - Đáy', icon: _svg('<path d="M12 4v16M8 8l4-4 4 4M8 16l4 4 4-4"/>'), phase: 1, desc: 'Bỏ qua Open/Close, chỉ xem biên độ' },
         
         // Nhóm 2: Đường & Vùng
         { grp: 'ĐƯỜNG & VÙNG', id: 6, name: 'Đường (Line)', icon: _svg('<polyline points="3 17 9 11 15 15 21 5"/>'), phase: 1, desc: 'Đường nối các giá đóng cửa' },
@@ -1388,7 +1387,7 @@ window.closeProChart = function() {
         { grp: 'ĐƯỜNG & VÙNG', id: 11, name: 'Đường Cơ Sở', icon: _svg('<line x1="3" y1="12" x2="21" y2="12" stroke-dasharray="2 2"/><polyline points="3 12 7 8 13 15 21 6"/>'), phase: 1, desc: 'Baseline: Trên xanh, dưới đỏ' },
         
         // Nhóm 3: Khử Nhiễu
-        { grp: 'KHỬ NHIỄU (PRO)', id: 12, name: 'Heikin Ashi', icon: _svg('<path d="M9 4v16M15 4v16M7 10h4v6H7zM13 8h4v8h-4z"/>'), phase: 1, desc: 'Nến trung bình lọc nhiễu sóng' }, // 🚀 Đổi thành phase 1
+        { grp: 'KHỬ NHIỄU (PRO)', id: 12, name: 'Heikin Ashi', icon: _svg('<path d="M9 4v16M15 4v16M7 10h4v6H7zM13 8h4v8h-4z"/>'), phase: 1, desc: 'Nến trung bình lọc nhiễu sóng' },
         { grp: 'KHỬ NHIỄU (PRO)', id: 13, name: 'Nến Khối Lượng', icon: _svg('<path d="M9 4v16M15 4v16M5 10h8v6H5zM14 8h2v8h-2z"/>'), phase: 2, desc: 'Bề ngang nến tỷ lệ với Volume' },
         { grp: 'KHỬ NHIỄU (PRO)', id: 14, name: 'Renko', icon: _svg('<rect x="5" y="14" width="6" height="6"/><rect x="11" y="8" width="6" height="6"/>'), phase: 2, desc: 'Gạch giá trị, loại bỏ thời gian' },
         { grp: 'KHỬ NHIỄU (PRO)', id: 15, name: 'Line Break', icon: _svg('<path d="M7 16h4v4H7zM13 8h4v12h-4zM7 4h4v10H7z"/>'), phase: 2, desc: 'Chỉ vẽ nến khi có Breakout' },
@@ -1402,25 +1401,28 @@ window.closeProChart = function() {
         { grp: 'ORDER FLOW (PRO)', id: 21, name: 'VPVR Profile', icon: _svg('<path d="M3 6h12M3 10h8M3 14h16M3 18h10"/>'), phase: 3, desc: 'Hồ sơ khối lượng dồn dập' }
     ];
 
-    // 2. CSS cho Menu
     const style = document.createElement('style');
     style.textContent = `
-        #wa-chart-type-menu {
-            display: none; position: fixed; background: #1e222d; border: 1px solid rgba(255,255,255,0.1); 
-            /* 🚀 FIX: Tăng chiều rộng lên 440px để 2 cột không bị chật chội */
-            border-radius: 8px; width: 440px; max-height: 85vh; overflow-y: auto; z-index: 999999; box-shadow: 0 16px 40px rgba(0,0,0,0.8);
-            padding: 16px; grid-template-columns: 1fr 1fr; gap: 16px 24px; align-items: start; user-select: none;
-        }
-        #wa-chart-type-menu::-webkit-scrollbar { width: 4px; }
-        #wa-chart-type-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
-        #wa-chart-type-menu::-webkit-scrollbar-track { background: transparent; }
-
+        /* 🚀 MODAL LOẠI BIỂU ĐỒ (Clone chuẩn UI của Modal Settings) */
+        #wa-chart-type-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999999; pointer-events: none; opacity: 0; visibility: hidden; transition: all 0.15s ease; transform: translateZ(0); }
+        #wa-chart-type-modal.show { opacity: 1; visibility: visible; pointer-events: auto; }
+        
+        #wa-ctm-box { position: absolute; top: 50%; left: 50%; transform: translate3d(-50%, -50%, 0); background: #1e222d; width: 520px; max-height: 80vh; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; flex-direction: column; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; pointer-events: auto; }
+        #wa-ctm-box.is-dragging { transition: none !important; will-change: left, top; }
+        
+        #wa-ctm-header { padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; cursor: grab; user-select: none; }
+        #wa-ctm-header:active { cursor: grabbing; }
+        .wa-ctm-title { font-size: 16px; font-weight: 700; color: #EAECEF; pointer-events: none; }
+        #btn-wa-ctm-close { color: #848e9c; cursor: pointer; font-size: 18px; transition: 0.2s; }
+        #btn-wa-ctm-close:hover { color: #F6465D; }
+        
+        #wa-ctm-content { flex: 1; padding: 20px 24px; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; align-items: start; }
+        #wa-ctm-content::-webkit-scrollbar { width: 4px; }
+        #wa-ctm-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        
         .wa-ct-grp { display: flex; flex-direction: column; gap: 4px; }
         .wa-ct-title { font-size: 10px; font-weight: 800; color: #848e9c; letter-spacing: 0.5px; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; text-transform: uppercase; }
-        .wa-ct-item {
-            display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 6px; cursor: pointer;
-            transition: all 0.2s ease; background: transparent; border: 1px solid transparent; color: #EAECEF;
-        }
+        .wa-ct-item { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s ease; background: transparent; border: 1px solid transparent; color: #EAECEF; }
         .wa-ct-item:hover { background: rgba(255,255,255,0.05); color: #FFF; }
         .wa-ct-item.active { background: rgba(0,240,255,0.08); border-color: rgba(0,240,255,0.2); color: #00F0FF; }
         .wa-ct-icon { display: flex; align-items: center; justify-content: center; opacity: 0.7; transition: opacity 0.2s; }
@@ -1428,12 +1430,25 @@ window.closeProChart = function() {
         .wa-ct-text { font-size: 12px; font-weight: 500; flex: 1; }
         .wa-ct-item.active .wa-ct-text { font-weight: 700; }
         .wa-ct-pro { font-size: 8px; background: rgba(240,185,11,0.15); color: #F0B90B; padding: 2px 5px; border-radius: 4px; font-weight: 800; letter-spacing: 0.5px; border: 1px solid rgba(240,185,11,0.3); margin-left: auto; }
-        #btn-wa-chart-type {
-            background: rgba(255,255,255,0.03); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); 
-            border-radius: 4px; padding: 4px 10px; height: 26px; display: inline-flex; align-items: center; 
-            gap: 6px; transition: 0.2s; cursor: pointer;
+        
+        /* 📱 ĐỒNG BỘ MOBILE BOTTOM SHEET CỰC XỊN SÒ */
+        @media (max-width: 768px) {
+            #wa-ctm-box {
+                top: auto !important; bottom: 0 !important; left: 50% !important;
+                transform: translate3d(-50%, 100%, 0) !important;
+                width: 92vw !important; height: 80vh !important; max-height: none;
+                border-radius: 24px 24px 0 0 !important;
+                transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+            }
+            #wa-chart-type-modal.show #wa-ctm-box {
+                transform: translate3d(-50%, 0, 0) !important;
+            }
+            #wa-ctm-header { padding-top: 24px; position: relative; border-bottom: none; }
+            #wa-ctm-header::before { content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 40px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 4px; }
+            /* Gộp thành 1 cột trên Mobile cho dễ vuốt chọn */
+            #wa-ctm-content { grid-template-columns: 1fr; gap: 12px; padding: 0 24px 24px 24px; }
+            .wa-ct-item { padding: 10px; }
         }
-        #btn-wa-chart-type:hover { background: rgba(255,255,255,0.08); color: #EAECEF; }
     `;
     document.head.appendChild(style);
 
@@ -1444,24 +1459,47 @@ window.closeProChart = function() {
         if (toolbar) {
             clearInterval(checkToolbar);
 
-            const btnWrap = document.createElement('div');
-            // Đặt ID cho cụm này để nút Settings có thể tìm thấy và chui vào
-            btnWrap.id = 'wa-chart-controls-group'; 
-            // Thêm gap: 6px để các nút cách nhau một chút cho đẹp
-            btnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; gap: 6px; margin-left: 8px;';
-            btnWrap.innerHTML = `
-                <button id="btn-wa-chart-type" data-wa-tip="Loại Biểu Đồ" style="background: rgba(255,255,255,0.03); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px 8px; height: 26px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; transition: 0.2s;">
-                    <span id="wa-ct-btn-icon" style="display:flex; align-items:center;">${CHART_TYPES[0].icon}</span>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                </button>
+            // Tìm hoặc tạo Group chứa các nút
+            let btnWrap = document.getElementById('wa-chart-controls-group');
+            if (!btnWrap) {
+                btnWrap = document.createElement('div');
+                btnWrap.id = 'wa-chart-controls-group'; 
+                btnWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; gap: 6px; margin-left: 8px;';
+                toolbar.appendChild(btnWrap);
+            }
+
+            // Tạo nút Type Button (Sử dụng đúng thông số CSS giống hệt nút Settings)
+            const chartTypeBtn = document.createElement('button');
+            chartTypeBtn.id = 'btn-wa-chart-type';
+            chartTypeBtn.setAttribute('data-wa-tip', 'Loại Biểu Đồ');
+            chartTypeBtn.style.cssText = 'background: rgba(255,255,255,0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px 8px; height: 26px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; transition: 0.2s;';
+            chartTypeBtn.innerHTML = `
+                <span id="wa-ct-btn-icon" style="display:flex; align-items:center;">${CHART_TYPES[0].icon}</span>
             `;
             
-            toolbar.appendChild(btnWrap);
+            // Xử lý Hover y chang Nút Settings
+            chartTypeBtn.onmouseenter = () => { chartTypeBtn.style.color = '#EAECEF'; chartTypeBtn.style.background = 'rgba(255,255,255,0.08)'; };
+            chartTypeBtn.onmouseleave = () => { chartTypeBtn.style.color = '#848e9c'; chartTypeBtn.style.background = 'rgba(255,255,255,0.05)'; };
+            
+            btnWrap.appendChild(chartTypeBtn);
 
-            const menu = document.createElement('div');
-            menu.id = 'wa-chart-type-menu';
+            // Bơm Cấu trúc HTML của Modal vào DOM
+            const modal = document.createElement('div');
+            modal.id = 'wa-chart-type-modal';
+            modal.innerHTML = `
+                <div id="wa-ctm-box">
+                    <div id="wa-ctm-header">
+                        <div class="wa-ctm-title">Loại Biểu Đồ</div>
+                        <div id="btn-wa-ctm-close">✖</div>
+                    </div>
+                    <div id="wa-ctm-content"></div>
+                </div>
+            `;
+            document.body.appendChild(modal);
 
-            // 🚀 BỎ LOGIC ÉP DÀI CHIỀU NGANG -> MẶC ĐỊNH LÀ GRID 2x2 CÂN ĐỐI
+            const contentDiv = document.getElementById('wa-ctm-content');
+
+            // Render Danh sách Menu
             const groups = [...new Set(CHART_TYPES.map(t => t.grp))];
             groups.forEach((gName) => {
                 const grpDiv = document.createElement('div');
@@ -1482,59 +1520,89 @@ window.closeProChart = function() {
 
                     div.onclick = (e) => {
                         e.stopPropagation();
-                        // 🚀 MỞ KHÓA TẤT CẢ: Không check phase nữa, bấm là chạy
+                        // Gửi update thẳng vào Chart Engine
                         if (window.WaveChartEngine) {
                             window.WaveChartEngine.update({ chartType: item.id }, true);
                         }
                         
-                        // Cập nhật icon trên nút toolbar
+                        // Đổi Icon trên nút
                         const btnIcon = document.getElementById('wa-ct-btn-icon');
                         if (btnIcon) btnIcon.innerHTML = item.icon;
                         
-                        // Cập nhật trạng thái active trong menu
-                        menu.querySelectorAll('.wa-ct-item').forEach(el => el.classList.remove('active'));
+                        // Active UI
+                        contentDiv.querySelectorAll('.wa-ct-item').forEach(el => el.classList.remove('active'));
                         div.classList.add('active');
                         
-                        // Đóng menu
-                        menu.style.display = 'none';
+                        window.closeChartTypeModal();
                     };
                     
                     grpDiv.appendChild(div);
                 });
-                menu.appendChild(grpDiv);
+                contentDiv.appendChild(grpDiv);
             });
 
-            document.body.appendChild(menu);
+            // Thuật toán Kéo thả Drag y hệt Settings
+            const modalBox = document.getElementById('wa-ctm-box');
+            const header = document.getElementById('wa-ctm-header');
+            let isDragging = false, startX, startY, initLeft, initTop;
+            
+            header.addEventListener('mousedown', (e) => {
+                if (window.innerWidth <= 768) return; // Tắt kéo thả trên Mobile
+                isDragging = true; startX = e.clientX; startY = e.clientY;
+                const rect = modalBox.getBoundingClientRect();
+                initLeft = rect.left; initTop = rect.top;
+                modalBox.style.transform = 'translate3d(0, 0, 0)'; 
+                modalBox.style.left = initLeft + 'px'; 
+                modalBox.style.top = initTop + 'px';
+                modalBox.classList.add('is-dragging');
+                document.body.style.userSelect = 'none'; 
+            });
+            window.addEventListener('mousemove', (e) => { if (!isDragging) return; modalBox.style.left = (initLeft + e.clientX - startX) + 'px'; modalBox.style.top = (initTop + e.clientY - startY) + 'px'; });
+            window.addEventListener('mouseup', () => { isDragging = false; modalBox.classList.remove('is-dragging'); document.body.style.userSelect = ''; });
 
-            const btn = document.getElementById('btn-wa-chart-type');
-            btn.onclick = (e) => {
-                e.stopPropagation();
-                const isHidden = menu.style.display === 'none' || menu.style.display === '';
-                if (isHidden) {
-                    const rect = btn.getBoundingClientRect();
-                    menu.style.top = (rect.bottom + 6) + 'px';
-                    
-                    const menuWidth = 440; // Độ rộng mới
-                    if (rect.left + menuWidth > window.innerWidth) {
-                        menu.style.left = (window.innerWidth - menuWidth - 10) + 'px';
-                    } else {
-                        menu.style.left = rect.left + 'px';
-                    }
-
-                    menu.style.display = 'grid'; // Grid tự động chia 2 cột đều đặn
-                    
-                    const currentType = window.WaveChartEngine ? window.WaveChartEngine.config.chartType : 1;
-                    menu.querySelectorAll('.wa-ct-item').forEach(el => {
-                        if (parseInt(el.dataset.id) === currentType) el.classList.add('active');
-                        else el.classList.remove('active');
-                    });
-                } else {
-                    menu.style.display = 'none';
-                }
+            // Core Bật/Tắt
+            window.openChartTypeModal = function() {
+                // Tự động đặt lại tâm tọa độ bằng 3D
+                modalBox.classList.remove('is-dragging');
+                modalBox.style.transform = 'translate3d(-50%, -50%, 0)'; 
+                modalBox.style.left = '50%'; 
+                modalBox.style.top = '50%';
+                
+                // Đồng bộ Highlight (Active state)
+                const currentType = window.WaveChartEngine ? window.WaveChartEngine.config.chartType : 1;
+                contentDiv.querySelectorAll('.wa-ct-item').forEach(el => {
+                    if (parseInt(el.dataset.id) === currentType) el.classList.add('active');
+                    else el.classList.remove('active');
+                });
+                
+                modal.classList.add('show');
             };
 
-            document.addEventListener('click', () => { menu.style.display = 'none'; });
-            menu.addEventListener('click', (e) => { e.stopPropagation(); });
+            window.closeChartTypeModal = function() {
+                modal.classList.remove('show');
+                // Chờ CSS animation mờ hẳn rồi mới chỉnh tọa độ về gốc
+                setTimeout(() => {
+                    modalBox.classList.remove('is-dragging');
+                    modalBox.style.transform = 'translate3d(-50%, -50%, 0)';
+                    modalBox.style.left = '50%';
+                    modalBox.style.top = '50%';
+                }, 150);
+            };
+
+            // Gắn sự kiện vào Nút bấm Toolbar (Cơ chế Toggle)
+            chartTypeBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (modal.classList.contains('show')) window.closeChartTypeModal();
+                else window.openChartTypeModal();
+            };
+
+            // Đóng khi click nút X
+            document.getElementById('btn-wa-ctm-close').onclick = window.closeChartTypeModal;
+
+            // Đóng khi click bậy ra ngoài màn hình tối
+            modal.addEventListener('mousedown', (e) => {
+                if (e.target === modal) window.closeChartTypeModal();
+            });
         }
     }, 200);
 })();
