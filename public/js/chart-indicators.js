@@ -4412,33 +4412,34 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 let descHTML = (isVPVR && vpvrDescriptions[idx]) ? `<div class="wa-ism-desc">${vpvrDescriptions[idx]}</div>` : '';
 
                 if (isColor) {
-                    let dVal = val;
-                    if (typeof val === 'number') {
-                        let hStr = Math.round(val).toString(16).toUpperCase();
-                        while(hStr.length < 6) hStr = '0' + hStr;
-                        dVal = '#' + hStr;
-                    }
-                    row.innerHTML = `<div class="wa-ism-label">${lbl}${descHTML}</div>
-                                     <div class="wa-ism-control"><div id="wa-param-${idx}" class="wa-ism-swatch ${dVal==='transparent'?'wa-is-transparent':''}" style="background:${dVal}"></div></div>`;
-                    
-                    const swatch = row.querySelector('.wa-ism-swatch');
-                    swatch.onclick = (e) => {
-                        e.stopPropagation(); activeParamIndex = idx; activeSwatchBtn = swatch;
-                        let curColor = swatch.style.background || '#ffffff';
-                        let currentOpacity = 1;
-                        if (curColor.startsWith('rgba')) {
-                            const m = curColor.match(/rgba\\([^,]+,[^,]+,[^,]+,\\s*([\\d.]+)\\)/);
-                            if (m) currentOpacity = parseFloat(m[1]);
-                        }
-                        opSlider.value = currentOpacity;
-                        hexInp.value = rgb2hex(curColor); 
-                        const rect = swatch.getBoundingClientRect();
-                        colorPicker.style.display = 'block'; 
-                        // Giữ bảng màu không bị tràn viền phải
-                        colorPicker.style.left = Math.max(10, rect.left - 180) + 'px'; 
-                        colorPicker.style.top = (rect.bottom + 10) + 'px';
-                    };
-                } else {
+                  let dVal = val;
+                  if (typeof val === 'number') {
+                      let hStr = Math.round(val).toString(16).toUpperCase();
+                      while(hStr.length < 6) hStr = '0' + hStr;
+                      dVal = '#' + hStr;
+                  }
+                  // FIX LỖI 1: Đổi style="background:..." thành style="background-color:..."
+                  row.innerHTML = `<div class="wa-ism-label">${lbl}${descHTML}</div>
+                                   <div class="wa-ism-control"><div id="wa-param-${idx}" class="wa-ism-swatch ${dVal==='transparent'?'wa-is-transparent':''}" style="background-color:${dVal}"></div></div>`;
+                  
+                  const swatch = row.querySelector('.wa-ism-swatch');
+                  swatch.onclick = (e) => {
+                      e.stopPropagation();
+                      // Gọi Bảng màu Toàn cục (Global HSV Color Picker)
+                      if (window.WaveColorPicker) {
+                          window.WaveColorPicker.open(swatch, dVal, (newColor) => {
+                              // Update nút màu
+                              swatch.style.backgroundColor = newColor;
+                              if (newColor === 'transparent') swatch.classList.add('wa-is-transparent');
+                              else swatch.classList.remove('wa-is-transparent');
+                              
+                              // FIX LỖI 2: Đẩy trực tiếp mã màu sạch vào Chart
+                              indState.params[idx] = newColor;
+                              try { global.tvChart.overrideIndicator({ name: indName, calcParams: indState.params }, indState.paneId); } catch (err) {}
+                          });
+                      }
+                  };
+              } else {
                     // Xử lý Options (0=.., 1=..) tự động biến thành Dropdown
                     let options = [];
                     let cleanLbl = lbl;
@@ -4632,3 +4633,201 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
 
   console.log('[Wave Alpha v' + WAVE_ALPHA_VERSION + '] Indicator Core initialized with Button/Unicode Fix.');
 })(window);
+
+
+// =========================================================================
+// 🎨 BỘ CÔNG CỤ: WAVE ALPHA UNIVERSAL HSV COLOR PICKER PRO (ĐỒNG BỘ TOÀN WEB)
+// =========================================================================
+(function initUniversalColorPicker() {
+  if (window.WaveColorPicker) return;
+
+  const style = document.createElement('style');
+  style.textContent = `
+      #wa-ucp-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999998; }
+      #wa-ucp { display: none; position: absolute; background: #1e222d; border: 1px solid #363c4e; border-radius: 8px; padding: 12px; width: 220px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); z-index: 99999999; font-family: 'Inter', sans-serif; }
+      #wa-ucp.show { display: block; animation: waFadeIn 0.15s ease; }
+      @keyframes waFadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+      
+      .wa-ucp-sv { position: relative; width: 100%; height: 130px; border-radius: 4px; overflow: hidden; cursor: crosshair; background-color: #ff0000; }
+      .wa-ucp-sv-w { position: absolute; width: 100%; height: 100%; background: linear-gradient(to right, #fff, rgba(255,255,255,0)); pointer-events: none; }
+      .wa-ucp-sv-b { position: absolute; width: 100%; height: 100%; background: linear-gradient(to top, #000, rgba(0,0,0,0)); pointer-events: none; }
+      .wa-ucp-thumb { position: absolute; width: 14px; height: 14px; border: 2px solid #fff; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 4px rgba(0,0,0,0.6); pointer-events: none; }
+      
+      .wa-ucp-ctrls { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+      .wa-ucp-preview { width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); background-image: conic-gradient(#333 0.25turn, #444 0.25turn 0.5turn, #333 0.5turn 0.75turn, #444 0.75turn); background-size: 8px 8px; position: relative; overflow: hidden; flex-shrink: 0; }
+      #wa-ucp-color { position: absolute; width: 100%; height: 100%; background: #ff0000; }
+      
+      .wa-ucp-sliders { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+      .wa-ucp-range { -webkit-appearance: none; width: 100%; height: 8px; border-radius: 4px; outline: none; background: transparent; margin: 0; }
+      .wa-ucp-range::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 1px solid #ccc; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+      #wa-ucp-hue { background: linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%); }
+      
+      .wa-ucp-alpha-bg { background-image: conic-gradient(#333 0.25turn, #444 0.25turn 0.5turn, #333 0.5turn 0.75turn, #444 0.75turn); background-size: 8px 8px; border-radius: 4px; height: 8px; }
+      #wa-ucp-alpha { width: 100%; background: linear-gradient(to right, transparent, #ff0000); display: block; border-radius: 4px; height: 100%; }
+      
+      .wa-ucp-hex { margin-top: 12px; display: flex; align-items: center; background: #131722; border: 1px solid #363c4e; border-radius: 4px; padding: 4px 8px; }
+      .wa-ucp-hex span { font-size: 11px; color: #848e9c; font-weight: 600; margin-right: 8px; }
+      #wa-ucp-hex-inp { background: transparent; border: none; color: #EAECEF; font-family: monospace; font-size: 13px; width: 100%; outline: none; text-transform: uppercase; }
+      
+      @media (max-width: 768px) {
+          #wa-ucp { position: fixed !important; top: 50% !important; left: 50% !important; transform: translate(-50%, -50%) !important; width: 280px; }
+          .wa-ucp-sv { height: 180px; }
+      }
+  `;
+  document.head.appendChild(style);
+
+  const html = `
+      <div id="wa-ucp-overlay"></div>
+      <div id="wa-ucp">
+          <div class="wa-ucp-sv" id="wa-ucp-sv">
+              <div class="wa-ucp-sv-w"></div><div class="wa-ucp-sv-b"></div>
+              <div class="wa-ucp-thumb" id="wa-ucp-thumb"></div>
+          </div>
+          <div class="wa-ucp-ctrls">
+              <div class="wa-ucp-preview"><div id="wa-ucp-color"></div></div>
+              <div class="wa-ucp-sliders">
+                  <input type="range" id="wa-ucp-hue" class="wa-ucp-range" min="0" max="360" value="0">
+                  <div class="wa-ucp-alpha-bg"><input type="range" id="wa-ucp-alpha" class="wa-ucp-range" min="0" max="1" step="0.01" value="1"></div>
+              </div>
+          </div>
+          <div class="wa-ucp-hex">
+              <span>HEX</span><input type="text" id="wa-ucp-hex-inp" maxlength="9">
+          </div>
+      </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', html);
+
+  const overlay = document.getElementById('wa-ucp-overlay');
+  const picker = document.getElementById('wa-ucp');
+  const svArea = document.getElementById('wa-ucp-sv');
+  const thumb = document.getElementById('wa-ucp-thumb');
+  const hueInp = document.getElementById('wa-ucp-hue');
+  const alphaInp = document.getElementById('wa-ucp-alpha');
+  const hexInp = document.getElementById('wa-ucp-hex-inp');
+  const colorPreview = document.getElementById('wa-ucp-color');
+
+  let h = 0, s = 1, v = 1, a = 1;
+  let onChangeCb = null;
+
+  function hsv2rgb(h, s, v) {
+      let f = (n, k = (n + h / 60) % 6) => v - v * s * Math.max(Math.min(k, 4 - k, 1), 0);
+      return [Math.round(f(5) * 255), Math.round(f(3) * 255), Math.round(f(1) * 255)];
+  }
+
+  function rgb2hsv(r, g, b) {
+      let v = Math.max(r, g, b), c = v - Math.min(r, g, b);
+      let h = c && ((v == r) ? (g - b) / c : ((v == g) ? 2 + (b - r) / c : 4 + (r - g) / c));
+      return [60 * (h < 0 ? h + 6 : h), v && c / v, v / 255];
+  }
+
+  function rgb2hex(r, g, b) {
+      return "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1).toUpperCase();
+  }
+  
+  function hexToRgba(hex) {
+      let r=0, g=0, b=0, al=1;
+      if(hex.length===4) { r=parseInt(hex[1]+hex[1],16); g=parseInt(hex[2]+hex[2],16); b=parseInt(hex[3]+hex[3],16); }
+      else if(hex.length===7) { r=parseInt(hex.slice(1,3),16); g=parseInt(hex.slice(3,5),16); b=parseInt(hex.slice(5,7),16); }
+      else if(hex.length===9) { r=parseInt(hex.slice(1,3),16); g=parseInt(hex.slice(3,5),16); b=parseInt(hex.slice(5,7),16); al=parseInt(hex.slice(7,9),16)/255; }
+      return [r,g,b,al];
+  }
+
+  function updateUI(fromHex = false) {
+      const rgb = hsv2rgb(h, s, v);
+      const pureRgb = hsv2rgb(h, 1, 1);
+      
+      svArea.style.backgroundColor = `rgb(${pureRgb[0]}, ${pureRgb[1]}, ${pureRgb[2]})`;
+      thumb.style.left = (s * 100) + '%';
+      thumb.style.top = ((1 - v) * 100) + '%';
+      hueInp.value = h;
+      alphaInp.value = a;
+      
+      alphaInp.style.background = `linear-gradient(to right, transparent, rgb(${rgb[0]},${rgb[1]},${rgb[2]}))`;
+      
+      const colorStr = a < 1 ? `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})` : rgb2hex(rgb[0], rgb[1], rgb[2]);
+      colorPreview.style.background = colorStr;
+      
+      if (!fromHex) {
+          let hexCode = rgb2hex(rgb[0], rgb[1], rgb[2]);
+          if (a < 1) {
+              let alphaHex = Math.round(a * 255).toString(16).padStart(2, '0').toUpperCase();
+              hexCode += alphaHex;
+          }
+          hexInp.value = hexCode;
+      }
+
+      if (onChangeCb) onChangeCb(colorStr);
+  }
+
+  // Xử lý kéo thả chấm tròn trên màn hình máy tính và chạm cảm ứng trên điện thoại
+  let isDragging = false;
+  const updateSV = (e) => {
+      const rect = svArea.getBoundingClientRect();
+      let x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+      let y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+      s = x / rect.width;
+      v = 1 - (y / rect.height);
+      updateUI();
+  };
+  svArea.onmousedown = (e) => { isDragging = true; updateSV(e); };
+  window.addEventListener('mousemove', (e) => { if (isDragging) updateSV(e); });
+  window.addEventListener('mouseup', () => { isDragging = false; });
+  
+  svArea.addEventListener('touchstart', (e) => { isDragging = true; updateSV(e.touches[0]); }, {passive:true});
+  window.addEventListener('touchmove', (e) => { if (isDragging) updateSV(e.touches[0]); }, {passive:true});
+  window.addEventListener('touchend', () => { isDragging = false; });
+
+  hueInp.oninput = () => { h = parseFloat(hueInp.value); updateUI(); };
+  alphaInp.oninput = () => { a = parseFloat(alphaInp.value); updateUI(); };
+  
+  hexInp.oninput = () => {
+      let val = hexInp.value.trim();
+      if(!val.startsWith('#')) val = '#' + val;
+      if(val.length===4 || val.length===7 || val.length===9) {
+          let [r,g,b,al] = hexToRgba(val);
+          let hsv = rgb2hsv(r,g,b);
+          h = hsv[0]; s = hsv[1]; v = hsv[2]; a = al;
+          updateUI(true);
+      }
+  };
+
+  // Đăng ký API để dùng cho mọi Bảng cài đặt trên web (Cài đặt nến, Cài đặt nền...)
+  window.WaveColorPicker = {
+      open: function(anchorEl, initColor, callback) {
+          onChangeCb = callback;
+          
+          // Phân tích màu gốc để thiết lập vị trí chấm tròn
+          if (initColor && initColor !== 'transparent') {
+              if (initColor.startsWith('rgba')) {
+                  let m = initColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+                  if(m) {
+                      let hsv = rgb2hsv(parseInt(m[1]), parseInt(m[2]), parseInt(m[3]));
+                      h = hsv[0]; s = hsv[1]; v = hsv[2]; a = m[4] ? parseFloat(m[4]) : 1;
+                  }
+              } else if (initColor.startsWith('#')) {
+                  let [r,g,b,al] = hexToRgba(initColor);
+                  let hsv = rgb2hsv(r,g,b);
+                  h = hsv[0]; s = hsv[1]; v = hsv[2]; a = al;
+              }
+          }
+          updateUI();
+
+          // Hiển thị ở vị trí thông minh
+          picker.classList.add('show');
+          overlay.style.display = 'block';
+          if (window.innerWidth > 768 && anchorEl) {
+              const rect = anchorEl.getBoundingClientRect();
+              picker.style.left = Math.max(10, rect.left - 200) + 'px';
+              picker.style.top = (rect.bottom + 10) + 'px';
+          }
+      },
+      close: function() {
+          picker.classList.remove('show');
+          overlay.style.display = 'none';
+          onChangeCb = null;
+      }
+  };
+
+  overlay.onmousedown = window.WaveColorPicker.close;
+  overlay.ontouchstart = window.WaveColorPicker.close;
+})();
