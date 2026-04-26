@@ -1549,7 +1549,7 @@ if (window.__wa_chart_settings_modal_initialized) return;
 window.__wa_chart_settings_modal_initialized = true;
     const style = document.createElement('style');
     style.textContent = `
-        #wa-chart-settings-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999999; pointer-events: none; opacity: 0; transition: opacity 0.15s ease; }
+        #wa-chart-settings-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999999; pointer-events: none; opacity: 0; transition: opacity 0.15s ease; transform: translateZ(0); }
         #wa-chart-settings-modal.show { display: block; opacity: 1; }
         .wa-csm-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e222d; width: 680px; height: 500px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; pointer-events: auto; }
         .wa-csm-box.is-dragging { transition: none !important; will-change: left, top; }
@@ -1888,7 +1888,7 @@ document.addEventListener('click', () => {
         isDragging = true; startX = e.clientX; startY = e.clientY;
         const rect = modalBox.getBoundingClientRect();
         initLeft = rect.left; initTop = rect.top;
-        modalBox.style.transform = 'none'; 
+        modalBox.style.transform = 'translate3d(0, 0, 0)'; // Thay đổi ở đây
         modalBox.style.left = initLeft + 'px'; 
         modalBox.style.top = initTop + 'px';
         modalBox.classList.add('is-dragging');
