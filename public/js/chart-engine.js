@@ -470,9 +470,12 @@ window.WaveChartEngine = {
         // Giải thích: KLineCharts từ chối icon='' và size=0. Ta bắt buộc phải dùng 
         // icon=' ' (dấu cách) và size=1 (truthy) để đè bẹp SVG răng cưa gốc thành 1px tàng hình.
         // =========================================================================
+        // =========================================================================
+        // 🚀 BẢN FIX CUỐI CÙNG: TRIỆT TIÊU HOÀN TOÀN ICON BẰNG EMPTY SVG & FAKE ID
+        // =========================================================================
         const ghostIcon = {
-            icon: ' ', // Khoảng trắng (Có giá trị truthy để đè SVG mặc định)
-            size: 1,   // Kích thước 1px (Số > 0 để qua mặt hàm merge của thư viện)
+            icon: 'M0,0', // Dùng Path SVG rỗng thay vì dấu cách để không render gì cả
+            size: 0.1,    // Kích thước tiệm cận 0 (lách luật cấm size=0 của KLineCharts)
             color: 'transparent', activeColor: 'transparent',
             backgroundColor: 'transparent', activeBackgroundColor: 'transparent',
             marginLeft: 0, marginRight: 0, paddingLeft: 0, paddingRight: 0
@@ -484,8 +487,10 @@ window.WaveChartEngine = {
                 icons: [
                     { id: 'visible' },
                     { id: 'invisible' },
-                    { id: 'setting', ...ghostIcon }, // Đè bẹp nút Cài đặt
-                    { id: 'close', ...ghostIcon }    // Đè bẹp nút Xóa
+                    // Cố tình đổi id thành 'setting_hidden' và 'close_hidden' 
+                    // để ghi đè index 3 & 4, đồng thời vô hiệu hóa luôn sự kiện click
+                    { id: 'setting_hidden', ...ghostIcon }, 
+                    { id: 'close_hidden', ...ghostIcon }    
                 ]
             }
         };
