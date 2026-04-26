@@ -481,7 +481,12 @@ window.WaveChartEngine = {
             },
             indicator: {
                 lastValueMark: { show: true },
-                zLevel: 2 // 🚀 BẢN FIX: Ép tất cả các chỉ báo (EMA, MACD...) luôn nổi lên lớp trên cùng
+                zLevel: 2, // 🚀 BẢN FIX: Ép tất cả các chỉ báo (EMA, MACD...) luôn nổi lên lớp trên cùng
+                tooltip: { 
+                    showName: false, 
+                    showParams: false, 
+                    showRule: 'none' 
+                }
             },
             candle: {
                 zLevel: 1, // 🚀 BẢN FIX: Hạ lớp nến / biểu đồ Line xuống lớp dưới
