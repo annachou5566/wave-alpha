@@ -455,6 +455,7 @@ window.WaveChartEngine = {
         // ✅ BẢN FIX: Nhắm chính xác mục tiêu. 
         // Thay vì xóa theo pane ('candle_pane') khiến các chỉ báo EMA/MA bị văng theo,
         // ta sẽ xóa chính xác bằng tên Indicator thông qua vòng lặp.
+        // ✅ BẢN FIX: Nhắm chính xác mục tiêu. 
         CUSTOM_CHART_IDS.forEach(id => { 
             try { this.chartInstance.removeIndicator('candle_pane', id); } catch (e) {} 
         });
@@ -465,15 +466,26 @@ window.WaveChartEngine = {
         else if (c.chartType === 6 || c.chartType === 9) { kcChartType = 'area'; isLine = (c.chartType === 6); }
 
         // =========================================================================
-        // 🚀 BẢN FIX ĐỊNH MỆNH: KLINECHARTS V10 SỬ DỤNG CHỮ "features" THAY VÌ "icons"
+        // 🚀 BẢN FIX CUỐI CÙNG: DÙNG TRICK "KÝ TỰ TRẮNG" ĐỂ LÁCH LUẬT DEEP MERGE
+        // Giải thích: KLineCharts từ chối icon='' và size=0. Ta bắt buộc phải dùng 
+        // icon=' ' (dấu cách) và size=1 (truthy) để đè bẹp SVG răng cưa gốc thành 1px tàng hình.
         // =========================================================================
+        const ghostIcon = {
+            icon: ' ', // Khoảng trắng (Có giá trị truthy để đè SVG mặc định)
+            size: 1,   // Kích thước 1px (Số > 0 để qua mặt hàm merge của thư viện)
+            color: 'transparent', activeColor: 'transparent',
+            backgroundColor: 'transparent', activeBackgroundColor: 'transparent',
+            marginLeft: 0, marginRight: 0, paddingLeft: 0, paddingRight: 0
+        };
+
         const mainSeriesStyle = {
             tooltip: {
                 showRule: 'always', 
-                // Xóa bỏ 4 icon mặc định và CHỈ hiển thị tính năng con mắt
-                features: [
-                    { id: 'visible' },    // Mắt mở
-                    { id: 'invisible' }   // Mắt nhắm
+                icons: [
+                    { id: 'visible' },
+                    { id: 'invisible' },
+                    { id: 'setting', ...ghostIcon }, // Đè bẹp nút Cài đặt
+                    { id: 'close', ...ghostIcon }    // Đè bẹp nút Xóa
                 ]
             }
         };
