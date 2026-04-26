@@ -3387,7 +3387,7 @@ if (!document.getElementById('wa-fb-rng-style')) {
             }
 
             // Truyền mã Hex để đổi màu
-            onChange(safeHex);
+            onChange(safeHex, alpha, newColor);
 
             // 🚀 Bồi thêm lệnh ép KLineChart vẽ lại hình với Opacity mới ngay lập tức
             var chartEngine = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : (window.tvChart || null);
@@ -3446,6 +3446,12 @@ if (cat === 'brush') {
     ov.styles = objS;
     global.tvChart.overrideOverlay({ id: ov.id, styles: objS });
     
+    // 🔥 ĐÃ FIX: Đồng bộ cập nhật màu sắc/opacity ngược lại cho Icon trên thanh Float
+    var cpBtn = bar.querySelector('#wa-fb-cp-border');
+    if (cpBtn) cpBtn.dataset.cur = objS.line.color;
+    var fbBorderIcon = document.getElementById('_cpfc_wa-fb-cp-border');
+    if (fbBorderIcon) fbBorderIcon.style.background = objS.line.color;
+    
     // Lưu cấu hình vào biến nhớ để lần vẽ sau tự áp dụng
     if (!toolStyles.brush) toolStyles.brush = {};
     if (ov.name === 'highlighter') {
@@ -3467,40 +3473,51 @@ if (cat === 'brush') {
   if (opSlider) { opSlider.addEventListener('mousedown', function(e){ e.stopPropagation(); }); opSlider.addEventListener('touchstart', function(e){ e.stopPropagation(); }, {passive: false}); }
 }
     // Callbacks xử lý đổi màu cho từng loại: CHỮ / VIỀN / NỀN
-    bindColorPicker('wa-fb-cp-text', function(hex) {
+    bindColorPicker('wa-fb-cp-text', function(hex, alpha, newColor) {
       if (!global.tvChart) return;
       var objS = JSON.parse(JSON.stringify(ov.styles || {}));
       if (!objS.text) objS.text = {};
-      objS.text.color = hex || 'rgba(0,0,0,0)';
+      objS.text.color = newColor || 'rgba(0,0,0,0)'; // Dùng newColor có sẵn RGBA
       ov.styles = objS; global.tvChart.overrideOverlay({ id: ov.id, styles: objS });
       if (typeof saveAllOverlays === 'function') saveAllOverlays();
     });
 
-    bindColorPicker('wa-fb-cp-border', function(hex) {
+    bindColorPicker('wa-fb-cp-border', function(hex, alpha, newColor) {
       if (!global.tvChart) return;
       var objS = JSON.parse(JSON.stringify(ov.styles || {}));
       
       if (cat === 'shapes' || cat === 'text') {
         if (!objS.polygon) objS.polygon = {};
-        objS.polygon.borderColor = hex || 'transparent';
+        objS.polygon.borderColor = hex ? newColor : 'transparent';
       }
       
       if (cat !== 'text') {
         if (!objS.line) objS.line = {};
         if (hex) {
-          // 🔥 BÍ QUYẾT: Giữ lại Opacity cũ khi đổi màu qua Toolbar nổi
-          var oldA = 1;
-          if (objS.line.color && objS.line.color.startsWith('rgba')) {
-            var m = objS.line.color.match(/rgba\([^,]+,\s*[^,]+,\s*[^,]+,\s*([\d.]+)\)/);
-            if (m) oldA = parseFloat(m[1]);
-          }
+          // 🔥 ĐÃ FIX: Không dùng lại Opacity cũ nữa, lấy Alpha trực tiếp từ color picker
           var r = parseInt(hex.slice(1,3), 16)||0, g = parseInt(hex.slice(3,5), 16)||0, b = parseInt(hex.slice(5,7), 16)||0;
-          objS.line.color = 'rgba('+r+','+g+','+b+','+oldA+')';
+          objS.line.color = 'rgba('+r+','+g+','+b+','+alpha+')';
         } else {
           objS.line.color = 'transparent';
         }
       }
       ov.styles = objS; global.tvChart.overrideOverlay({ id: ov.id, styles: objS });
+      if (typeof saveAllOverlays === 'function') saveAllOverlays();
+    });
+
+    bindColorPicker('wa-fb-cp-bg', function(hex, alpha, newColor) {
+      if (!global.tvChart) return;
+      var objS = JSON.parse(JSON.stringify(ov.styles || {}));
+      if (!objS.polygon) objS.polygon = {};
+      if (!hex) {
+        objS.polygon.color = 'transparent';
+      } else {
+        // 🔥 ĐÃ FIX: Áp dụng trực tiếp biến alpha mới
+        var r = parseInt(hex.slice(1,3), 16)||0, g = parseInt(hex.slice(3,5), 16)||0, b = parseInt(hex.slice(5,7), 16)||0;
+        objS.polygon.color = 'rgba('+r+','+g+','+b+','+alpha+')';
+        if (cat === 'shapes') objS.polygon.style = 'strokefill';
+      }
+      ov.styles = objS; global.tvChart.overrideOverlay({ id: ov.id, styles: objS, extendData: ov.extendData });
       if (typeof saveAllOverlays === 'function') saveAllOverlays();
     });
 
