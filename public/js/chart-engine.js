@@ -509,18 +509,21 @@ window.WaveChartEngine = {
     },
 
     // 🚀 CACHE & PARSER MÀU SẮC CHUYÊN NGHIỆP (ĐÃ FIX LỖI ĐEN MÀU RGBA)
-    // 🚀 CACHE & PARSER MÀU SẮC CHUYÊN NGHIỆP (ĐÃ FIX LỖI ĐEN MÀU RGBA)
     _dimColor: function(hex, opacity) {
         if (!hex) return 'transparent';
         const cacheKey = hex + '_' + opacity; 
         if (_WA_COLOR_CACHE[cacheKey]) return _WA_COLOR_CACHE[cacheKey];
         
         let r = 0, g = 0, b = 0, result;
+        let localOpacity = 1; // Thêm biến lưu độ mờ riêng của bảng màu
         
         // Cải tiến: Đọc được cả màu RGBA để lấy đúng R, G, B gốc và áp dụng Opacity mới
         if (hex.startsWith('rgba')) {
             const m = hex.match(/rgba\(\s*(\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\s*\)/);
-            if (m) { r = +m[1]; g = +m[2]; b = +m[3]; }
+            if (m) { 
+                r = +m[1]; g = +m[2]; b = +m[3]; 
+                localOpacity = parseFloat(m[4]); // Lấy độ mờ riêng từ bảng màu
+            }
         }
         else if (hex.startsWith('rgb(')) { 
             const m = hex.match(/rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)/); 
@@ -529,11 +532,16 @@ window.WaveChartEngine = {
         else if (hex.length === 4) { 
             r = parseInt(hex[1] + hex[1], 16); g = parseInt(hex[2] + hex[2], 16); b = parseInt(hex[3] + hex[3], 16); 
         } 
-        else if (hex.length === 7) { 
+        else if (hex.length >= 7) { 
             r = parseInt(hex.substring(1, 3), 16); g = parseInt(hex.substring(3, 5), 16); b = parseInt(hex.substring(5, 7), 16); 
         }
         
-        result = `rgba(${r}, ${g}, ${b}, ${opacity})`; 
+        // LOGIC MỚI: Nhân độ mờ riêng của màu (Color Picker) với độ mờ chung (Global Slider)
+        // Nhờ vậy cả 2 thanh trượt đều có tác dụng và hoạt động đồng bộ với nhau
+        let finalOpacity = localOpacity * (opacity !== undefined ? opacity : 1);
+        finalOpacity = Math.round(finalOpacity * 1000) / 1000; // Làm tròn tránh số quá dài
+
+        result = `rgba(${r}, ${g}, ${b}, ${finalOpacity})`; 
         _WA_COLOR_CACHE[cacheKey] = result; 
         return result;
     }
