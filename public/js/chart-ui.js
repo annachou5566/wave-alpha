@@ -1618,17 +1618,17 @@ window.__wa_chart_settings_modal_initialized = true;
         
         /* ================= BỔ SUNG: MOBILE BOTTOM SHEET ================= */
         @media (max-width: 768px) {
-            /* 1. Ép bảng xuống đáy màn hình, bo góc trên */
+            /* 1. Ép bảng xuống đáy màn hình, chừa lề 2 bên (width 92vw), căn giữa (left 50%) */
             .wa-csm-box {
-                top: auto !important; bottom: 0 !important; left: 0 !important;
-                transform: translate3d(0, 100%, 0) !important;
-                width: 100vw !important; height: 85vh !important; min-width: 0 !important;
+                top: auto !important; bottom: 0 !important; left: 50% !important;
+                transform: translate3d(-50%, 100%, 0) !important;
+                width: 92vw !important; height: 85vh !important; min-width: 0 !important;
                 border-radius: 24px 24px 0 0 !important;
                 flex-direction: column !important;
                 transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
             }
             #wa-chart-settings-modal.show .wa-csm-box {
-                transform: translate3d(0, 0, 0) !important;
+                transform: translate3d(-50%, 0, 0) !important;
             }
             /* 2. Cục gạch ngang (Drag Handle) báo hiệu có thể vuốt xuống */
             .wa-csm-header { padding-top: 24px; position: relative; border-bottom: none; }
@@ -1639,10 +1639,17 @@ window.__wa_chart_settings_modal_initialized = true;
             .wa-csm-sidebar > div:first-child { display: flex; gap: 8px; width: 100%; }
             .wa-csm-tab { padding: 10px 16px; border-left: none; border-bottom: 2px solid transparent; border-radius: 4px 4px 0 0; font-size: 14px; }
             .wa-csm-tab.active { border-bottom-color: #26a69a; background: transparent; }
-            /* Ẩn nút Reset ở cột trái (nó đã có ở tab Nâng Cao) để tiết kiệm diện tích menu ngang */
+            /* Ẩn nút Reset ở cột trái */
             .wa-csm-sidebar > div:last-child { display: none; }
             /* 4. Tối ưu chạm cho ngón tay */
             .wa-csm-row { padding: 6px 0; }
+            
+            /* 5. FIX LỖI BẢNG MÀU: Dùng !important ép luôn hiển thị ở giữa màn hình điện thoại */
+            #wa-color-picker {
+                top: 50% !important; left: 50% !important;
+                transform: translate(-50%, -50%) !important;
+                position: fixed !important;
+            }
         }
         `;
     document.head.appendChild(style);
