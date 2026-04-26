@@ -3121,61 +3121,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       _on(el, 'keypress', function(e) { e.stopPropagation(); });
     });
 
-    // --- BỔ SUNG ĐỒNG BỘ ẨN/HIỆN THÔNG MINH BẬC NHẤT ---
-    if (!window._wa_panel_sync) {
-      window._wa_panel_sync = true;
-
-      // 1. Click vào Thanh Menu, Viền Web (Ngoài biểu đồ) -> Ép đóng cả 2
-      document.addEventListener('mousedown', function(e) {
-        var p = document.getElementById('wa-props-panel');
-        var f = document.getElementById('wa-float-bar');
-        var c = document.getElementById('sc-chart-container') || document.querySelector('.klinecharts-pro');
-
-        if (p && p.contains(e.target)) return;
-        if (f && f.contains(e.target)) return;
-
-        // ✅ FIX: Không đóng bảng cài đặt nếu người dùng đang tương tác với Bảng màu HSV hoặc Overlay của nó
-        if (e.target.closest('#wa-ucp') || e.target.id === 'wa-ucp-overlay') return;
-        
-        if (e.target.closest('._pop')) return;
-        
-        // Nếu click thẳng vào vùng vẽ của biểu đồ -> Kệ biểu đồ tự xử, ta lui ra
-        if (e.target.closest('canvas') || (c && c.contains(e.target))) return;
-
-        // Nếu click vào Header Web, Thanh điều hướng web... -> Xóa sổ Panel
-        if (typeof hidePanel === 'function') hidePanel();
-        else if (p) p.classList.remove('show');
-        
-        if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-      }, true);
-
-      // 2. Chó Săn: Bắt chước theo hành vi của Float Toolbar (CÓ DELAY CHỐNG TẮT NHẦM)
-      var hiddenStrikes = 0;
-      setInterval(function() {
-        var p = document.getElementById('wa-props-panel');
-        var f = document.getElementById('wa-float-bar');
-        
-        // Chỉ chạy theo dõi nếu Properties Panel đang lỡ hiển thị
-        if (p && p.classList.contains('show')) {
-          var isFloatHidden = !f || f.style.visibility === 'hidden' || f.style.opacity === '0' || f.style.display === 'none';
-          if (isFloatHidden) {
-            hiddenStrikes++;
-            // 🔥 BÍ QUYẾT: Trễ nhịp. Phải tàng hình liên tục 3 nhịp (450ms) mới được đóng
-            // Điều này triệt tiêu hoàn toàn lỗi bảng tự tắt khi đang thao tác!
-            if (hiddenStrikes >= 3) {
-                if (typeof hidePanel === 'function') hidePanel();
-                else p.classList.remove('show');
-                window.currentSelectedOverlay = null; 
-                hiddenStrikes = 0;
-            }
-          } else {
-            hiddenStrikes = 0; // Trả lại bình thường
-          }
-        } else {
-            hiddenStrikes = 0;
-        }
-      }, 150);
-    }
+    
   }
 
   function hidePanel() {
@@ -4367,16 +4313,17 @@ function bindCoreEventsOnce() {
   document.addEventListener('mousedown', function(e) {
     if (isDrawingSessionActive) return;
     var bar = document.getElementById('wa-float-bar');
-    if (!bar) return;
-    if (bar.contains(e.target)) return;
+    if (bar && bar.contains(e.target)) return;
     var panel = document.getElementById('wa-props-panel');
     if (panel && panel.contains(e.target)) return;
     var tb = document.querySelector('.wa-toolbar');
     if (tb && tb.contains(e.target)) return;
-    var _container = document.getElementById('sc-chart-container');
-    if (_container && _container.classList.contains('wa-drawing-mode')) return;
+    
+    // Nếu click ra ngoài, chỉ ẩn Thanh công cụ nổi (Float Toolbar)
     if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-    if (typeof hidePanel === 'function') hidePanel();
+    
+    // 🚀 ĐÃ XÓA LỆNH hidePanel() Ở ĐÂY!
+    // Bảng cài đặt (Props Panel) giờ đây là BẤT TỬ, chỉ chết khi bấm dấu X.
   }, { passive: true });
 
   document.addEventListener('touchstart', function(e) {
