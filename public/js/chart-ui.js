@@ -1586,26 +1586,19 @@ window.closeProChart = function() {
         .wcp-opacity-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #848e9c; }
         .wcp-opacity-slider { flex: 1; accent-color: #26a69a; }
 
-        /* BỔ SUNG: CSS Custom Select & Confirm Modal */
-        .wa-custom-select-wrapper { position: relative; width: 140px; user-select: none; }
-        .wa-custom-select-trigger { background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .wa-custom-select-trigger:hover { border-color: rgba(0,240,255,0.3); }
-        .wa-custom-select-options { display: none; position: absolute; top: 100%; left: 0; right: 0; background: #1e222d; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; margin-top: 4px; z-index: 100; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
-        .wa-custom-select-options.open { display: block; }
-        .wa-custom-select-option { padding: 8px 12px; font-size: 12px; color: #EAECEF; cursor: pointer; transition: background 0.2s; }
-        .wa-custom-select-option:hover { background: rgba(0,240,255,0.1); color: #00F0FF; }
-        .wa-custom-select-option.selected { background: rgba(38,166,154,0.2); color: #26a69a; font-weight: bold; }
-
-        #wa-custom-confirm-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); z-index: 99999999; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
-        .wa-confirm-box { background: #1e222d; border: 1px solid #363c4e; border-radius: 8px; width: 320px; padding: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.8); animation: popIn 0.2s ease-out; }
-        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .wa-confirm-title { font-size: 14px; font-weight: bold; color: #F0B90B; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .wa-confirm-text { font-size: 12px; color: #b7bdc6; margin-bottom: 20px; line-height: 1.5; }
-        .wa-confirm-actions { display: flex; gap: 10px; justify-content: center; }
-        .wa-btn-cancel { flex: 1; background: rgba(255,255,255,0.05); color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); padding: 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.2s; }
-        .wa-btn-cancel:hover { background: rgba(255,255,255,0.1); }
-        .wa-btn-confirm { flex: 1; background: rgba(246,70,93,0.15); color: #F6465D; border: 1px solid rgba(246,70,93,0.3); padding: 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.2s; }
-        .wa-btn-confirm:hover { background: rgba(246,70,93,0.25); box-shadow: 0 0 10px rgba(246,70,93,0.2); }
+        /* BỔ SUNG: CSS Custom Confirm Modal */
+        #wa-custom-confirm-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(11, 14, 17, 0.85); z-index: 99999999; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .wa-confirm-box { background: linear-gradient(180deg, #1c2127 0%, #161a1e 100%); border: 1px solid #2b3139; border-radius: 16px; width: 340px; padding: 24px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05); animation: waScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1); font-family: 'Be Vietnam Pro', 'Inter', sans-serif; }
+        @keyframes waScaleUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .wa-confirm-icon { width: 56px; height: 56px; background: rgba(246, 70, 93, 0.1); border: 1px solid rgba(246, 70, 93, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; box-shadow: 0 0 20px rgba(246, 70, 93, 0.2); }
+        .wa-confirm-icon i { color: #F6465D; font-size: 24px; }
+        .wa-confirm-title { font-size: 16px; font-weight: 700; color: #EAECEF; margin-bottom: 8px; letter-spacing: 0.5px; }
+        .wa-confirm-text { font-size: 13px; color: #848e9c; margin-bottom: 24px; line-height: 1.5; }
+        .wa-confirm-actions { display: flex; gap: 12px; justify-content: center; }
+        .wa-btn-cancel { flex: 1; background: transparent; color: #EAECEF; border: 1px solid #333; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s; }
+        .wa-btn-cancel:hover { background: rgba(255,255,255,0.05); border-color: #555; }
+        .wa-btn-confirm { flex: 1; background: #F6465D; color: #fff; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s; box-shadow: 0 4px 12px rgba(246, 70, 93, 0.3); }
+        .wa-btn-confirm:hover { background: #ff526a; box-shadow: 0 6px 16px rgba(246, 70, 93, 0.4); transform: translateY(-1px); }
     `;
     document.head.appendChild(style);
 
@@ -1739,17 +1732,17 @@ window.closeProChart = function() {
     const confirmHTML = `
         <div id="wa-custom-confirm-overlay">
             <div class="wa-confirm-box">
-                <div class="wa-confirm-title"><i class="fas fa-exclamation-triangle"></i> CẢNH BÁO</div>
+                <div class="wa-confirm-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="wa-confirm-title">XÁC NHẬN KHÔI PHỤC</div>
                 <div class="wa-confirm-text" id="wa-confirm-msg"></div>
                 <div class="wa-confirm-actions">
                     <button class="wa-btn-cancel" id="wa-btn-cancel-confirm">HỦY BỎ</button>
-                    <button class="wa-btn-confirm" id="wa-btn-ok-confirm">ĐỒNG Ý</button>
+                    <button class="wa-btn-confirm" id="wa-btn-ok-confirm">KHÔI PHỤC</button>
                 </div>
             </div>
         </div>
     `;
     
-    // Đã thay đổi: Nối thêm confirmHTML vào lệnh insert
     document.body.insertAdjacentHTML('beforeend', modalHTML + pickerHTML + confirmHTML);
 
     // BỔ SUNG: Hàm điều khiển Modal Confirm
@@ -1757,80 +1750,27 @@ window.closeProChart = function() {
         const overlay = document.getElementById('wa-custom-confirm-overlay');
         document.getElementById('wa-confirm-msg').innerText = msg;
         overlay.style.display = 'flex';
+        
         const btnOk = document.getElementById('wa-btn-ok-confirm');
         const btnCancel = document.getElementById('wa-btn-cancel-confirm');
         
-        const cleanup = () => { overlay.style.display = 'none'; btnOk.replaceWith(btnOk.cloneNode(true)); btnCancel.replaceWith(btnCancel.cloneNode(true)); };
-        btnCancel.addEventListener('click', cleanup, {once: true});
-        btnOk.addEventListener('click', () => { cleanup(); if (onConfirm) onConfirm(); }, {once: true});
+        const cleanup = () => { 
+            overlay.style.display = 'none'; 
+            // Gỡ bỏ event listeners bằng cách clone và replace node
+            btnOk.replaceWith(btnOk.cloneNode(true)); 
+            btnCancel.replaceWith(btnCancel.cloneNode(true)); 
+        };
+        
+        // Cần lấy lại node mới sau khi clone ở các lần trước đó (nếu có)
+        const currentBtnCancel = document.getElementById('wa-btn-cancel-confirm');
+        const currentBtnOk = document.getElementById('wa-btn-ok-confirm');
+
+        currentBtnCancel.addEventListener('click', cleanup, {once: true});
+        currentBtnOk.addEventListener('click', () => { 
+            cleanup(); 
+            if (onConfirm) onConfirm(); 
+        }, {once: true});
     };
-
-    // BỔ SUNG: Logic Giao diện Dropdown (Đã bọc an toàn tránh lỗi crash JS)
-    function applyCustomSelects() {
-        document.querySelectorAll('.wa-csm-select').forEach(select => {
-            if (select.parentElement.classList.contains('wa-custom-select-wrapper')) return;
-            select.style.display = 'none';
-            
-            const wrapper = document.createElement('div');
-            wrapper.className = 'wa-custom-select-wrapper';
-            wrapper.style.width = select.style.width || '140px';
-            
-            const trigger = document.createElement('div');
-            trigger.className = 'wa-custom-select-trigger';
-            // Check an toàn
-            const initialText = (select.selectedIndex >= 0 && select.options.length > 0) ? select.options[select.selectedIndex].text : '';
-            trigger.innerHTML = `<span>${initialText}</span> <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
-            
-            const optionsDiv = document.createElement('div');
-            optionsDiv.className = 'wa-custom-select-options';
-            
-            Array.from(select.options).forEach(opt => {
-                const optDiv = document.createElement('div');
-                optDiv.className = 'wa-custom-select-option' + (opt.selected ? ' selected' : '');
-                optDiv.innerText = opt.text;
-                optDiv.dataset.value = opt.value;
-                optDiv.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    select.value = opt.value; 
-                    select.dispatchEvent(new Event('change')); 
-                    trigger.querySelector('span').innerText = opt.text;
-                    optionsDiv.querySelectorAll('.wa-custom-select-option').forEach(o => o.classList.remove('selected'));
-                    optDiv.classList.add('selected');
-                    optionsDiv.classList.remove('open');
-                });
-                optionsDiv.appendChild(optDiv);
-            });
-            
-            trigger.addEventListener('click', (e) => {
-                e.stopPropagation();
-                document.querySelectorAll('.wa-custom-select-options').forEach(el => { if (el !== optionsDiv) el.classList.remove('open'); });
-                optionsDiv.classList.toggle('open');
-            });
-            
-            wrapper.appendChild(trigger); wrapper.appendChild(optionsDiv);
-            select.parentNode.insertBefore(wrapper, select); wrapper.appendChild(select);
-        });
-        document.addEventListener('click', () => document.querySelectorAll('.wa-custom-select-options').forEach(el => el.classList.remove('open')));
-    }
-
-    // BỔ SUNG: Logic Đồng bộ Text Dropdown (Đã bọc an toàn tránh lỗi crash JS)
-    function syncCustomSelects() {
-        document.querySelectorAll('.wa-custom-select-wrapper').forEach(wrapper => {
-            const select = wrapper.querySelector('select');
-            const triggerSpan = wrapper.querySelector('.wa-custom-select-trigger span');
-            if (select && triggerSpan && select.selectedIndex >= 0 && select.options.length > 0) {
-                triggerSpan.innerText = select.options[select.selectedIndex].text;
-            }
-            if (select) {
-                wrapper.querySelectorAll('.wa-custom-select-option').forEach(opt => {
-                    opt.classList.toggle('selected', opt.dataset.value == select.value);
-                });
-            }
-        });
-    }
-
-    // Khởi tạo giao diện Dropdown ngay lập tức
-    applyCustomSelects();
 
     const modal = document.getElementById('wa-chart-settings-modal');
     const modalBox = document.getElementById('wa-csm-box');
@@ -1873,12 +1813,20 @@ window.closeProChart = function() {
     function applyColorToSwatch(hexCode, opacity) {
         if (!activeSwatchBtn) return;
         
-        let finalColor = hexCode;
-        if (opacity < 1 && hexCode.startsWith('#')) {
-            let r = parseInt(hexCode.slice(1,3), 16), g = parseInt(hexCode.slice(3,5), 16), b = parseInt(hexCode.slice(5,7), 16);
-            finalColor = `rgba(${r},${g},${b},${opacity})`;
+        // Làm sạch chuỗi hex: nếu user gõ dư ký tự, chỉ lấy đúng chuẩn #RRGGBB
+        if (hexCode.startsWith('#') && hexCode.length >= 7) {
+            hexCode = hexCode.substring(0, 7);
         }
-        activeSwatchBtn.style.background = finalColor; hexInp.value = finalColor;
+
+        let finalColor = hexCode;
+        if (opacity < 1 && hexCode.startsWith('#') && hexCode.length === 7) {
+            let r = parseInt(hexCode.slice(1,3), 16), g = parseInt(hexCode.slice(3,5), 16), b = parseInt(hexCode.slice(5,7), 16);
+            if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+                finalColor = `rgba(${r},${g},${b},${opacity})`;
+            }
+        }
+        activeSwatchBtn.style.background = finalColor; 
+        hexInp.value = hexCode; // Giữ ô input luôn là mã Hex gọn gàng
         if (window.WaveChartEngine) window.WaveChartEngine.update({ [activeBindKey]: finalColor });
     }
 
@@ -1886,16 +1834,33 @@ window.closeProChart = function() {
         swatch.onclick = (e) => {
             e.stopPropagation(); activeSwatchBtn = swatch; activeBindKey = swatch.dataset.colorBind;
             let curColor = swatch.style.background || '#ffffff';
-            hexInp.value = curColor.startsWith('rgb') ? curColor : rgb2hex(curColor);
+            
+            // FIX: Bóc tách Opacity hiện tại đưa lên thanh trượt, và ép màu vào ô Input thành chuẩn Hex
+            let currentOpacity = 1;
+            if (curColor.startsWith('rgba')) {
+                const m = curColor.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/);
+                if (m) currentOpacity = parseFloat(m[1]);
+            }
+            opSlider.value = currentOpacity;
+            hexInp.value = rgb2hex(curColor); 
+            
             const rect = swatch.getBoundingClientRect();
             colorPicker.style.display = 'block'; colorPicker.style.left = rect.left + 'px'; colorPicker.style.top = (rect.bottom + 10) + 'px';
         };
     });
 
     hexInp.oninput = (e) => applyColorToSwatch(e.target.value, opSlider.value);
-    opSlider.oninput = (e) => applyColorToSwatch(hexInp.value.substring(0,7), e.target.value);
+    opSlider.oninput = (e) => applyColorToSwatch(hexInp.value, e.target.value);
+    
     document.addEventListener('click', (e) => { if (!colorPicker.contains(e.target) && !e.target.classList.contains('wa-color-swatch')) colorPicker.style.display = 'none'; });
-    function rgb2hex(rgb) { if (rgb.search("rgb") === -1) return rgb; rgb = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/); return "#" + ("0" + parseInt(rgb[1]).toString(16)).slice(-2) + ("0" + parseInt(rgb[2]).toString(16)).slice(-2) + ("0" + parseInt(rgb[3]).toString(16)).slice(-2); }
+    
+    // Tối ưu hàm rgb2hex an toàn hơn (thêm check fallback)
+    function rgb2hex(rgb) { 
+        if (rgb.search("rgb") === -1) return rgb; 
+        rgb = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/); 
+        if (!rgb) return '#ffffff'; 
+        return "#" + ("0" + parseInt(rgb[1]).toString(16)).slice(-2) + ("0" + parseInt(rgb[2]).toString(16)).slice(-2) + ("0" + parseInt(rgb[3]).toString(16)).slice(-2); 
+    }
 
     function updateDynamicUI(config) {
         const t = parseInt(config.chartType); 
@@ -1935,6 +1900,7 @@ window.closeProChart = function() {
         document.getElementById('csm-border-swatches').style.pointerEvents = config.borderIndependent ? 'auto' : 'none';
     }
 
+    // ✅ FIX VỊ TRÍ: Khởi tạo lại tâm màn hình mỗi khi click mở Modal
     window.openChartSettings = function() {
         if (!window.WaveChartEngine) return;
         const config = window.WaveChartEngine.getConfig();
@@ -1947,15 +1913,12 @@ window.closeProChart = function() {
             const key = swatch.dataset.colorBind; if (config[key]) swatch.style.background = config[key];
         });
         
+        // Đặt lại tọa độ tâm hoàn hảo để không bị lật trái
         modalBox.style.transform = 'translate(-50%, -50%)'; 
         modalBox.style.left = '50%'; 
         modalBox.style.top = '50%';
         
         updateDynamicUI(config);
-        
-        // BỔ SUNG: Update lại UI của Menu sau khi mở bảng cài đặt
-        if (typeof syncCustomSelects === 'function') syncCustomSelects(); 
-        
         modal.classList.add('show');
     };
 
@@ -1989,13 +1952,13 @@ window.closeProChart = function() {
         }
     }, 200);
 
-    // ✅ Đã thay thế: Nút Reset giờ gọi Modal Xác Nhận Custom
+    // ✅ ĐÃ FIX: Gọi Popup Custom thay cho hệ thống mặc định
     const btnReset = document.getElementById('wa-btn-reset-cfg');
     if (btnReset) {
         btnReset.onmouseenter = () => btnReset.style.background = 'rgba(246, 70, 93, 0.2)';
         btnReset.onmouseleave = () => btnReset.style.background = 'rgba(246, 70, 93, 0.1)';
         btnReset.onclick = () => {
-            window.showCustomConfirm("Bạn có chắc chắn muốn khôi phục toàn bộ cài đặt biểu đồ về mặc định?", () => {
+            window.showCustomConfirm("Bạn có chắc chắn muốn khôi phục toàn bộ cài đặt biểu đồ về mặc định? Hành động này không thể hoàn tác.", () => {
                 localStorage.removeItem('wave_alpha_chart_config');
                 if (window.WaveChartEngine) {
                     const defaultCfg = {
@@ -2019,6 +1982,7 @@ window.closeProChart = function() {
                     window.WaveChartEngine.config = { ...defaultCfg };
                     window.WaveChartEngine.applyNow();
                     
+                    // Đồng bộ lại UI trong bảng Cài đặt
                     modal.querySelectorAll('[data-bind]').forEach(el => {
                         const key = el.dataset.bind;
                         if (defaultCfg[key] !== undefined) { 
@@ -2030,7 +1994,6 @@ window.closeProChart = function() {
                         const key = swatch.dataset.colorBind; 
                         if (defaultCfg[key]) swatch.style.background = defaultCfg[key];
                     });
-                    
                     updateDynamicUI(defaultCfg);
                     if (typeof syncCustomSelects === 'function') syncCustomSelects();
                 }
