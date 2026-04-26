@@ -1585,6 +1585,27 @@ window.closeProChart = function() {
         .wcp-hex-input { flex: 1; background: #131722; border: 1px solid #363c4e; color: #EAECEF; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 12px; outline: none; }
         .wcp-opacity-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #848e9c; }
         .wcp-opacity-slider { flex: 1; accent-color: #26a69a; }
+        /* Custom Select */
+        .wa-custom-select-wrapper { position: relative; width: 140px; user-select: none; }
+        .wa-custom-select-trigger { background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .wa-custom-select-trigger:hover { border-color: rgba(0,240,255,0.3); }
+        .wa-custom-select-options { display: none; position: absolute; top: 100%; left: 0; right: 0; background: #1e222d; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; margin-top: 4px; z-index: 100; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .wa-custom-select-options.open { display: block; }
+        .wa-custom-select-option { padding: 8px 12px; font-size: 12px; color: #EAECEF; cursor: pointer; transition: background 0.2s; }
+        .wa-custom-select-option:hover { background: rgba(0,240,255,0.1); color: #00F0FF; }
+        .wa-custom-select-option.selected { background: rgba(38,166,154,0.2); color: #26a69a; font-weight: bold; }
+
+        /* Custom Confirm Modal */
+        #wa-custom-confirm-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); z-index: 99999999; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        .wa-confirm-box { background: #1e222d; border: 1px solid #363c4e; border-radius: 8px; width: 320px; padding: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.8); animation: popIn 0.2s ease-out; }
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .wa-confirm-title { font-size: 14px; font-weight: bold; color: #F0B90B; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .wa-confirm-text { font-size: 12px; color: #b7bdc6; margin-bottom: 20px; line-height: 1.5; }
+        .wa-confirm-actions { display: flex; gap: 10px; justify-content: center; }
+        .wa-btn-cancel { flex: 1; background: rgba(255,255,255,0.05); color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); padding: 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.2s; }
+        .wa-btn-cancel:hover { background: rgba(255,255,255,0.1); }
+        .wa-btn-confirm { flex: 1; background: rgba(246,70,93,0.15); color: #F6465D; border: 1px solid rgba(246,70,93,0.3); padding: 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.2s; }
+        .wa-btn-confirm:hover { background: rgba(246,70,93,0.25); box-shadow: 0 0 10px rgba(246,70,93,0.2); }
     `;
     document.head.appendChild(style);
 
@@ -1715,7 +1736,80 @@ window.closeProChart = function() {
     `;
     
     document.body.insertAdjacentHTML('beforeend', modalHTML + pickerHTML);
+// 1. Dựng HTML Custom Confirm
+const confirmHTML = `
+<div id="wa-custom-confirm-overlay">
+    <div class="wa-confirm-box">
+        <div class="wa-confirm-title"><i class="fas fa-exclamation-triangle"></i> CẢNH BÁO</div>
+        <div class="wa-confirm-text" id="wa-confirm-msg"></div>
+        <div class="wa-confirm-actions">
+            <button class="wa-btn-cancel" id="wa-btn-cancel-confirm">HỦY BỎ</button>
+            <button class="wa-btn-confirm" id="wa-btn-ok-confirm">ĐỒNG Ý</button>
+        </div>
+    </div>
+</div>`;
+document.body.insertAdjacentHTML('beforeend', confirmHTML);
 
+window.showCustomConfirm = function(msg, onConfirm) {
+    const overlay = document.getElementById('wa-custom-confirm-overlay');
+    document.getElementById('wa-confirm-msg').innerText = msg;
+    overlay.style.display = 'flex';
+    const btnOk = document.getElementById('wa-btn-ok-confirm');
+    const btnCancel = document.getElementById('wa-btn-cancel-confirm');
+    
+    const cleanup = () => { overlay.style.display = 'none'; btnOk.replaceWith(btnOk.cloneNode(true)); btnCancel.replaceWith(btnCancel.cloneNode(true)); };
+    btnCancel.addEventListener('click', cleanup, {once: true});
+    btnOk.addEventListener('click', () => { cleanup(); if (onConfirm) onConfirm(); }, {once: true});
+};
+
+// 2. Trình hô biến <select> mặc định thành Custom UI
+function applyCustomSelects() {
+    document.querySelectorAll('.wa-csm-select').forEach(select => {
+        if (select.parentElement.classList.contains('wa-custom-select-wrapper')) return;
+        select.style.display = 'none'; // Ẩn select gốc
+        
+        const wrapper = document.createElement('div');
+        wrapper.className = 'wa-custom-select-wrapper';
+        wrapper.style.width = select.style.width || '140px';
+        
+        const trigger = document.createElement('div');
+        trigger.className = 'wa-custom-select-trigger';
+        trigger.innerHTML = `<span>${select.options[select.selectedIndex]?.text || ''}</span> <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+        
+        const optionsDiv = document.createElement('div');
+        optionsDiv.className = 'wa-custom-select-options';
+        
+        Array.from(select.options).forEach(opt => {
+            const optDiv = document.createElement('div');
+            optDiv.className = 'wa-custom-select-option' + (opt.selected ? ' selected' : '');
+            optDiv.innerText = opt.text;
+            optDiv.dataset.value = opt.value;
+            optDiv.addEventListener('click', (e) => {
+                e.stopPropagation();
+                select.value = opt.value; 
+                select.dispatchEvent(new Event('change')); // Bắn event để chart nhận lệnh
+                trigger.querySelector('span').innerText = opt.text;
+                optionsDiv.querySelectorAll('.wa-custom-select-option').forEach(o => o.classList.remove('selected'));
+                optDiv.classList.add('selected');
+                optionsDiv.classList.remove('open');
+            });
+            optionsDiv.appendChild(optDiv);
+        });
+        
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.wa-custom-select-options').forEach(el => { if (el !== optionsDiv) el.classList.remove('open'); });
+            optionsDiv.classList.toggle('open');
+        });
+        
+        wrapper.appendChild(trigger); wrapper.appendChild(optionsDiv);
+        select.parentNode.insertBefore(wrapper, select); wrapper.appendChild(select);
+    });
+    document.addEventListener('click', () => document.querySelectorAll('.wa-custom-select-options').forEach(el => el.classList.remove('open')));
+}
+
+// Khởi chạy ngay lập tức
+applyCustomSelects();
     const modal = document.getElementById('wa-chart-settings-modal');
     const modalBox = document.getElementById('wa-csm-box');
     const header = modal.querySelector('.wa-csm-header');
@@ -1854,6 +1948,15 @@ window.closeProChart = function() {
             const key = el.dataset.bind;
             if (config[key] !== undefined) { if (el.type === 'checkbox') el.checked = config[key]; else el.value = config[key]; }
         });
+        // Đồng bộ chữ hiển thị cho các thẻ Select vừa được Custom
+        document.querySelectorAll('.wa-custom-select-wrapper').forEach(wrapper => {
+            const select = wrapper.querySelector('select');
+            const triggerSpan = wrapper.querySelector('.wa-custom-select-trigger span');
+            if (select && triggerSpan) triggerSpan.innerText = select.options[select.selectedIndex].text;
+            wrapper.querySelectorAll('.wa-custom-select-option').forEach(opt => {
+                opt.classList.toggle('selected', opt.dataset.value == select.value);
+            });
+        });
         modal.querySelectorAll('.wa-color-swatch').forEach(swatch => {
             const key = swatch.dataset.colorBind; if (config[key]) swatch.style.background = config[key];
         });
@@ -1903,7 +2006,7 @@ window.closeProChart = function() {
         btnReset.onmouseenter = () => btnReset.style.background = 'rgba(246, 70, 93, 0.2)';
         btnReset.onmouseleave = () => btnReset.style.background = 'rgba(246, 70, 93, 0.1)';
         btnReset.onclick = () => {
-            if (confirm("Bạn có chắc chắn muốn khôi phục toàn bộ cài đặt biểu đồ về mặc định?")) {
+            window.showCustomConfirm("Bạn có chắc chắn muốn khôi phục toàn bộ cài đặt biểu đồ về mặc định?", () => {
                 localStorage.removeItem('wave_alpha_chart_config');
                 if (window.WaveChartEngine) {
                     const defaultCfg = {
@@ -1941,7 +2044,7 @@ window.closeProChart = function() {
                     });
                     updateDynamicUI(defaultCfg);
                 }
-            }
+            }); 
         };
     }
 })();
