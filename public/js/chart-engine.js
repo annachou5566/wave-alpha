@@ -465,20 +465,33 @@ window.WaveChartEngine = {
         else if (c.chartType === 6 || c.chartType === 9) { kcChartType = 'area'; isLine = (c.chartType === 6); }
 
         // =========================================================================
-        // 🚀 BÍ QUYẾT LỌC ICON: Lấy icon gốc của thư viện và chỉ giữ lại Con Mắt
+        // 🚀 BÍ QUYẾT TRIỆT TIÊU ICON: Ép size = 0 cho nút Cài đặt và Xóa
+        // Bắt buộc phải trả về đủ 4 slot icon, nhưng "Giết chết" diện tích của slot 3 và 4
         // =========================================================================
-        let eyeIconsOnly = [];
+        let overriddenIcons = [];
         try {
-            const currentStyles = this.chartInstance.getStyles();
-            const defaultIcons = currentStyles.indicator.tooltip.icons || [];
-            // Lọc: Chỉ lấy object có id là 'visible' (mắt mở) và 'invisible' (mắt nhắm)
-            eyeIconsOnly = defaultIcons.filter(icon => icon.id === 'visible' || icon.id === 'invisible');
+            const defaultIcons = this.chartInstance.getStyles().indicator.tooltip.icons || [];
+            overriddenIcons = defaultIcons.map(icon => {
+                // Bắt id của nút Cài đặt ('setting') và nút Xóa ('close' hoặc 'cross')
+                if (icon.id === 'setting' || icon.id === 'close' || icon.id === 'cross') {
+                    return { 
+                        ...icon, 
+                        size: 0,          // Ép font icon về 0
+                        icon: '',         // Xóa ký tự SVG
+                        marginLeft: 0, 
+                        marginRight: 0, 
+                        paddingLeft: 0, 
+                        paddingRight: 0 
+                    };
+                }
+                return icon; // Giữ nguyên nút Con mắt (visible/invisible)
+            });
         } catch(e) {}
 
         const mainSeriesStyle = {
             tooltip: {
                 showRule: 'always', 
-                icons: eyeIconsOnly // Trả mảng object chuẩn vào, KLineCharts sẽ hiểu!
+                icons: overriddenIcons // Truyền mảng đã được "bóp nghẹt" size vào
             }
         };
 
