@@ -4644,7 +4644,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
   const style = document.createElement('style');
   style.textContent = `
       #wa-ucp-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999998; }
-      #wa-ucp { display: none; position: absolute; background: #1e222d; border: 1px solid #363c4e; border-radius: 8px; padding: 12px; width: 220px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); z-index: 99999999; font-family: 'Inter', sans-serif; }
+      #wa-ucp { display: none; position: fixed; background: #1e222d; border: 1px solid #363c4e; border-radius: 8px; padding: 12px; width: 220px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); z-index: 99999999; font-family: 'Inter', sans-serif; }
       #wa-ucp.show { display: block; animation: waFadeIn 0.15s ease; }
       @keyframes waFadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
       
