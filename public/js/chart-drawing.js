@@ -2893,14 +2893,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         "._tog.on::after{left:17px}" +
         "._cpb{width:26px;height:26px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);cursor:pointer;position:relative;overflow:hidden;flex-shrink:0}" +
         "._cpbg{position:absolute;inset:0;background-image:linear-gradient(45deg,#273040 25%,transparent 25%),linear-gradient(-45deg,#273040 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#273040 75%),linear-gradient(-45deg,transparent 75%,#273040 75%);background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0}" +
-        "._cpf{position:absolute;inset:0}" +
-        "._pop{position:fixed;z-index:999999;background:#151B23;border:1px solid #273040;border-radius:10px;padding:12px;box-shadow:0 10px 40px rgba(0,0,0,0.7);width:196px}" +
-        "._pg{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-bottom:10px}" +
-        "._pc{aspect-ratio:1;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform 0.1s}" +
-        "._pc:hover{transform:scale(1.2);border-color:rgba(255,255,255,0.8);z-index:3}" +
-        "._pc.on{border-color:#3B82F6;transform:scale(1.1);z-index:2}" +
-        "._ph{display:flex;align-items:center;gap:6px;background:#0D1117;border:1px solid #273040;border-radius:6px;padding:6px 8px}" +
-        "._phi{flex:1;background:transparent;border:none;color:#E8EDF2;font-size:11px;outline:none;font-family:monospace;text-transform:uppercase}";
+        "._cpf{position:absolute;inset:0}";
       document.head.appendChild(_css);
     }
 
@@ -3005,53 +2998,22 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       });
     });
 
-    var PAL = [
-      ['#FFFFFF','#F2F3F5','#C0C8D0','#8896A7','#4A5568','#2D3748','#1A202C','#0F141A'],
-      ['#FFF5F5','#FC8181','#F56565','#E53E3E','#C53030','#9B2C2C','#742A2A','#450A0A'],
-      ['#F0FFF4','#9AE6B4','#68D391','#38A169','#22C55E','#276749','#1C4532','#052E16'],
-      ['#EBF8FF','#90CDF4','#63B3ED','#3B82F6','#2B6CB0','#2C5282','#1E3A5F','#172554'],
-      ['#FFFFF0','#FAF089','#F6E05E','#F59E0B','#D69E2E','#B7791F','#975A16','#78350F'],
-      ['#FAF5FF','#D6BCFA','#B794F4','#8B5CF6','#6B46C1','#553C9A','#44337A','#1A0A3D']
-    ];
-    var _aCP = null;
-    function _closeCP() { var p=document.getElementById('_rp_pop'); if(p) p.remove(); _aCP=null; }
-
+    // Dùng bảng màu HSV Toàn cục
     body.querySelectorAll('._cpb').forEach(function(btn) {
       var cid = btn.dataset.cp;
       _on(btn, 'click', function(ev) {
         ev.stopPropagation();
-        if (_aCP === cid) { _closeCP(); return; }
-        _closeCP(); _aCP = cid;
-        var curHex = toHex(btn.dataset.cur) || '#3B82F6';
-        var pop = document.createElement('div'); pop.id = '_rp_pop'; pop.className = '_pop';
-        var gh = '<div class="_pg"><div class="_pc'+(!curHex?' on':'')+'" style="background:repeating-linear-gradient(-45deg,#273040 0 4px,transparent 4px 8px);border:1px solid rgba(255,255,255,0.1)" data-c="" title="Tắt màu"></div>';
-        PAL.forEach(function(row){ row.forEach(function(cl){ gh += '<div class="_pc'+(cl.toUpperCase()===curHex.toUpperCase()?' on':'')+'" style="background:'+cl+'" data-c="'+cl+'"></div>'; }); });
-        gh += '</div><div class="_ph"><span>#</span><input class="_phi" id="_phi_'+cid+'" maxlength="6" value="'+(curHex?curHex.slice(1).toUpperCase():'')+'"></div>';
-        pop.innerHTML = gh; document.body.appendChild(pop);
-        
-        var br = btn.getBoundingClientRect(), top = br.bottom+8, left = br.left - 80;
-        if (top+200 > window.innerHeight) top = br.top-208;
-        if (left < 10) left = 10;
-        if (left+200 > window.innerWidth) left = window.innerWidth-210;
-        pop.style.left = left+'px'; pop.style.top = top+'px';
-
-        function applyC(hex) {
-          var fEl=document.getElementById('_cpfc_'+cid); if(fEl) fEl.style.background=hex||'transparent';
-          btn.dataset.cur = hex;
-          pop.querySelectorAll('._pc').forEach(function(c){ c.classList.toggle('on', (c.dataset.c||'').toUpperCase()===(hex||'').toUpperCase()); });
-          var phi=document.getElementById('_phi_'+cid); if(phi) phi.value=hex?hex.slice(1).toUpperCase():'';
-          doAction();
-        }
-        pop.querySelectorAll('._pc').forEach(function(c){ c.addEventListener('mousedown', function(e){ e.stopPropagation(); applyC(this.dataset.c); }); });
-        var phi = document.getElementById('_phi_'+cid);
-        if (phi) {
-          phi.addEventListener('mousedown', function(e){ e.stopPropagation(); });
-          phi.addEventListener('input', function(){ var v=this.value.replace(/[^0-9a-fA-F]/g,''); this.value=v; if(v.length===6) applyC('#'+v); else if(!v.length) applyC(''); });
+        if (window.WaveColorPicker) {
+          var curHex = toHex(btn.dataset.cur) || '#3B82F6';
+          window.WaveColorPicker.open(btn, curHex, function(newColor) {
+            var fEl = document.getElementById('_cpfc_'+cid);
+            if (fEl) fEl.style.background = newColor || 'transparent';
+            btn.dataset.cur = newColor;
+            doAction();
+          });
         }
       });
     });
-
-    _on(document, 'mousedown', function(ev){ var pop = document.getElementById('_rp_pop'); if (pop && !pop.contains(ev.target) && !ev.target.closest('._cpb')) _closeCP(); });
 
     function gCP(id) { var b=body.querySelector('._cpb[data-cp="'+id+'"]'); return b?toHex(b.dataset.cur):null; }
     function gRng(id){ var e=document.getElementById(id); return e?parseFloat(e.value):null; }
@@ -3352,21 +3314,7 @@ if (!document.getElementById('wa-fb-rng-style')) {
   stRng.innerHTML = '.wa-fb-rng{-webkit-appearance:none;height:3px;background:#273040;border-radius:2px;outline:none;cursor:pointer;}.wa-fb-rng::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#3B82F6;cursor:pointer;transition:transform 0.1s;}.wa-fb-rng::-webkit-slider-thumb:hover{transform:scale(1.2);}';
   document.head.appendChild(stRng);
 }
-  // Nhúng Style an toàn cho Popup Màu (đẹp chuẩn như Cài Đặt)
-  if (!document.getElementById('wa-fb-pop-style')) {
-    var st = document.createElement('style');
-    st.id = 'wa-fb-pop-style';
-    st.innerHTML = '._pop{position:fixed;z-index:999999;background:#151B23;border:1px solid #273040;border-radius:9px;padding:10px;box-shadow:0 20px 60px rgba(0,0,0,.92);width:218px}._pg{display:grid;grid-template-columns:repeat(10, 1fr);gap:4px}._pc{width:16px;height:16px;border-radius:4px;border:1.5px solid rgba(255,255,255,.18);cursor:pointer;transition:transform .12s, border-color .12s}._pc:hover{transform:scale(1.5);border-color:rgba(255,255,255,.8);z-index:3}._pc.on{border-color:#3B82F6;z-index:2}._ph{margin-top:10px;display:flex;align-items:center;gap:8px;height:28px;border:1px solid #1E2A3A;border-radius:6px;background:#080D12;padding:0 8px}._ph:focus-within{border-color:#3B82F6}._phi{flex:1;background:transparent;border:none;color:#E8EDF2;font-size:11px;outline:none;font-family:monospace;text-transform:uppercase;min-width:0}';
-    document.head.appendChild(st);
-  }
-  if (!window._fbPopBound) {
-    window._fbPopBound = true;
-    document.addEventListener('mousedown', function(ev) {
-      var pop = document.getElementById('_fb_pop');
-      if (pop && !pop.contains(ev.target) && !ev.target.closest('.wa-fb-btn')) { pop.remove(); window._fbActiveCP = null; }
-    });
-  }
-
+  
   requestAnimationFrame(function() {
     // Positioning
     if (window._wa_fb_pinned_left !== undefined && window._wa_fb_pinned_top !== undefined) {
@@ -3410,71 +3358,30 @@ if (!document.getElementById('wa-fb-rng-style')) {
       if (!btn) return;
       btn.addEventListener('click', function(ev) {
         ev.stopPropagation();
-        var existingPop = document.getElementById('_fb_pop');
-        if (existingPop) { existingPop.remove(); if (window._fbActiveCP === btnId) { window._fbActiveCP = null; return; } }
-        window._fbActiveCP = btnId;
-        
-        var curHex = btn.dataset.cur || '';
-        var pop = document.createElement('div');
-        pop.id = '_fb_pop'; pop.className = '_pop';
-        
-        var PAL = [
-          ['#FFFFFF','#F2F3F5','#C0C8D0','#8896A7','#4A5568','#2D3748','#1A202C','#0F141A','#060A0F','#000000'],
-          ['#FFF5F5','#FED7D7','#FC8181','#F56565','#F23645','#E53E3E','#C53030','#9B2C2C','#742A2A','#450A0A'],
-          ['#F0FFF4','#C6F6D5','#9AE6B4','#68D391','#48BB78','#38A169','#22C55E','#276749','#1C4532','#052E16'],
-          ['#EBF8FF','#BEE3F8','#90CDF4','#63B3ED','#4299E1','#3B82F6','#2B6CB0','#2C5282','#1E3A5F','#172554'],
-          ['#FFFFF0','#FEFCBF','#FAF089','#F6E05E','#ECC94B','#F59E0B','#D69E2E','#B7791F','#975A16','#78350F'],
-          ['#FAF5FF','#E9D8FD','#D6BCFA','#B794F4','#9F7AEA','#8B5CF6','#6B46C1','#553C9A','#44337A','#1A0A3D'],
-          ['#E0FFFF','#B2F5EA','#81E6D9','#4FD1C5','#38B2AC','#06B6D4','#0891B2','#0E7490','#155E75','#083344'],
-          ['#FFF0F6','#FFD6E7','#FFA8CB','#FF79A8','#F06292','#EC4899','#DB2777','#BE185D','#9D174D','#831843']
-        ];
-        
-        var gh = '<div class="_pg"><div class="_pc'+(!curHex?' on':'')+'" style="background:repeating-linear-gradient(-45deg,#111827 0 4px,#1F2937 4px 8px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);" data-c="" title="Trong suốt / Tắt"></div>';
-        PAL.forEach(function(row){ row.forEach(function(cl){
-          gh += '<div class="_pc'+((curHex&&cl.toUpperCase()===curHex.toUpperCase())?' on':'')+'" style="background:'+cl+'" data-c="'+cl+'"></div>';
-        }); });
-        gh += '</div><div class="_ph">'
-            + '<span style="color:#4A5568;font-family:monospace;font-weight:800;font-size:11px;user-select:none">#</span>'
-            + '<input class="_phi" id="_phi_'+btnId+'" maxlength="6" value="'+(curHex?curHex.slice(1).toUpperCase():'')+'">'
-            + '</div>';
-        pop.innerHTML = gh;
-        document.body.appendChild(pop);
-
-        var br = btn.getBoundingClientRect();
-        var pT = br.bottom+5, pL = br.left;
-        if (pT+250 > window.innerHeight) pT = br.top-254;
-        if (pL+222 > window.innerWidth) pL = window.innerWidth-224;
-        pop.style.left = Math.max(4, pL)+'px'; pop.style.top = Math.max(4, pT)+'px';
-
-        function applyC(hex) {
-          var fEl = document.getElementById('_cpfc_'+btnId);
-          if (fEl) {
-            if (hex) { fEl.style.background = hex; fEl.style.border = 'none'; }
-            else { fEl.style.background = 'linear-gradient(to top right, transparent 40%, #F23645 40%, #F23645 60%, transparent 60%)'; fEl.style.border = '1px solid rgba(255,255,255,0.1)'; }
-          }
-          btn.dataset.cur = hex;
-          pop.querySelectorAll('._pc').forEach(function(c){
-            c.classList.toggle('on', (c.dataset.c||'').toUpperCase()===(hex||'').toUpperCase());
-          });
-          var phi = document.getElementById('_phi_'+btnId);
-          if (phi) phi.value = hex ? hex.slice(1).toUpperCase() : '';
-          onChange(hex);
-        }
-
-        pop.querySelectorAll('._pc').forEach(function(c){
-          c.addEventListener('mousedown', function(e){ e.stopPropagation(); applyC(this.dataset.c); });
-        });
-        var phi = document.getElementById('_phi_'+btnId);
-        if (phi) {
-          phi.addEventListener('mousedown', function(e){ e.stopPropagation(); });
-          phi.addEventListener('input', function(){
-            var v = this.value.replace(/[^0-9a-fA-F]/g,''); this.value = v;
-            if (v.length === 6) applyC('#'+v);
-            else if (!v.length) applyC('');
+        if (window.WaveColorPicker) {
+          var curHex = btn.dataset.cur || '';
+          var isBg = btnId === 'wa-fb-cp-bg';
+          var initColor = curHex;
+          if (!initColor && isBg) initColor = 'transparent';
+          
+          window.WaveColorPicker.open(btn, initColor, function(newColor) {
+            var fEl = document.getElementById('_cpfc_'+btnId);
+            if (fEl) {
+              if (newColor && newColor !== 'transparent') {
+                fEl.style.background = newColor;
+                fEl.style.border = 'none';
+              } else {
+                fEl.style.background = 'linear-gradient(to top right, transparent 40%, #F23645 40%, #F23645 60%, transparent 60%)';
+                fEl.style.border = '1px solid rgba(255,255,255,0.1)';
+              }
+            }
+            btn.dataset.cur = newColor;
+            onChange(newColor);
           });
         }
       });
     }
+
 // 🔥 BẮT SỰ KIỆN KÉO THANH TRƯỢT SIZE & OPACITY (CHỈ ÁP DỤNG CHO CỌ VẼ)
 if (cat === 'brush') {
   var sizeSlider = bar.querySelector('#wa-fb-size');
