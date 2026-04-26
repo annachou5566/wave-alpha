@@ -465,24 +465,15 @@ window.WaveChartEngine = {
         else if (c.chartType === 6 || c.chartType === 9) { kcChartType = 'area'; isLine = (c.chartType === 6); }
 
         // =========================================================================
-        // 🚀 BÍ QUYẾT CUỐI CÙNG: ÉP CHẾT 2 ICON CÀI ĐẶT & XÓA BẰNG CÁCH GHI ĐÈ INDEX
+        // 🚀 BẢN FIX ĐỊNH MỆNH: KLINECHARTS V10 SỬ DỤNG CHỮ "features" THAY VÌ "icons"
         // =========================================================================
-        const ghostIcon = { 
-            size: 0, 
-            icon: '', 
-            marginLeft: 0, marginRight: 0, paddingLeft: 0, paddingRight: 0,
-            color: 'transparent', activeColor: 'transparent', 
-            backgroundColor: 'transparent', activeBackgroundColor: 'transparent' 
-        };
-
         const mainSeriesStyle = {
             tooltip: {
                 showRule: 'always', 
-                icons: [
-                    { id: 'visible' },     // Vị trí 0: Giữ nguyên mặc định (Mắt mở)
-                    { id: 'invisible' },   // Vị trí 1: Giữ nguyên mặc định (Mắt nhắm)
-                    { id: 'setting', ...ghostIcon }, // Vị trí 2: Răng cưa -> TÀNG HÌNH
-                    { id: 'close', ...ghostIcon }    // Vị trí 3: Dấu X -> TÀNG HÌNH
+                // Xóa bỏ 4 icon mặc định và CHỈ hiển thị tính năng con mắt
+                features: [
+                    { id: 'visible' },    // Mắt mở
+                    { id: 'invisible' }   // Mắt nhắm
                 ]
             }
         };
