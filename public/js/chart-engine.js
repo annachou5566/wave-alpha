@@ -505,7 +505,12 @@ window.WaveChartEngine = {
                 },
                 priceMark: { show: c.showLastPriceLine, high: { show: false }, low: { show: false } }
             },
-            crosshair: { show: c.crosshairMode !== 'hidden' }
+            crosshair: { show: c.crosshairMode !== 'hidden' },
+            
+            // ✅ BẢN FIX: Truyền lệnh đổi Thang đo giá (Normal / Percentage / Log) vào Trục Y
+            yAxis: {
+                type: c.yAxisMode || 'normal'
+            }
         };
 
         try {
