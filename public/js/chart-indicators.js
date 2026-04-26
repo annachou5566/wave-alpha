@@ -4242,21 +4242,25 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     const vpvrDescriptions = ["Thanh ngang (10-200)", "Lõi Volume (70%)", "Chiều ngang (%)", "0: Phải, 1: Trái", "0: Toàn, 1: Ngày, 2: Tuần", "0: Tắt, 1: Bật", "Lực Mua", "Lực Bán", "Point of Control", "Viền Giá Trị", "HVN Dày", "LVN Mỏng", "nPOC Chưa Test", "Icon Phe Áp Đảo", "Mờ trong VA", "Mờ ngoài VA", "Dày nét (1-5)", "Dày nét (1-4)", "0:Đứt 1:Chấm 2:Liền", "0:Đứt 1:Chấm 2:Dài", "Cỡ chữ (8-16)", "0:Ẩn 1:Hiện"];
 
     const liveUpdateChart = () => {
-        if (!currentActiveIndName) return;
-        const indState = global.scActiveIndicators.find(x => x.name === currentActiveIndName);
-        if (!indState) return;
+      if (!currentActiveIndName) return;
+      const indState = global.scActiveIndicators.find(x => x.name === currentActiveIndName);
+      if (!indState) return;
 
-        const newParams = indState.params.map((val, idx) => {
-            const inp = document.getElementById('wa-param-' + idx);
-            if (inp) {
-                if (inp.classList.contains('wa-ism-swatch')) return inp.style.backgroundColor || val;
-                return parseFloat(inp.value) || 0;
-            }
-            return val;
-        });
-        indState.params = newParams;
-        try { global.tvChart.overrideIndicator({ name: currentActiveIndName, calcParams: newParams }, indState.paneId); } catch (e) {}
-    };
+      const newParams = indState.params.map((val, idx) => {
+          const inp = document.getElementById('wa-param-' + idx);
+          if (inp) {
+              // [SỬA LỖI MÀU SẮC]: Lấy từ data-color (chứa mã HEX gốc) thay vì style.backgroundColor
+              if (inp.classList.contains('wa-ism-swatch')) return inp.dataset.color || val;
+              
+              // [SỬA LỖI SỐ]: Dùng isNaN để check thay vì || 0 để an toàn tuyệt đối với số 0
+              let parsed = parseFloat(inp.value);
+              return isNaN(parsed) ? 0 : parsed;
+          }
+          return val;
+      });
+      indState.params = newParams;
+      try { global.tvChart.overrideIndicator({ name: currentActiveIndName, calcParams: newParams }, indState.paneId); } catch (e) {}
+  };
 
     function renderSidebar() {
         sidebar.innerHTML = '';
@@ -4338,29 +4342,31 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 let descHTML = (isVPVR && vpvrDescriptions[idx]) ? `<div class="wa-ism-desc">${vpvrDescriptions[idx]}</div>` : '';
 
                 if (isColor) {
-                    let dVal = val;
-                    if (typeof val === 'number') {
-                        let hStr = Math.round(val).toString(16).toUpperCase();
-                        while(hStr.length < 6) hStr = '0' + hStr;
-                        dVal = '#' + hStr;
-                    }
-                    row.innerHTML = `<div class="wa-ism-label">${lbl}${descHTML}</div>
-                                     <div class="wa-ism-control"><div id="wa-param-${idx}" class="wa-ism-swatch ${dVal==='transparent'?'wa-is-transparent':''}" style="background-color:${dVal}"></div></div>`;
-                    
-                    const swatch = row.querySelector('.wa-ism-swatch');
-                    swatch.onclick = (e) => {
-                        e.stopPropagation();
-                        if (window.WaveColorPicker) {
-                            window.WaveColorPicker.open(swatch, dVal, (newColor) => {
-                                swatch.style.backgroundColor = newColor;
-                                if (newColor === 'transparent') swatch.classList.add('wa-is-transparent');
-                                else swatch.classList.remove('wa-is-transparent');
-                                indState.params[idx] = newColor;
-                                try { global.tvChart.overrideIndicator({ name: indName, calcParams: indState.params }, indState.paneId); } catch (err) {}
-                            });
-                        }
-                    };
-                } else {
+                  let dVal = val;
+                  if (typeof val === 'number') {
+                      let hStr = Math.round(val).toString(16).toUpperCase();
+                      while(hStr.length < 6) hStr = '0' + hStr;
+                      dVal = '#' + hStr;
+                  }
+                  // [SỬA LỖI]: Thêm thuộc tính data-color="${dVal}" để giữ nguyên gốc mã màu
+                  row.innerHTML = `<div class="wa-ism-label">${lbl}${descHTML}</div>
+                                   <div class="wa-ism-control"><div id="wa-param-${idx}" class="wa-ism-swatch ${dVal==='transparent'?'wa-is-transparent':''}" style="background-color:${dVal}" data-color="${dVal}"></div></div>`;
+                  
+                  const swatch = row.querySelector('.wa-ism-swatch');
+                  swatch.onclick = (e) => {
+                      e.stopPropagation();
+                      if (window.WaveColorPicker) {
+                          window.WaveColorPicker.open(swatch, dVal, (newColor) => {
+                              swatch.style.backgroundColor = newColor;
+                              swatch.dataset.color = newColor; // <--- CẬP NHẬT LẠI MÃ HEX VÀO DATASET
+                              if (newColor === 'transparent') swatch.classList.add('wa-is-transparent');
+                              else swatch.classList.remove('wa-is-transparent');
+                              indState.params[idx] = newColor;
+                              try { global.tvChart.overrideIndicator({ name: indName, calcParams: indState.params }, indState.paneId); } catch (err) {}
+                          });
+                      }
+                  };
+              } else {
                     let options = [];
                     let cleanLbl = lbl;
                     const match = lbl.match(/\((.*?=\s*.*?)\)/); 
