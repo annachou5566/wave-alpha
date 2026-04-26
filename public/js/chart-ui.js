@@ -1608,13 +1608,14 @@ window.closeProChart = function() {
 })();
 
 // =========================================================================
-// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (ĐÃ FIX LỖI LỆCH TRÁI + RESET THÔNG MINH)
+// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (ĐÃ REFACTOR NATIVE COMPONENTS)
 // =========================================================================
 (function initChartSettingsModal() {
     'use strict';
-// CHỐNG KHỞI TẠO TRÙNG
-if (window.__wa_chart_settings_modal_initialized) return;
-window.__wa_chart_settings_modal_initialized = true;
+    if (window.__wa_chart_settings_modal_initialized) return;
+    window.__wa_chart_settings_modal_initialized = true;
+
+    // 1. DỌN SẠCH CSS RÁC: Đã gỡ bỏ toàn bộ CSS của .wa-select-wrap, .wa-select-options, .wa-color-swatch cũ.
     const style = document.createElement('style');
     style.textContent = `
         #wa-chart-settings-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999999; pointer-events: none; opacity: 0; visibility: hidden; transition: all 0.15s ease; transform: translateZ(0); }
@@ -1637,10 +1638,7 @@ window.__wa_chart_settings_modal_initialized = true;
         .wa-csm-row { display: flex; justify-content: space-between; align-items: center; }
         .wa-csm-label { font-size: 13px; color: #b7bdc6; display: flex; align-items: center; gap: 8px; }
         .wa-csm-control { display: flex; align-items: center; gap: 10px; }
-        .wa-csm-select { background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 4px; font-size: 12px; outline: none; cursor: pointer; width: 140px; }
         .wa-csm-slider { width: 100px; accent-color: #26a69a; }
-        .wa-color-swatch { width: 26px; height: 26px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; transition: 0.2s; background: transparent; }
-        .wa-color-swatch:hover { border-color: #00F0FF; box-shadow: 0 0 5px rgba(0,240,255,0.3); }
         .wa-switch { position: relative; display: inline-block; width: 36px; height: 20px; }
         .wa-switch input { opacity: 0; width: 0; height: 0; }
         .wa-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .2s; border-radius: 20px; }
@@ -1649,7 +1647,7 @@ window.__wa_chart_settings_modal_initialized = true;
         input:checked + .wa-slider:before { transform: translateX(16px); background-color: #26a69a; }
         .wa-csm-divider { font-size: 11px; font-weight: 800; color: #527c82; text-transform: uppercase; margin-top: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; }
         
-        /* CSS Custom Confirm Modal (BỎ NỀN ĐEN MỜ) */
+        /* CSS Custom Confirm Modal */
         #wa-custom-confirm-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: transparent; z-index: 99999999; align-items: center; justify-content: center; }
         .wa-confirm-box { background: linear-gradient(180deg, #1c2127 0%, #161a1e 100%); border: 1px solid #2b3139; border-radius: 16px; width: 340px; padding: 24px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05); animation: waScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1); font-family: 'Be Vietnam Pro', 'Inter', sans-serif; }
         @keyframes waScaleUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -1662,23 +1660,9 @@ window.__wa_chart_settings_modal_initialized = true;
         .wa-btn-cancel:hover { background: rgba(255,255,255,0.05); border-color: #555; }
         .wa-btn-confirm { flex: 1; background: #F6465D; color: #fff; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s; box-shadow: 0 4px 12px rgba(246, 70, 93, 0.3); }
         .wa-btn-confirm:hover { background: #ff526a; box-shadow: 0 6px 16px rgba(246, 70, 93, 0.4); transform: translateY(-1px); }
-    /* BỔ SUNG: CSS Custom Select */
-        .wa-select-wrap { position: relative; width: 140px; font-family: 'Inter', sans-serif; }
-        .wa-select-trigger { background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; transition: 0.2s; }
-        .wa-select-trigger:hover { border-color: #26a69a; }
-        .wa-select-trigger.open { border-color: #26a69a; border-bottom-left-radius: 0; border-bottom-right-radius: 0; background: #1e222d; }
-        .wa-select-options { position: absolute; top: 100%; left: 0; width: 100%; background: #1e222d; border: 1px solid #26a69a; border-top: none; border-radius: 0 0 4px 4px; z-index: 99; display: none; max-height: 180px; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
-        .wa-select-options::-webkit-scrollbar { width: 4px; }
-        .wa-select-options::-webkit-scrollbar-thumb { background: #26a69a; border-radius: 4px; }
-        .wa-select-options.open { display: block; }
-        .wa-select-option { padding: 10px 12px; font-size: 12px; color: #b7bdc6; cursor: pointer; transition: 0.2s; border-bottom: 1px solid rgba(255,255,255,0.02); }
-        .wa-select-option:last-child { border-bottom: none; }
-        .wa-select-option:hover { background: rgba(38,166,154,0.1); color: #EAECEF; padding-left: 16px; }
-        .wa-select-option.selected { color: #26a69a; font-weight: bold; background: rgba(38,166,154,0.05); }
         
-        /* ================= BỔ SUNG: MOBILE BOTTOM SHEET ================= */
+        /* Đồng bộ Mobile */
         @media (max-width: 768px) {
-            /* 1. Ép bảng xuống đáy màn hình, chừa lề 2 bên (width 92vw), căn giữa (left 50%) */
             .wa-csm-box {
                 top: auto !important; bottom: 0 !important; left: 50% !important;
                 transform: translate3d(-50%, 100%, 0) !important;
@@ -1687,39 +1671,23 @@ window.__wa_chart_settings_modal_initialized = true;
                 flex-direction: column !important;
                 transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
             }
-            #wa-chart-settings-modal.show .wa-csm-box {
-                transform: translate3d(-50%, 0, 0) !important;
-            }
-            /* 2. Cục gạch ngang (Drag Handle) báo hiệu có thể vuốt xuống */
+            #wa-chart-settings-modal.show .wa-csm-box { transform: translate3d(-50%, 0, 0) !important; }
             .wa-csm-header { padding-top: 24px; position: relative; border-bottom: none; }
             .wa-csm-header::before { content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 40px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 4px; }
-            /* 3. Bẻ cột Menu dọc thành thanh Cuộn ngang (Scrollable Tabs) */
             .wa-csm-sidebar { width: 100% !important; flex-direction: row; padding: 10px 16px 0; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); overflow-x: auto; white-space: nowrap; scrollbar-width: none; align-items: flex-start; }
             .wa-csm-sidebar::-webkit-scrollbar { display: none; }
             .wa-csm-sidebar > div:first-child { display: flex; gap: 8px; }
             .wa-csm-tab { padding: 10px 16px; border-left: none; border-bottom: 2px solid transparent; border-radius: 4px 4px 0 0; font-size: 14px; }
             .wa-csm-tab.active { border-bottom-color: #26a69a; background: transparent; }
-            
-            /* Khóa khoảng trống (spacer) */
             .wa-csm-sidebar > div:nth-child(2) { display: none; }
-            
-            /* HIỂN THỊ NÚT KHÔI PHỤC: Đặt ở cuối thanh cuộn ngang, có vạch ngăn cách */
             .wa-csm-sidebar > div:last-child { display: block !important; padding: 0 0 0 12px !important; border-top: none !important; border-left: 1px solid rgba(255,255,255,0.1) !important; margin-left: 4px; }
             .wa-csm-sidebar > div:last-child button { padding: 8px 12px !important; font-size: 10px !important; margin-top: 2px; }
-            
-            /* 4. Tối ưu chạm cho ngón tay */
             .wa-csm-row { padding: 6px 0; }
-            
-            /* 5. FIX LỖI BẢNG MÀU: Dùng !important ép luôn hiển thị ở giữa màn hình điện thoại */
-            #wa-color-picker {
-                top: 50% !important; left: 50% !important;
-                transform: translate(-50%, -50%) !important;
-                position: fixed !important;
-            }
         }
-        `;
+    `;
     document.head.appendChild(style);
 
+    // 2. REFACTOR HTML: Chuẩn hóa WaveDropdown (div + hidden input) và WaveColorPicker (.wa-ism-swatch)
     const modalHTML = `
         <div id="wa-chart-settings-modal">
             <div class="wa-csm-box" id="wa-csm-box">
@@ -1730,7 +1698,6 @@ window.__wa_chart_settings_modal_initialized = true;
                         <div class="wa-csm-tab" data-tab="csm-appearance">Giao Diện</div>
                         <div class="wa-csm-tab" data-tab="csm-pro">Nâng Cao</div>
                     </div>
-                    
                     <div style="flex: 1;"></div>
                     <div style="padding: 20px 16px; border-top: 1px solid rgba(255,255,255,0.05);">
                         <button id="wa-btn-reset-cfg" style="width: 100%; background: rgba(246, 70, 93, 0.05); color: #F6465D; border: 1px dashed rgba(246, 70, 93, 0.3); padding: 10px 0; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; cursor: pointer; transition: 0.2s;">KHÔI PHỤC MẶC ĐỊNH</button>
@@ -1743,23 +1710,23 @@ window.__wa_chart_settings_modal_initialized = true;
                     </div>
                     <div class="wa-csm-panels">
                         <div id="csm-symbol" class="wa-csm-panel active">
-                            <div class="wa-csm-row"><div class="wa-csm-label">Loại biểu đồ</div>
-                            <select class="wa-csm-select" data-bind="chartType" id="csm-chart-type" data-type="number">
-                                <option value="1">Nến Nhật</option><option value="2">Nến Rỗng</option><option value="3">Thanh (Bars)</option>
-                                <option value="4">Cột (Columns)</option><option value="5">Đỉnh-Đáy (H-L)</option>
-                                <option value="6">Đường (Line)</option><option value="7">Đường + Điểm</option><option value="8">Bậc Thang</option>
-                                <option value="9">Vùng (Area)</option><option value="10">Vùng HLC (Pro)</option><option value="11">Đường Cơ Sở (Pro)</option>
-                            </select></div>
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">Loại biểu đồ</div>
+                                <div class="wa-csm-control">
+                                    <div id="dd-wrapper-chartType"></div>
+                                    <input type="hidden" id="csm-chart-type" data-bind="chartType" data-type="number">
+                                </div>
+                            </div>
                             <div class="wa-csm-divider">Màu sắc</div>
                             
                             <div id="csm-ui-candles" style="display:flex; flex-direction:column; gap:20px;">
-                                <div class="wa-csm-row"><div class="wa-csm-label">Thân nến (Body)</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="upColor"></div><div class="wa-color-swatch" data-color-bind="downColor"></div></div></div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Thân nến (Body)</div><div class="wa-csm-control"><div class="wa-ism-swatch" data-color-bind="upColor"></div><div class="wa-ism-swatch" data-color-bind="downColor"></div></div></div>
                                 <div class="wa-csm-row">
                                     <div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="showBorder"><span class="wa-slider"></span></label> Viền (Borders)</div>
                                     <div class="wa-csm-control">
                                         <label class="wa-switch" title="Màu độc lập"><input type="checkbox" data-bind="borderIndependent"><span class="wa-slider"></span></label>
                                         <div id="csm-border-swatches" style="display:flex; gap:10px; opacity:0.5; pointer-events:none;">
-                                            <div class="wa-color-swatch" data-color-bind="borderUpColor"></div><div class="wa-color-swatch" data-color-bind="borderDownColor"></div>
+                                            <div class="wa-ism-swatch" data-color-bind="borderUpColor"></div><div class="wa-ism-swatch" data-color-bind="borderDownColor"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -1768,46 +1735,61 @@ window.__wa_chart_settings_modal_initialized = true;
                                     <div class="wa-csm-control">
                                         <label class="wa-switch" title="Màu độc lập"><input type="checkbox" data-bind="wickIndependent"><span class="wa-slider"></span></label>
                                         <div id="csm-wick-swatches" style="display:flex; gap:10px; opacity:0.5; pointer-events:none;">
-                                            <div class="wa-color-swatch" data-color-bind="wickUpColor"></div><div class="wa-color-swatch" data-color-bind="wickDownColor"></div>
+                                            <div class="wa-ism-swatch" data-color-bind="wickUpColor"></div><div class="wa-ism-swatch" data-color-bind="wickDownColor"></div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             <div id="csm-ui-lines" style="display:none; flex-direction:column; gap:20px;">
-                                <div class="wa-csm-row"><div class="wa-csm-label" id="lbl-line-color">Màu Đường / Vùng</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="upColor"></div><div class="wa-color-swatch" id="swatch-line-down" data-color-bind="downColor" style="display:none;"></div></div></div>
+                                <div class="wa-csm-row"><div class="wa-csm-label" id="lbl-line-color">Màu Đường / Vùng</div><div class="wa-csm-control"><div class="wa-ism-swatch" data-color-bind="upColor"></div><div class="wa-ism-swatch" id="swatch-line-down" data-color-bind="downColor" style="display:none;"></div></div></div>
                             </div>
 
                             <div id="csm-ui-step" style="display:none; flex-direction:column; gap:20px;">
                                 <div class="wa-csm-row">
                                     <div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="stepLineSingleColor"><span class="wa-slider"></span></label> Dùng 1 màu liền mạch</div>
                                 </div>
-                                <div class="wa-csm-row"><div class="wa-csm-label">Màu Đoạn Tăng / 1 Màu</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="upColor"></div></div></div>
-                                <div class="wa-csm-row" id="row-step-down"><div class="wa-csm-label">Màu Đoạn Giảm</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="downColor"></div></div></div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Màu Đoạn Tăng / 1 Màu</div><div class="wa-csm-control"><div class="wa-ism-swatch" data-color-bind="upColor"></div></div></div>
+                                <div class="wa-csm-row" id="row-step-down"><div class="wa-csm-label">Màu Đoạn Giảm</div><div class="wa-csm-control"><div class="wa-ism-swatch" data-color-bind="downColor"></div></div></div>
                             </div>
 
                             <div id="csm-ui-hlc" style="display:none; flex-direction:column; gap:20px;">
-                                <div class="wa-csm-row"><div class="wa-csm-label">Đường Đóng Cửa (Close)</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="hlcCloseColor"></div></div></div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Đường Đóng Cửa (Close)</div><div class="wa-csm-control"><div class="wa-ism-swatch" data-color-bind="hlcCloseColor"></div></div></div>
                                 <div class="wa-csm-row">
                                     <div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="hlcShowHighLow"><span class="wa-slider"></span></label> Viền Đỉnh/Đáy (H-L)</div>
-                                    <div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="hlcHighColor"></div><div class="wa-color-swatch" data-color-bind="hlcLowColor"></div></div>
+                                    <div class="wa-csm-control"><div class="wa-ism-swatch" data-color-bind="hlcHighColor"></div><div class="wa-ism-swatch" data-color-bind="hlcLowColor"></div></div>
                                 </div>
                                 <div class="wa-csm-row"><div class="wa-csm-label">Độ mờ viền (Opacity)</div><div class="wa-csm-control"><input type="range" class="wa-csm-slider" min="0" max="1" step="0.05" data-bind="hlcHighLowOpacity" data-type="number"></div></div>
-                                <div class="wa-csm-row"><div class="wa-csm-label">Nền Trên / Nền Dưới</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="hlcUpFillColor"></div><div class="wa-color-swatch" data-color-bind="hlcDownFillColor"></div></div></div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Nền Trên / Nền Dưới</div><div class="wa-csm-control"><div class="wa-ism-swatch" data-color-bind="hlcUpFillColor"></div><div class="wa-ism-swatch" data-color-bind="hlcDownFillColor"></div></div></div>
                                 <div class="wa-csm-row"><div class="wa-csm-label">Độ mờ nền (Opacity)</div><div class="wa-csm-control"><input type="range" class="wa-csm-slider" min="0" max="1" step="0.05" data-bind="hlcFillOpacity" data-type="number"></div></div>
                             </div>
 
                             <div id="csm-ui-baseline" style="display:none; flex-direction:column; gap:20px;">
-                                <div class="wa-csm-row"><div class="wa-csm-label">Đường Trên / Nền Trên</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="baselineUpColor"></div><div class="wa-color-swatch" data-color-bind="baselineUpFill"></div></div></div>
-                                <div class="wa-csm-row"><div class="wa-csm-label">Đường Dưới / Nền Dưới</div><div class="wa-csm-control"><div class="wa-color-swatch" data-color-bind="baselineDownColor"></div><div class="wa-color-swatch" data-color-bind="baselineDownFill"></div></div></div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Đường Trên / Nền Trên</div><div class="wa-csm-control"><div class="wa-ism-swatch" data-color-bind="baselineUpColor"></div><div class="wa-ism-swatch" data-color-bind="baselineUpFill"></div></div></div>
+                                <div class="wa-csm-row"><div class="wa-csm-label">Đường Dưới / Nền Dưới</div><div class="wa-csm-control"><div class="wa-ism-swatch" data-color-bind="baselineDownColor"></div><div class="wa-ism-swatch" data-color-bind="baselineDownFill"></div></div></div>
                                 <div class="wa-csm-row"><div class="wa-csm-label">Độ mờ nền chung</div><div class="wa-csm-control"><input type="range" class="wa-csm-slider" min="0" max="1" step="0.05" data-bind="baselineFillOpacity" data-type="number"></div></div>
                                 <div class="wa-csm-divider">Thông số Baseline</div>
-                                <div class="wa-csm-row"><div class="wa-csm-label">Mức cơ sở (%)</div><div class="wa-csm-control"><input type="number" class="wa-csm-select" style="width:80px; text-align:center;" min="0" max="100" data-bind="baselineValue" data-type="number"></div></div>
-                                <div class="wa-csm-row"><div class="wa-csm-label">Nguồn giá</div><select class="wa-csm-select" data-bind="baselinePriceSource"><option value="close">Đóng cửa</option><option value="hl2">TB (H+L)/2</option><option value="ohlc4">TB Toàn phần</option></select></div>
+                                <div class="wa-csm-row">
+                                    <div class="wa-csm-label">Mức cơ sở (%)</div>
+                                    <div class="wa-csm-control"><input type="number" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;" min="0" max="100" data-bind="baselineValue" data-type="number"></div>
+                                </div>
+                                <div class="wa-csm-row">
+                                    <div class="wa-csm-label">Nguồn giá</div>
+                                    <div class="wa-csm-control">
+                                        <div id="dd-wrapper-baselineSource"></div>
+                                        <input type="hidden" id="csm-baseline-source" data-bind="baselinePriceSource">
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="wa-csm-divider">Trục Y</div>
-                            <div class="wa-csm-row"><div class="wa-csm-label">Thang đo giá</div><select class="wa-csm-select" data-bind="yAxisMode"><option value="normal">Bình thường</option><option value="percentage">Phần trăm (%)</option><option value="log">Logarit</option></select></div>
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">Thang đo giá</div>
+                                <div class="wa-csm-control">
+                                    <div id="dd-wrapper-yAxisMode"></div>
+                                    <input type="hidden" id="csm-yaxis-mode" data-bind="yAxisMode">
+                                </div>
+                            </div>
                         </div>
                         
                         <div id="csm-status" class="wa-csm-panel">
@@ -1820,12 +1802,26 @@ window.__wa_chart_settings_modal_initialized = true;
                         </div>
 
                         <div id="csm-appearance" class="wa-csm-panel">
-                            <div class="wa-csm-row"><div class="wa-csm-label">Kiểu nền</div><div class="wa-csm-control"><select class="wa-csm-select" data-bind="bgType" id="csm-bg-type" style="width:100px;"><option value="solid">Đơn sắc</option><option value="gradient">Gradient</option></select><div class="wa-color-swatch" data-color-bind="bgColor"></div><div class="wa-color-swatch" data-color-bind="bgColor2" id="csm-bg2-swatch" style="display:none;"></div></div></div>
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">Kiểu nền</div>
+                                <div class="wa-csm-control">
+                                    <div id="dd-wrapper-bgType"></div>
+                                    <input type="hidden" id="csm-bg-type" data-bind="bgType">
+                                    <div class="wa-ism-swatch" data-color-bind="bgColor"></div>
+                                    <div class="wa-ism-swatch" data-color-bind="bgColor2" id="csm-bg2-swatch" style="display:none;"></div>
+                                </div>
+                            </div>
                             <div class="wa-csm-row"><div class="wa-csm-label">Lưới dọc</div><label class="wa-switch"><input type="checkbox" data-bind="gridVertical"><span class="wa-slider"></span></label></div>
                             <div class="wa-csm-row"><div class="wa-csm-label">Lưới ngang</div><label class="wa-switch"><input type="checkbox" data-bind="gridHorizontal"><span class="wa-slider"></span></label></div>
-                            <div class="wa-csm-row"><div class="wa-csm-label">Màu Lưới</div><div class="wa-color-swatch" data-color-bind="gridColor"></div></div>
+                            <div class="wa-csm-row"><div class="wa-csm-label">Màu Lưới</div><div class="wa-ism-swatch" data-color-bind="gridColor"></div></div>
                             <div class="wa-csm-divider">Trục & Không gian</div>
-                            <div class="wa-csm-row"><div class="wa-csm-label">Tâm ngắm</div><select class="wa-csm-select" data-bind="crosshairMode"><option value="normal">Bình thường</option><option value="hidden">Ẩn</option></select></div>
+                            <div class="wa-csm-row">
+                                <div class="wa-csm-label">Tâm ngắm</div>
+                                <div class="wa-csm-control">
+                                    <div id="dd-wrapper-crosshairMode"></div>
+                                    <input type="hidden" id="csm-crosshair-mode" data-bind="crosshairMode">
+                                </div>
+                            </div>
                             <div class="wa-csm-row"><div class="wa-csm-label">Lề phải (Nến)</div><input type="range" class="wa-csm-slider" min="0" max="50" step="1" data-bind="rightMargin" data-type="number"></div>
                         </div>
                         
@@ -1838,10 +1834,7 @@ window.__wa_chart_settings_modal_initialized = true;
             </div>
         </div>
     `;
-    
-    const pickerHTML = ``;
 
-    // BỔ SUNG: HTML Cho Bảng Xác Nhận Custom
     const confirmHTML = `
         <div id="wa-custom-confirm-overlay">
             <div class="wa-confirm-box">
@@ -1855,147 +1848,93 @@ window.__wa_chart_settings_modal_initialized = true;
             </div>
         </div>
     `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML + pickerHTML + confirmHTML);
-// BỔ SUNG: Logic Custom Select (Tự động chuyển đổi select gốc)
-window.syncCustomSelects = function() {
-    document.querySelectorAll('.wa-select-wrap').forEach(w => {
-        const select = w.querySelector('select');
-        const triggerText = w.querySelector('.wa-select-trigger span');
-        const activeOpt = w.querySelector('.wa-select-option[data-value="' + select.value + '"]');
-        if (activeOpt) {
-            triggerText.innerText = activeOpt.innerText;
-            w.querySelectorAll('.wa-select-option').forEach(o => o.classList.remove('selected'));
-            activeOpt.classList.add('selected');
+    document.body.insertAdjacentHTML('beforeend', modalHTML + confirmHTML);
+
+    // 3. TẠO DATA CHO WAVEDROPDOWN
+    const ddConfigs = [
+        { 
+            id: 'chartType', 
+            wrapId: 'dd-wrapper-chartType', 
+            inputId: 'csm-chart-type',
+            options: [
+                { value: '1', label: 'Nến Nhật' }, { value: '2', label: 'Nến Rỗng' }, { value: '3', label: 'Thanh (Bars)' },
+                { value: '4', label: 'Cột (Columns)' }, { value: '5', label: 'Đỉnh-Đáy (H-L)' }, { value: '6', label: 'Đường (Line)' },
+                { value: '7', label: 'Đường + Điểm' }, { value: '8', label: 'Bậc Thang' }, { value: '9', label: 'Vùng (Area)' },
+                { value: '10', label: 'Vùng HLC (Pro)' }, { value: '11', label: 'Đường Cơ Sở (Pro)' }
+            ]
+        },
+        {
+            id: 'baselinePriceSource',
+            wrapId: 'dd-wrapper-baselineSource',
+            inputId: 'csm-baseline-source',
+            options: [{ value: 'close', label: 'Đóng cửa' }, { value: 'hl2', label: 'TB (H+L)/2' }, { value: 'ohlc4', label: 'TB Toàn phần' }]
+        },
+        {
+            id: 'yAxisMode',
+            wrapId: 'dd-wrapper-yAxisMode',
+            inputId: 'csm-yaxis-mode',
+            options: [{ value: 'normal', label: 'Bình thường' }, { value: 'percentage', label: 'Phần trăm (%)' }, { value: 'log', label: 'Logarit' }]
+        },
+        {
+            id: 'bgType',
+            wrapId: 'dd-wrapper-bgType',
+            inputId: 'csm-bg-type',
+            options: [{ value: 'solid', label: 'Đơn sắc' }, { value: 'gradient', label: 'Gradient' }]
+        },
+        {
+            id: 'crosshairMode',
+            wrapId: 'dd-wrapper-crosshairMode',
+            inputId: 'csm-crosshair-mode',
+            options: [{ value: 'normal', label: 'Bình thường' }, { value: 'hidden', label: 'Ẩn' }]
         }
-    });
-};
+    ];
 
-// Lọc lấy các thẻ select (bỏ qua thẻ input dùng chung class)
-document.querySelectorAll('select.wa-csm-select').forEach(select => {
-    if (select.parentElement.classList.contains('wa-select-wrap')) return;
-    select.style.display = 'none'; // Ẩn select gốc
-    
-    const wrap = document.createElement('div');
-    wrap.className = 'wa-select-wrap';
-    if (select.style.width) wrap.style.width = select.style.width;
-    
-    select.parentNode.insertBefore(wrap, select);
-    wrap.appendChild(select);
-    
-    const trigger = document.createElement('div');
-    trigger.className = 'wa-select-trigger';
-    trigger.innerHTML = '<span></span> <span style="font-size:9px; color:#848e9c;">▼</span>';
-    wrap.appendChild(trigger);
-    
-    const optionsDiv = document.createElement('div');
-    optionsDiv.className = 'wa-select-options';
-    wrap.appendChild(optionsDiv);
-    
-    Array.from(select.options).forEach(opt => {
-        const optionEl = document.createElement('div');
-        optionEl.className = 'wa-select-option';
-        optionEl.dataset.value = opt.value;
-        optionEl.innerText = opt.innerText;
-        
-        optionEl.addEventListener('click', (e) => {
-            e.stopPropagation();
-            select.value = opt.value;
-            optionsDiv.classList.remove('open');
-            trigger.classList.remove('open');
-            
-            // Trigger event change để code gốc bắt được giá trị mới
-            const event = new Event('change', { bubbles: true });
-            select.dispatchEvent(event);
-            window.syncCustomSelects();
-        });
-        optionsDiv.appendChild(optionEl);
-    });
-    
-    trigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        document.querySelectorAll('.wa-select-options').forEach(el => { if (el !== optionsDiv) el.classList.remove('open'); });
-        document.querySelectorAll('.wa-select-trigger').forEach(el => { if (el !== trigger) el.classList.remove('open'); });
-        optionsDiv.classList.toggle('open');
-        trigger.classList.toggle('open');
-    });
-});
-
-// Bấm ra ngoài thì đóng menu
-document.addEventListener('click', () => {
-    document.querySelectorAll('.wa-select-options').forEach(el => el.classList.remove('open'));
-    document.querySelectorAll('.wa-select-trigger').forEach(el => el.classList.remove('open'));
-});
-
-// =========================================================================
-    // BỔ SUNG CẢI TIẾN 3: TỰ ĐỘNG HIỂN THỊ THÔNG SỐ THANH TRƯỢT (LIVE BADGES)
-    // =========================================================================
+    // Cập nhật giá trị hiển thị cho Slider
     document.querySelectorAll('.wa-csm-slider').forEach(slider => {
         const badge = document.createElement('span');
         badge.style.cssText = 'min-width:34px; text-align:right; font-size:10px; color:#848e9c; font-variant-numeric:tabular-nums; margin-left:8px; display:inline-block; font-weight: bold;';
         badge.innerText = slider.value;
         slider.parentNode.appendChild(badge);
-        
         slider.addEventListener('input', (e) => {
             let val = e.target.value;
-            // Nếu là lề phải thì thêm px, nếu là opacity thì fix 2 số thập phân
             badge.innerText = slider.max > 10 ? val + 'px' : parseFloat(val).toFixed(2);
         });
-        
-        // Trigger lần đầu để hiển thị giá trị hiện tại
         slider.dispatchEvent(new Event('input'));
     });
-    // =========================================================================
 
-    window.syncCustomSelects(); // Chạy lần đầu
-    // BỔ SUNG: Hàm điều khiển Modal Confirm
     window.showCustomConfirm = function(msg, onConfirm) {
         const overlay = document.getElementById('wa-custom-confirm-overlay');
         document.getElementById('wa-confirm-msg').innerText = msg;
         overlay.style.display = 'flex';
-        
         const btnOk = document.getElementById('wa-btn-ok-confirm');
         const btnCancel = document.getElementById('wa-btn-cancel-confirm');
         
-        const cleanup = () => { 
-            overlay.style.display = 'none'; 
-            btnOk.replaceWith(btnOk.cloneNode(true)); 
-            btnCancel.replaceWith(btnCancel.cloneNode(true)); 
-        };
-        
-        const currentBtnCancel = document.getElementById('wa-btn-cancel-confirm');
-        const currentBtnOk = document.getElementById('wa-btn-ok-confirm');
-
-        currentBtnCancel.addEventListener('click', cleanup, {once: true});
-        currentBtnOk.addEventListener('click', () => { 
-            cleanup(); 
-            if (onConfirm) onConfirm(); 
-        }, {once: true});
+        const cleanup = () => { overlay.style.display = 'none'; btnOk.replaceWith(btnOk.cloneNode(true)); btnCancel.replaceWith(btnCancel.cloneNode(true)); };
+        document.getElementById('wa-btn-cancel-confirm').addEventListener('click', cleanup, {once: true});
+        document.getElementById('wa-btn-ok-confirm').addEventListener('click', () => { cleanup(); if (onConfirm) onConfirm(); }, {once: true});
     };
 
     const modal = document.getElementById('wa-chart-settings-modal');
     const modalBox = document.getElementById('wa-csm-box');
     const header = modal.querySelector('.wa-csm-header');
-    
 
-    // Drag logic - Đảm bảo modal mượt mà
+    // Drag logic
     let isDragging = false, startX, startY, initLeft, initTop;
     header.addEventListener('mousedown', (e) => {
         if (window.innerWidth <= 768) return; 
         isDragging = true; startX = e.clientX; startY = e.clientY;
         const rect = modalBox.getBoundingClientRect();
         initLeft = rect.left; initTop = rect.top;
-        modalBox.style.transform = 'translate3d(0, 0, 0)'; // Thay đổi ở đây
+        modalBox.style.transform = 'translate3d(0, 0, 0)'; 
         modalBox.style.left = initLeft + 'px'; 
         modalBox.style.top = initTop + 'px';
         modalBox.classList.add('is-dragging');
         document.body.style.userSelect = 'none'; 
     });
     window.addEventListener('mousemove', (e) => { if (!isDragging) return; modalBox.style.left = (initLeft + e.clientX - startX) + 'px'; modalBox.style.top = (initTop + e.clientY - startY) + 'px'; });
-    window.addEventListener('mouseup', () => { isDragging = false;
-        modalBox.classList.remove('is-dragging');
-        document.body.style.userSelect = ''; });
+    window.addEventListener('mouseup', () => { isDragging = false; modalBox.classList.remove('is-dragging'); document.body.style.userSelect = ''; });
 
+    // Tabs
     const tabs = modal.querySelectorAll('.wa-csm-tab');
     const panels = modal.querySelectorAll('.wa-csm-panel');
     tabs.forEach(tab => {
@@ -2005,23 +1944,19 @@ document.addEventListener('click', () => {
         };
     });
 
-    modal.querySelectorAll('.wa-color-swatch').forEach(swatch => {
+    // 4. KÍCH HOẠT CUSTOM COLOR PICKER
+    modal.querySelectorAll('.wa-ism-swatch').forEach(swatch => {
         swatch.onclick = (e) => {
             e.stopPropagation();
             const key = swatch.dataset.colorBind;
-            
-            // Đảm bảo lấy đúng màu nền hiện tại, nếu là chuỗi rỗng thì fallback màu trắng
             let curColor = swatch.style.backgroundColor || swatch.style.background || '#ffffff';
-            
-            // Fix trường hợp trình duyệt tự parse rgba thành rgb khi opacity = 1
             if (curColor.startsWith('rgb') && !curColor.includes('rgba')) {
                  curColor = curColor.replace('rgb', 'rgba').replace(')', ', 1)');
             }
-
-            // Gọi Bảng màu HSV Toàn cục
             if (window.WaveColorPicker) {
                 window.WaveColorPicker.open(swatch, curColor, (newColor) => {
                     swatch.style.backgroundColor = newColor;
+                    swatch.dataset.color = newColor; 
                     if (window.WaveChartEngine) {
                         window.WaveChartEngine.update({ [key]: newColor });
                     }
@@ -2032,7 +1967,6 @@ document.addEventListener('click', () => {
 
     function updateDynamicUI(config) {
         const t = parseInt(config.chartType); 
-        
         const isCandles = (t === 1 || t === 2 || t === 3 || t === 4 || t === 5 || t === 12);
         const isLines = (t === 6 || t === 7 || t === 9);
         const isStep = (t === 8);
@@ -2040,7 +1974,6 @@ document.addEventListener('click', () => {
         const isBaseline = (t === 11);
 
         document.getElementById('csm-ui-candles').style.display = isCandles ? 'flex' : 'none';
-        
         let linesEl = document.getElementById('csm-ui-lines');
         if(linesEl) {
             linesEl.style.display = isLines ? 'flex' : 'none';
@@ -2061,48 +1994,59 @@ document.addEventListener('click', () => {
         let baseEl = document.getElementById('csm-ui-baseline'); if(baseEl) baseEl.style.display = isBaseline ? 'flex' : 'none';
 
         document.getElementById('csm-bg2-swatch').style.display = config.bgType === 'gradient' ? 'block' : 'none';
-        
         document.getElementById('csm-wick-swatches').style.opacity = config.wickIndependent ? '1' : '0.5';
         document.getElementById('csm-wick-swatches').style.pointerEvents = config.wickIndependent ? 'auto' : 'none';
         document.getElementById('csm-border-swatches').style.opacity = config.borderIndependent ? '1' : '0.5';
         document.getElementById('csm-border-swatches').style.pointerEvents = config.borderIndependent ? 'auto' : 'none';
     }
 
-    // ✅ FIX VỊ TRÍ: Khởi tạo lại tâm màn hình mỗi khi click mở Modal
     window.openChartSettings = function() {
         if (!window.WaveChartEngine) return;
         const config = window.WaveChartEngine.getConfig();
         
+        // Cập nhật giá trị UI chung
         modal.querySelectorAll('[data-bind]').forEach(el => {
             const key = el.dataset.bind;
-            // Dùng defaultCfg thay cho config nếu ở trong nút Reset nhé
             const dataObj = typeof defaultCfg !== 'undefined' && defaultCfg[key] !== undefined ? defaultCfg : config;
             
             if (dataObj[key] !== undefined) { 
                 if (el.type === 'checkbox') el.checked = dataObj[key]; 
                 else el.value = dataObj[key]; 
-                // BỔ SUNG: Ép slider cập nhật lại con số Badge
                 if (el.type === 'range') el.dispatchEvent(new Event('input'));
             }
         });
-        modal.querySelectorAll('.wa-color-swatch').forEach(swatch => {
+
+        // 5. RENDER WAVEDROPDOWN
+        ddConfigs.forEach(dd => {
+            const wrapper = document.getElementById(dd.wrapId);
+            const hiddenInput = document.getElementById(dd.inputId);
+            const currVal = String(config[dd.id]); // Đảm bảo mapping đúng kiểu chuỗi
+
+            if (window.WaveDropdown) {
+                // Xóa instance cũ (nếu có) trước khi tạo lại để tránh đè nội dung
+                wrapper.innerHTML = ''; 
+                window.WaveDropdown.create(wrapper, dd.options, currVal, (newVal) => {
+                    hiddenInput.value = newVal;
+                    hiddenInput.dispatchEvent(new Event('change'));
+                });
+            }
+        });
+
+        modal.querySelectorAll('.wa-ism-swatch').forEach(swatch => {
             const key = swatch.dataset.colorBind; if (config[key]) swatch.style.background = config[key];
         });
         
-        // Đặt lại tọa độ tâm hoàn hảo bằng 3D
         modalBox.classList.remove('is-dragging');
         modalBox.style.transform = 'translate3d(-50%, -50%, 0)'; 
         modalBox.style.left = '50%'; 
         modalBox.style.top = '50%';
         
         updateDynamicUI(config);
-        if (typeof window.syncCustomSelects === 'function') window.syncCustomSelects();
         modal.classList.add('show');
     };
 
-    // Hàm đóng mượt mà
     window.closeChartSettings = function() {
-        if (window.WaveColorPicker) window.WaveColorPicker.close(); // Đóng bảng màu HSV nếu đang mở
+        if (window.WaveColorPicker) window.WaveColorPicker.close();
         modal.classList.remove('show');
         setTimeout(() => {
             modalBox.classList.remove('is-dragging');
@@ -2114,15 +2058,23 @@ document.addEventListener('click', () => {
 
     document.getElementById('btn-wa-csm-close').onclick = window.closeChartSettings;
 
-    // BỔ SUNG UX: Bấm ra ngoài vùng tối để đóng Modal
+    // BẢO VỆ POPUP: Ngăn modal đóng ngang khi user đang click/kéo bảng màu (Lỗi UX cũ cậu nhắc)
     modal.addEventListener('mousedown', (e) => {
-        if (e.target === modal) window.closeChartSettings();
+        // Chỉ đóng Modal nếu click đúng vào khoảng tối bên ngoài VÀ Picker màu đang không hoạt động
+        const isClickingInsidePicker = e.target.closest('.wa-color-picker-container'); // Giả định class wrap của picker
+        if (e.target === modal && !isClickingInsidePicker) {
+            window.closeChartSettings();
+        }
     });
 
-    // BỔ SUNG UX: Đóng Color Picker khi lăn chuột để tránh picker lơ lửng
     modal.querySelector('.wa-csm-panels').addEventListener('scroll', () => {
-        if (window.WaveColorPicker) window.WaveColorPicker.close();
+        if (window.WaveColorPicker && typeof window.WaveColorPicker.close === 'function') {
+            // Cậu có thể gắn thêm flag isDragging trong Core nếu muốn lúc kéo màu cuộn thanh không bị tắt
+            window.WaveColorPicker.close(); 
+        }
     });
+
+    // Lắng nghe thay đổi từ Hidden Input (do WaveDropdown bắn ra) và Checkbox/Range
     modal.querySelectorAll('[data-bind]').forEach(el => {
         const eventType = el.type === 'range' ? 'input' : 'change';
         el.addEventListener(eventType, (e) => {
@@ -2138,7 +2090,6 @@ document.addEventListener('click', () => {
         const typeBtn = document.getElementById('btn-wa-chart-type');
         if (typeBtn && typeBtn.parentNode) {
             clearInterval(checkToolbar);
-            
             if (!document.getElementById('btn-wa-chart-settings')) {
                 const btnHTML = `
                     <button id="btn-wa-chart-settings" data-wa-tip="Cài đặt Biểu đồ" style="background: rgba(255,255,255,0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; margin-left: 6px;">
@@ -2149,26 +2100,16 @@ document.addEventListener('click', () => {
             }
             document.getElementById('btn-wa-chart-settings').onclick = (e) => { 
                 e.stopPropagation(); 
-                if (modal.classList.contains('show')) {
-                    window.closeChartSettings();
-                } else {
-                    window.openChartSettings();
-                }
+                if (modal.classList.contains('show')) window.closeChartSettings();
+                else window.openChartSettings();
             };
         }
     }, 200);
 
-    // ✅ NÚT RESET: Bỏ Icon, chuyển ra Cột Trái, Hiện Modal Custom không có nền đen
     const btnReset = document.getElementById('wa-btn-reset-cfg');
     if (btnReset) {
-        btnReset.onmouseenter = () => {
-            btnReset.style.background = 'rgba(246, 70, 93, 0.15)';
-            btnReset.style.borderColor = 'rgba(246, 70, 93, 0.6)';
-        };
-        btnReset.onmouseleave = () => {
-            btnReset.style.background = 'rgba(246, 70, 93, 0.05)';
-            btnReset.style.borderColor = 'rgba(246, 70, 93, 0.3)';
-        };
+        btnReset.onmouseenter = () => { btnReset.style.background = 'rgba(246, 70, 93, 0.15)'; btnReset.style.borderColor = 'rgba(246, 70, 93, 0.6)'; };
+        btnReset.onmouseleave = () => { btnReset.style.background = 'rgba(246, 70, 93, 0.05)'; btnReset.style.borderColor = 'rgba(246, 70, 93, 0.3)'; };
         btnReset.onclick = () => {
             window.showCustomConfirm("Bạn có chắc chắn muốn khôi phục toàn bộ cài đặt biểu đồ về mặc định? Hành động này không thể hoàn tác.", () => {
                 localStorage.removeItem('wave_alpha_chart_config');
@@ -2194,30 +2135,35 @@ document.addEventListener('click', () => {
                     window.WaveChartEngine.config = { ...defaultCfg };
                     window.WaveChartEngine.applyNow();
                     
-                    // Đồng bộ lại UI trong bảng Cài đặt
+                    // Render lại Dropdown
+                    ddConfigs.forEach(dd => {
+                        const wrapper = document.getElementById(dd.wrapId);
+                        wrapper.innerHTML = '';
+                        window.WaveDropdown.create(wrapper, dd.options, String(defaultCfg[dd.id]), (newVal) => {
+                            document.getElementById(dd.inputId).value = newVal;
+                            document.getElementById(dd.inputId).dispatchEvent(new Event('change'));
+                        });
+                    });
+
                     modal.querySelectorAll('[data-bind]').forEach(el => {
                         const key = el.dataset.bind;
-                        // Dùng defaultCfg thay cho config nếu ở trong nút Reset nhé
                         const dataObj = typeof defaultCfg !== 'undefined' && defaultCfg[key] !== undefined ? defaultCfg : config;
-                        
                         if (dataObj[key] !== undefined) { 
                             if (el.type === 'checkbox') el.checked = dataObj[key]; 
                             else el.value = dataObj[key]; 
-                            // BỔ SUNG: Ép slider cập nhật lại con số Badge
                             if (el.type === 'range') el.dispatchEvent(new Event('input'));
                         }
                     });
-                    modal.querySelectorAll('.wa-color-swatch').forEach(swatch => {
+                    modal.querySelectorAll('.wa-ism-swatch').forEach(swatch => {
                         const key = swatch.dataset.colorBind; 
                         if (defaultCfg[key]) swatch.style.background = defaultCfg[key];
                     });
                     updateDynamicUI(defaultCfg);
-                    if (typeof syncCustomSelects === 'function') syncCustomSelects();
                 }
             });
         };
     }
-    // BỔ SUNG: Tính năng Import/Export cấu hình JSON
+
     const proPanel = document.getElementById('csm-pro');
     if (proPanel) {
         const ioHTML = `
@@ -2230,7 +2176,6 @@ document.addEventListener('click', () => {
         `;
         proPanel.insertAdjacentHTML('beforeend', ioHTML);
 
-        // Nút Xuất JSON
         document.getElementById('wa-btn-export-cfg').onclick = () => {
             if (!window.WaveChartEngine) return;
             const blob = new Blob([JSON.stringify(window.WaveChartEngine.getConfig(), null, 2)], { type: 'application/json' });
@@ -2241,9 +2186,7 @@ document.addEventListener('click', () => {
             URL.revokeObjectURL(a.href);
         };
 
-        // Nút Nhập JSON
         document.getElementById('wa-btn-import-cfg').onclick = () => document.getElementById('wa-import-file').click();
-        
         document.getElementById('wa-import-file').onchange = e => {
             const f = e.target.files[0];
             if (!f) return;
@@ -2252,14 +2195,14 @@ document.addEventListener('click', () => {
                 try {
                     const cfg = JSON.parse(ev.target.result);
                     if (window.WaveChartEngine) {
-                        window.WaveChartEngine.update(cfg); // Apply setting mới
-                        window.openChartSettings(); // Mở lại bảng để UI đồng bộ
+                        window.WaveChartEngine.update(cfg);
+                        window.openChartSettings(); 
                         alert('Nhập cấu hình thành công!');
                     }
                 } catch (err) { alert('File JSON không hợp lệ!'); }
             };
             fr.readAsText(f);
-            e.target.value = ''; // Reset file input
+            e.target.value = ''; 
         };
     }
 })();
