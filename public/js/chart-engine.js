@@ -255,18 +255,32 @@ window.WaveChartEngine = {
             // ─────────────────────────────────────────────────────────────
             // 5. VÙNG HLC AREA (ID 10) — Tách nền trên & dưới đường Close
             // ─────────────────────────────────────────────────────────────
+            // ─────────────────────────────────────────────────────────────
+            // 5. VÙNG HLC AREA (ID 10) — Tách nền trên & dưới đường Close
+            // ─────────────────────────────────────────────────────────────
             window.klinecharts.registerIndicator({
                 name: 'WA_HLC_AREA', 
-                shortName: 'HLC AREA', // Tên sẽ hiện chình ình ở góc trái
+                shortName: 'HLC AREA', 
                 series: 'price', 
                 calc: (d) => d,
                 
-                // Khai báo để hiện H L C khi di chuột (không dùng createTooltipDataSource nữa để tránh lỗi mất tên)
                 figures: [
                     { key: 'high', title: 'H: ', type: 'text' },
                     { key: 'low', title: 'L: ', type: 'text' },
                     { key: 'close', title: 'C: ', type: 'text' }
                 ],
+
+                // 🚀 BÊ ĐÚNG LOGIC TỪ CHART-INDICATORS SANG ĐỂ LỌC ICON
+                createTooltipDataSource: function({ indicator, defaultStyles }) {
+                    const icons = defaultStyles.tooltip.icons;
+                    // Lấy đúng icon Ẩn/Hiện dựa theo trạng thái hiển thị
+                    const eyeIcon = indicator.visible ? icons[1] : icons[0];
+                    return {
+                        name: indicator.shortName,
+                        calcParamsText: '', 
+                        icons: [eyeIcon] // Trả về duy nhất 1 icon con mắt, chém bay nút Xóa & Cài đặt
+                    };
+                },
                 
                 draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
@@ -481,17 +495,13 @@ window.WaveChartEngine = {
             marginLeft: 0, marginRight: 0, paddingLeft: 0, paddingRight: 0
         };
 
+        // =========================================================================
+        // Không cần trick "ký tự trắng" hay ép size nữa vì đã xử lý ở DataSource
+        // =========================================================================
         const mainSeriesStyle = {
             tooltip: {
-                showRule: 'always', 
-                icons: [
-                    { id: 'visible' },
-                    { id: 'invisible' },
-                    // Cố tình đổi id thành 'setting_hidden' và 'close_hidden' 
-                    // để ghi đè index 3 & 4, đồng thời vô hiệu hóa luôn sự kiện click
-                    { id: 'setting_hidden', ...ghostIcon }, 
-                    { id: 'close_hidden', ...ghostIcon }    
-                ]
+                showRule: 'always'
+                // Bỏ sạch mảng icons ở đây đi cho gọn code
             }
         };
 
