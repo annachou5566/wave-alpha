@@ -4180,19 +4180,20 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         .wa-ism-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
         .wa-ism-btn.delete:hover { color: #f6465d; background: rgba(246,70,93,0.1); }
 
-        /* Content Area */
-        .wa-ism-content { flex: 1; display: flex; flex-direction: column; background: #1e222d; min-width: 0; }
-        .wa-ism-header { padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; cursor: grab; user-select: none; }
-        .wa-ism-header:active { cursor: grabbing; }
-        .wa-ism-title { font-size: 16px; font-weight: 700; color: #EAECEF; display: flex; align-items: center; gap: 8px; pointer-events: none; text-transform: uppercase; letter-spacing: 0.5px; }
-        .wa-ism-close { color: #848e9c; cursor: pointer; display: flex; padding: 4px; margin: -4px; transition: 0.2s; }
-        .wa-ism-close:hover { color: #F6465D; }
-        
-        /* Params List */
-        .wa-ism-panels { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
-        .wa-ism-panels::-webkit-scrollbar { width: 4px; }
-        .wa-ism-panels::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
-        
+
+/* Content Area */
+          .wa-ism-content { flex: 1; display: flex; flex-direction: column; background: #1e222d; min-width: 0; min-height: 0; overflow: hidden; }
+          .wa-ism-header { padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; cursor: grab; user-select: none; flex-shrink: 0; }
+          .wa-ism-header:active { cursor: grabbing; }
+          .wa-ism-title { font-size: 16px; font-weight: 700; color: #EAECEF; display: flex; align-items: center; gap: 8px; pointer-events: none; text-transform: uppercase; letter-spacing: 0.5px; }
+          .wa-ism-close { color: #848e9c; cursor: pointer; display: flex; padding: 4px; margin: -4px; transition: 0.2s; }
+          .wa-ism-close:hover { color: #F6465D; }
+          
+          /* Params List */
+          .wa-ism-panels { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; -webkit-overflow-scrolling: touch; }
+          .wa-ism-panels::-webkit-scrollbar { width: 4px; }
+          .wa-ism-panels::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
         .wa-ism-group-title { font-size: 11px; font-weight: 800; color: #527c82; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; margin-top: 4px; margin-bottom: 8px; }
         .wa-ism-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; gap: 16px; }
         .wa-ism-label { font-size: 13px; color: #b7bdc6; display: flex; flex-direction: column; flex: 1; min-width: 0; }
