@@ -1401,7 +1401,6 @@ window.evaluateQuantVerdict = function() {
     scheduleVerdictRender(hftObj, mftObj, lftObj, q.flags);
 };
 
-
 // =====================================================================
 // BỘ QUẢN LÝ HTML TOOLTIP CAO CẤP (CHUẨN TRADINGVIEW)
 // =====================================================================
@@ -1472,4 +1471,3 @@ window.WaveHtmlLegend = {
         });
     }
 };
-
