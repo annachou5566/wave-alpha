@@ -253,31 +253,10 @@ window.WaveChartEngine = {
             });
 
             // ─────────────────────────────────────────────────────────────
-            // 5. VÙNG HLC AREA (ID 10) — BIẾN THÀNH CHỈ BÁO CHÍNH THỨC
+            // 5. VÙNG HLC AREA (ID 10) — Tách nền trên & dưới đường Close
             // ─────────────────────────────────────────────────────────────
             window.klinecharts.registerIndicator({
-                name: 'WA_HLC_AREA', 
-                shortName: 'HLC AREA', // Tên hiển thị ngắn gọn ở góc trái
-                series: 'price', 
-                calc: (d) => d,
-                
-                // Hiển thị giá trị H, L, C ngay trên Legend khi di chuột
-                createTooltipDataSource: ({ indicator }) => {
-                    const dataList = indicator.result;
-                    // KLineCharts sẽ tự lấy index của nến đang được trỏ chuột vào
-                    return {
-                        name: 'HLC Area',
-                        values: [] // Chúng ta để rỗng để nó tự lấy dữ liệu từ 'figures' bên dưới
-                    };
-                },
-                
-                // Khai báo các con số muốn hiện trên Legend (High, Low, Close)
-                figures: [
-                    { key: 'high', title: 'H: ', type: 'text' },
-                    { key: 'low', title: 'L: ', type: 'text' },
-                    { key: 'close', title: 'C: ', type: 'text' }
-                ],
-
+                name: 'WA_HLC_AREA', shortName: ' ', series: 'price', calc: (d) => d,
                 draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
@@ -287,8 +266,9 @@ window.WaveChartEngine = {
                     ctx.save();
                     ctx.setLineDash([]);
                     const start = Math.max(0, from - 1);
+
+                    // Pre-build 3 mảng điểm — tránh polygon lệch khi data gap
                     const highPts = [], lowPts = [], closePts = [];
-                    
                     for (let i = start; i < to; i++) {
                         const kd = dataList[i];
                         if (!kd || kd.high === undefined || kd.low === undefined || kd.close === undefined) continue;
@@ -299,33 +279,42 @@ window.WaveChartEngine = {
                     }
                     if (highPts.length < 2) { ctx.restore(); return true; }
 
-                    // Vẽ Nền nửa trên
+                    // Nền nửa trên: High → Close
                     ctx.beginPath();
                     ctx.fillStyle = window.WaveChartEngine._dimColor(c.hlcUpFillColor, c.hlcFillOpacity);
                     highPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
                     [...closePts].reverse().forEach(p => ctx.lineTo(p.x, p.y));
-                    ctx.closePath(); ctx.fill();
+                    ctx.closePath();
+                    ctx.fill();
 
-                    // Vẽ Nền nửa dưới
+                    // Nền nửa dưới: Close → Low
                     ctx.beginPath();
                     ctx.fillStyle = window.WaveChartEngine._dimColor(c.hlcDownFillColor, c.hlcFillOpacity);
                     closePts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
                     [...lowPts].reverse().forEach(p => ctx.lineTo(p.x, p.y));
-                    ctx.closePath(); ctx.fill();
+                    ctx.closePath();
+                    ctx.fill();
 
-                    // Viền High & Low
+                    // Viền High & Low (nếu bật)
                     if (c.hlcShowHighLow) {
                         ctx.lineWidth = 1;
                         ctx.strokeStyle = window.WaveChartEngine._dimColor(c.hlcHighColor, c.hlcHighLowOpacity);
-                        ctx.beginPath(); highPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)); ctx.stroke();
+                        ctx.beginPath();
+                        highPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+                        ctx.stroke();
+
                         ctx.strokeStyle = window.WaveChartEngine._dimColor(c.hlcLowColor, c.hlcHighLowOpacity);
-                        ctx.beginPath(); lowPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, y)); ctx.stroke();
+                        ctx.beginPath();
+                        lowPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+                        ctx.stroke();
                     }
 
-                    // Đường Close chính
+                    // Đường Close — dày & sắc nét nhất
                     ctx.beginPath();
                     ctx.strokeStyle = c.hlcCloseColor;
-                    ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                    ctx.lineWidth   = 2;
+                    ctx.lineCap     = 'round';
+                    ctx.lineJoin    = 'round';
                     closePts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
                     ctx.stroke();
 
@@ -452,15 +441,26 @@ window.WaveChartEngine = {
         const c = this.config;
         let kcChartType = 'candle_solid', isLine = false, hideCandle = false;
 
+        // ✅ BẢN FIX: Nhắm chính xác mục tiêu. 
+        // Thay vì xóa theo pane ('candle_pane') khiến các chỉ báo EMA/MA bị văng theo,
+        // ta sẽ xóa chính xác bằng tên Indicator thông qua vòng lặp.
         CUSTOM_CHART_IDS.forEach(id => { 
-            try { this.chartInstance.removeIndicator('candle_pane', id); } catch (e) {} 
+            try { 
+                // Xóa theo đúng name của indicator để không chạm vào các chỉ báo khác
+                this.chartInstance.removeIndicator('candle_pane', id); 
+            } catch (e) {} 
         });
 
-        // Cấu hình Style để chỉ hiện tên và nút ẩn/hiện (con mắt), giấu nút cài đặt và nút xóa đi
+        // Loại native
+        if      (c.chartType === 2) kcChartType = 'candle_stroke';
+        else if (c.chartType === 3) kcChartType = 'ohlc';
+        else if (c.chartType === 6 || c.chartType === 9) { kcChartType = 'area'; isLine = (c.chartType === 6); }
+
+        // Loại custom - CẤU HÌNH STYLE ẨN NÚT CÀI ĐẶT & NÚT XÓA (CHỈ GIỮ LẠI CON MẮT)
         const mainSeriesStyle = {
             tooltip: {
-                showRule: 'always', // Luôn hiện để có chỗ bấm con mắt
-                icons: ['visible'] // CHỈ HIỆN icon con mắt, xóa bỏ icon cài đặt và xóa
+                showRule: 'always', 
+                icons: ['visible'] // Chỉ kích hoạt icon hiển thị/ẩn
             }
         };
 
