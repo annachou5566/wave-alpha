@@ -1599,7 +1599,20 @@ window.closeProChart = function() {
         .wa-btn-cancel:hover { background: rgba(255,255,255,0.05); border-color: #555; }
         .wa-btn-confirm { flex: 1; background: #F6465D; color: #fff; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s; box-shadow: 0 4px 12px rgba(246, 70, 93, 0.3); }
         .wa-btn-confirm:hover { background: #ff526a; box-shadow: 0 6px 16px rgba(246, 70, 93, 0.4); transform: translateY(-1px); }
-    `;
+    /* BỔ SUNG: CSS Custom Select */
+        .wa-select-wrap { position: relative; width: 140px; font-family: 'Inter', sans-serif; }
+        .wa-select-trigger { background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; transition: 0.2s; }
+        .wa-select-trigger:hover { border-color: #26a69a; }
+        .wa-select-trigger.open { border-color: #26a69a; border-bottom-left-radius: 0; border-bottom-right-radius: 0; background: #1e222d; }
+        .wa-select-options { position: absolute; top: 100%; left: 0; width: 100%; background: #1e222d; border: 1px solid #26a69a; border-top: none; border-radius: 0 0 4px 4px; z-index: 99; display: none; max-height: 180px; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .wa-select-options::-webkit-scrollbar { width: 4px; }
+        .wa-select-options::-webkit-scrollbar-thumb { background: #26a69a; border-radius: 4px; }
+        .wa-select-options.open { display: block; }
+        .wa-select-option { padding: 10px 12px; font-size: 12px; color: #b7bdc6; cursor: pointer; transition: 0.2s; border-bottom: 1px solid rgba(255,255,255,0.02); }
+        .wa-select-option:last-child { border-bottom: none; }
+        .wa-select-option:hover { background: rgba(38,166,154,0.1); color: #EAECEF; padding-left: 16px; }
+        .wa-select-option.selected { color: #26a69a; font-weight: bold; background: rgba(38,166,154,0.05); }
+        `;
     document.head.appendChild(style);
 
     const modalHTML = `
@@ -1745,7 +1758,77 @@ window.closeProChart = function() {
     `;
     
     document.body.insertAdjacentHTML('beforeend', modalHTML + pickerHTML + confirmHTML);
+// BỔ SUNG: Logic Custom Select (Tự động chuyển đổi select gốc)
+window.syncCustomSelects = function() {
+    document.querySelectorAll('.wa-select-wrap').forEach(w => {
+        const select = w.querySelector('select');
+        const triggerText = w.querySelector('.wa-select-trigger span');
+        const activeOpt = w.querySelector('.wa-select-option[data-value="' + select.value + '"]');
+        if (activeOpt) {
+            triggerText.innerText = activeOpt.innerText;
+            w.querySelectorAll('.wa-select-option').forEach(o => o.classList.remove('selected'));
+            activeOpt.classList.add('selected');
+        }
+    });
+};
 
+// Lọc lấy các thẻ select (bỏ qua thẻ input dùng chung class)
+document.querySelectorAll('select.wa-csm-select').forEach(select => {
+    if (select.parentElement.classList.contains('wa-select-wrap')) return;
+    select.style.display = 'none'; // Ẩn select gốc
+    
+    const wrap = document.createElement('div');
+    wrap.className = 'wa-select-wrap';
+    if (select.style.width) wrap.style.width = select.style.width;
+    
+    select.parentNode.insertBefore(wrap, select);
+    wrap.appendChild(select);
+    
+    const trigger = document.createElement('div');
+    trigger.className = 'wa-select-trigger';
+    trigger.innerHTML = '<span></span> <span style="font-size:9px; color:#848e9c;">▼</span>';
+    wrap.appendChild(trigger);
+    
+    const optionsDiv = document.createElement('div');
+    optionsDiv.className = 'wa-select-options';
+    wrap.appendChild(optionsDiv);
+    
+    Array.from(select.options).forEach(opt => {
+        const optionEl = document.createElement('div');
+        optionEl.className = 'wa-select-option';
+        optionEl.dataset.value = opt.value;
+        optionEl.innerText = opt.innerText;
+        
+        optionEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            select.value = opt.value;
+            optionsDiv.classList.remove('open');
+            trigger.classList.remove('open');
+            
+            // Trigger event change để code gốc bắt được giá trị mới
+            const event = new Event('change', { bubbles: true });
+            select.dispatchEvent(event);
+            window.syncCustomSelects();
+        });
+        optionsDiv.appendChild(optionEl);
+    });
+    
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.wa-select-options').forEach(el => { if (el !== optionsDiv) el.classList.remove('open'); });
+        document.querySelectorAll('.wa-select-trigger').forEach(el => { if (el !== trigger) el.classList.remove('open'); });
+        optionsDiv.classList.toggle('open');
+        trigger.classList.toggle('open');
+    });
+});
+
+// Bấm ra ngoài thì đóng menu
+document.addEventListener('click', () => {
+    document.querySelectorAll('.wa-select-options').forEach(el => el.classList.remove('open'));
+    document.querySelectorAll('.wa-select-trigger').forEach(el => el.classList.remove('open'));
+});
+
+window.syncCustomSelects(); // Chạy lần đầu
     // BỔ SUNG: Hàm điều khiển Modal Confirm
     window.showCustomConfirm = function(msg, onConfirm) {
         const overlay = document.getElementById('wa-custom-confirm-overlay');
@@ -1918,6 +2001,7 @@ window.closeProChart = function() {
         modalBox.style.top = '50%';
         
         updateDynamicUI(config);
+        if (typeof window.syncCustomSelects === 'function') window.syncCustomSelects();
         modal.classList.add('show');
     };
 
