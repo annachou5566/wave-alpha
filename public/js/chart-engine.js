@@ -76,6 +76,11 @@ window.WaveChartEngine = {
             // ─────────────────────────────────────────────────────────────
             window.klinecharts.registerIndicator({
                 name: 'WA_COL_CHART', shortName: ' ', series: 'price', calc: (d) => d,
+                // Thêm đoạn này:
+                createTooltipDataSource: function({ indicator, defaultStyles }) {
+                    const icons = defaultStyles.tooltip.icons;
+                    return { name: indicator.shortName, calcParamsText: '', icons: [indicator.visible ? icons[1] : icons[0]] };
+                },
                 draw: ({ ctx, indicator, visibleRange, bounding, barSpace, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
@@ -107,6 +112,11 @@ window.WaveChartEngine = {
             // ─────────────────────────────────────────────────────────────
             window.klinecharts.registerIndicator({
                 name: 'WA_HL_CHART', shortName: ' ', series: 'price', calc: (d) => d,
+                // Thêm đoạn này:
+                createTooltipDataSource: function({ indicator, defaultStyles }) {
+                    const icons = defaultStyles.tooltip.icons;
+                    return { name: indicator.shortName, calcParamsText: '', icons: [indicator.visible ? icons[1] : icons[0]] };
+                },
                 draw: ({ ctx, indicator, visibleRange, barSpace, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
@@ -153,6 +163,11 @@ window.WaveChartEngine = {
             // ─────────────────────────────────────────────────────────────
             window.klinecharts.registerIndicator({
                 name: 'WA_STEP_LINE', shortName: ' ', series: 'price', calc: (d) => d,
+                // Thêm đoạn này:
+                createTooltipDataSource: function({ indicator, defaultStyles }) {
+                    const icons = defaultStyles.tooltip.icons;
+                    return { name: indicator.shortName, calcParamsText: '', icons: [indicator.visible ? icons[1] : icons[0]] };
+                },
                 draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
@@ -205,6 +220,11 @@ window.WaveChartEngine = {
             // ─────────────────────────────────────────────────────────────
             window.klinecharts.registerIndicator({
                 name: 'WA_LINE_MARKER', shortName: ' ', series: 'price', calc: (d) => d,
+                // Thêm đoạn này:
+                createTooltipDataSource: function({ indicator, defaultStyles }) {
+                    const icons = defaultStyles.tooltip.icons;
+                    return { name: indicator.shortName, calcParamsText: '', icons: [indicator.visible ? icons[1] : icons[0]] };
+                },
                 draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
@@ -252,9 +272,7 @@ window.WaveChartEngine = {
                 }
             });
 
-            // ─────────────────────────────────────────────────────────────
-            // 5. VÙNG HLC AREA (ID 10) — Tách nền trên & dưới đường Close
-            // ─────────────────────────────────────────────────────────────
+            
             // ─────────────────────────────────────────────────────────────
             // 5. VÙNG HLC AREA (ID 10) — Tách nền trên & dưới đường Close
             // ─────────────────────────────────────────────────────────────
@@ -353,6 +371,11 @@ window.WaveChartEngine = {
             // ─────────────────────────────────────────────────────────────
             window.klinecharts.registerIndicator({
                 name: 'WA_BASELINE', shortName: ' ', series: 'price', calc: (d) => d,
+                // Thêm đoạn này:
+                createTooltipDataSource: function({ indicator, defaultStyles }) {
+                    const icons = defaultStyles.tooltip.icons;
+                    return { name: indicator.shortName, calcParamsText: '', icons: [indicator.visible ? icons[1] : icons[0]] };
+                },
                 draw: ({ ctx, indicator, visibleRange, bounding, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
