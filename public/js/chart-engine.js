@@ -457,12 +457,12 @@ window.WaveChartEngine = {
         else if (c.chartType === 6 || c.chartType === 9) { kcChartType = 'area'; isLine = (c.chartType === 6); }
 
         // Loại custom
-        if      (c.chartType === 4)  { this.chartInstance.createIndicator('WA_COL_CHART',   false, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 5)  { this.chartInstance.createIndicator('WA_HL_CHART',    false, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 7)  { this.chartInstance.createIndicator('WA_LINE_MARKER', false, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 8)  { this.chartInstance.createIndicator('WA_STEP_LINE',   false, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 10) { this.chartInstance.createIndicator('WA_HLC_AREA',    false, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 11) { this.chartInstance.createIndicator('WA_BASELINE',    false, {id: 'candle_pane'}); hideCandle = true; }
+        if      (c.chartType === 4)  { this.chartInstance.createIndicator('WA_COL_CHART',   true, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 5)  { this.chartInstance.createIndicator('WA_HL_CHART',    true, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 7)  { this.chartInstance.createIndicator('WA_LINE_MARKER', true, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 8)  { this.chartInstance.createIndicator('WA_STEP_LINE',   true, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 10) { this.chartInstance.createIndicator('WA_HLC_AREA',    true, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 11) { this.chartInstance.createIndicator('WA_BASELINE',    true, {id: 'candle_pane'}); hideCandle = true; }
 
         const isHollow       = (c.chartType === 2);
         const finalUpColor   = hideCandle ? 'transparent' : c.upColor;
@@ -479,26 +479,22 @@ window.WaveChartEngine = {
                 horizontal: { show: c.gridHorizontal, color: c.gridColor, style: 'dashed' },
                 vertical:   { show: c.gridVertical,   color: c.gridColor, style: 'dashed' }
             },
-            // ✅ BẢN FIX: Hạ z-index của biểu đồ chính xuống dưới các Indicator
             indicator: {
                 lastValueMark: { show: true },
-                // Đảm bảo chỉ báo luôn nổi lên trên cùng dù là nến hay Line
-                zLevel: 2 
+                zLevel: 2 // 🚀 BẢN FIX: Ép tất cả các chỉ báo (EMA, MACD...) luôn nổi lên lớp trên cùng
             },
             candle: {
-                type:    kcChartType,
-                tooltip: { showRule: c.showOHLC ? 'always' : 'none' },
-                // Hạ z-index của nến/line xuống 1
-                zLevel: 1,
-            },
-            candle: {
+                zLevel: 1, // 🚀 BẢN FIX: Hạ lớp nến / biểu đồ Line xuống lớp dưới
                 type:    kcChartType,
                 tooltip: { showRule: c.showOHLC ? 'always' : 'none' },
                 bar: {
-                    upColor:        finalUpColor,   downColor:        finalDownColor,
+                    upColor:        finalUpColor,   
+                    downColor:      finalDownColor,
                     noChangeColor:  finalNoChange,
-                    upBorderColor:  finalUpBorder,  downBorderColor:  finalDownBorder,
-                    upWickColor:    finalUpWick,    downWickColor:    finalDownWick
+                    upBorderColor:  finalUpBorder,  
+                    downBorderColor: finalDownBorder,
+                    upWickColor:    finalUpWick,    
+                    downWickColor:   finalDownWick
                 },
                 area: {
                     lineSize:        2,
@@ -509,8 +505,7 @@ window.WaveChartEngine = {
                 },
                 priceMark: { show: c.showLastPriceLine, high: { show: false }, low: { show: false } }
             },
-            crosshair: { show: c.crosshairMode !== 'hidden' },
-            indicator:  { lastValueMark: { show: true } }
+            crosshair: { show: c.crosshairMode !== 'hidden' }
         };
 
         try {
