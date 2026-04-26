@@ -1544,12 +1544,15 @@ window.closeProChart = function() {
 // =========================================================================
 (function initChartSettingsModal() {
     'use strict';
-
+// CHỐNG KHỞI TẠO TRÙNG
+if (window.__wa_chart_settings_modal_initialized) return;
+window.__wa_chart_settings_modal_initialized = true;
     const style = document.createElement('style');
     style.textContent = `
         #wa-chart-settings-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999999; pointer-events: none; opacity: 0; transition: opacity 0.15s ease; }
         #wa-chart-settings-modal.show { display: block; opacity: 1; }
         .wa-csm-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e222d; width: 680px; height: 500px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; pointer-events: auto; }
+        .wa-csm-box.is-dragging { transition: none !important; }
         .wa-csm-sidebar { width: 200px; background: #131722; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 20px 0 0 0; }
         .wa-csm-tab { padding: 12px 24px; color: #848e9c; font-size: 13px; font-weight: 600; cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s; display: flex; align-items: center; gap: 10px; }
         .wa-csm-tab:hover { background: rgba(255,255,255,0.03); color: #EAECEF; }
@@ -1828,7 +1831,27 @@ document.addEventListener('click', () => {
     document.querySelectorAll('.wa-select-trigger').forEach(el => el.classList.remove('open'));
 });
 
-window.syncCustomSelects(); // Chạy lần đầu
+// =========================================================================
+    // BỔ SUNG CẢI TIẾN 3: TỰ ĐỘNG HIỂN THỊ THÔNG SỐ THANH TRƯỢT (LIVE BADGES)
+    // =========================================================================
+    document.querySelectorAll('.wa-csm-slider').forEach(slider => {
+        const badge = document.createElement('span');
+        badge.style.cssText = 'min-width:34px; text-align:right; font-size:10px; color:#848e9c; font-variant-numeric:tabular-nums; margin-left:8px; display:inline-block; font-weight: bold;';
+        badge.innerText = slider.value;
+        slider.parentNode.appendChild(badge);
+        
+        slider.addEventListener('input', (e) => {
+            let val = e.target.value;
+            // Nếu là lề phải thì thêm px, nếu là opacity thì fix 2 số thập phân
+            badge.innerText = slider.max > 10 ? val + 'px' : parseFloat(val).toFixed(2);
+        });
+        
+        // Trigger lần đầu để hiển thị giá trị hiện tại
+        slider.dispatchEvent(new Event('input'));
+    });
+    // =========================================================================
+
+    window.syncCustomSelects(); // Chạy lần đầu
     // BỔ SUNG: Hàm điều khiển Modal Confirm
     window.showCustomConfirm = function(msg, onConfirm) {
         const overlay = document.getElementById('wa-custom-confirm-overlay');
@@ -1868,10 +1891,13 @@ window.syncCustomSelects(); // Chạy lần đầu
         modalBox.style.transform = 'none'; 
         modalBox.style.left = initLeft + 'px'; 
         modalBox.style.top = initTop + 'px';
+        modalBox.classList.add('is-dragging');
         document.body.style.userSelect = 'none'; 
     });
     window.addEventListener('mousemove', (e) => { if (!isDragging) return; modalBox.style.left = (initLeft + e.clientX - startX) + 'px'; modalBox.style.top = (initTop + e.clientY - startY) + 'px'; });
-    window.addEventListener('mouseup', () => { isDragging = false; document.body.style.userSelect = ''; });
+    window.addEventListener('mouseup', () => { isDragging = false;
+        modalBox.classList.remove('is-dragging');
+        document.body.style.userSelect = ''; });
 
     const tabs = modal.querySelectorAll('.wa-csm-tab');
     const panels = modal.querySelectorAll('.wa-csm-panel');
@@ -2087,6 +2113,51 @@ window.syncCustomSelects(); // Chạy lần đầu
                     if (typeof syncCustomSelects === 'function') syncCustomSelects();
                 }
             });
+        };
+    }
+    // BỔ SUNG: Tính năng Import/Export cấu hình JSON
+    const proPanel = document.getElementById('csm-pro');
+    if (proPanel) {
+        const ioHTML = `
+            <div class="wa-csm-divider" style="margin-top:10px;">Sao lưu cấu hình</div>
+            <div style="display:flex; gap:10px;">
+                <button id="wa-btn-export-cfg" style="flex:1; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); color:#EAECEF; padding:8px; border-radius:4px; font-size:11px; cursor:pointer;">📥 XUẤT JSON</button>
+                <button id="wa-btn-import-cfg" style="flex:1; background:rgba(38,166,154,0.1); border:1px solid rgba(38,166,154,0.3); color:#26a69a; padding:8px; border-radius:4px; font-size:11px; cursor:pointer;">📤 NHẬP JSON</button>
+            </div>
+            <input type="file" id="wa-import-file" accept=".json" style="display:none;">
+        `;
+        proPanel.insertAdjacentHTML('beforeend', ioHTML);
+
+        // Nút Xuất JSON
+        document.getElementById('wa-btn-export-cfg').onclick = () => {
+            if (!window.WaveChartEngine) return;
+            const blob = new Blob([JSON.stringify(window.WaveChartEngine.getConfig(), null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'wave-alpha-chart-config.json';
+            a.click();
+            URL.revokeObjectURL(a.href);
+        };
+
+        // Nút Nhập JSON
+        document.getElementById('wa-btn-import-cfg').onclick = () => document.getElementById('wa-import-file').click();
+        
+        document.getElementById('wa-import-file').onchange = e => {
+            const f = e.target.files[0];
+            if (!f) return;
+            const fr = new FileReader();
+            fr.onload = ev => {
+                try {
+                    const cfg = JSON.parse(ev.target.result);
+                    if (window.WaveChartEngine) {
+                        window.WaveChartEngine.update(cfg); // Apply setting mới
+                        window.openChartSettings(); // Mở lại bảng để UI đồng bộ
+                        alert('Nhập cấu hình thành công!');
+                    }
+                } catch (err) { alert('File JSON không hợp lệ!'); }
+            };
+            fr.readAsText(f);
+            e.target.value = ''; // Reset file input
         };
     }
 })();
