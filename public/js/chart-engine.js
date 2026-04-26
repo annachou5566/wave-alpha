@@ -76,11 +76,6 @@ window.WaveChartEngine = {
             // ─────────────────────────────────────────────────────────────
             window.klinecharts.registerIndicator({
                 name: 'WA_COL_CHART', shortName: ' ', series: 'price', calc: (d) => d,
-                // Thêm đoạn này:
-                createTooltipDataSource: function({ indicator, defaultStyles }) {
-                    const icons = defaultStyles.tooltip.icons;
-                    return { name: indicator.shortName, calcParamsText: '', icons: [indicator.visible ? icons[1] : icons[0]] };
-                },
                 draw: ({ ctx, indicator, visibleRange, bounding, barSpace, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
@@ -112,11 +107,6 @@ window.WaveChartEngine = {
             // ─────────────────────────────────────────────────────────────
             window.klinecharts.registerIndicator({
                 name: 'WA_HL_CHART', shortName: ' ', series: 'price', calc: (d) => d,
-                // Thêm đoạn này:
-                createTooltipDataSource: function({ indicator, defaultStyles }) {
-                    const icons = defaultStyles.tooltip.icons;
-                    return { name: indicator.shortName, calcParamsText: '', icons: [indicator.visible ? icons[1] : icons[0]] };
-                },
                 draw: ({ ctx, indicator, visibleRange, barSpace, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
@@ -163,11 +153,6 @@ window.WaveChartEngine = {
             // ─────────────────────────────────────────────────────────────
             window.klinecharts.registerIndicator({
                 name: 'WA_STEP_LINE', shortName: ' ', series: 'price', calc: (d) => d,
-                // Thêm đoạn này:
-                createTooltipDataSource: function({ indicator, defaultStyles }) {
-                    const icons = defaultStyles.tooltip.icons;
-                    return { name: indicator.shortName, calcParamsText: '', icons: [indicator.visible ? icons[1] : icons[0]] };
-                },
                 draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
@@ -220,11 +205,6 @@ window.WaveChartEngine = {
             // ─────────────────────────────────────────────────────────────
             window.klinecharts.registerIndicator({
                 name: 'WA_LINE_MARKER', shortName: ' ', series: 'price', calc: (d) => d,
-                // Thêm đoạn này:
-                createTooltipDataSource: function({ indicator, defaultStyles }) {
-                    const icons = defaultStyles.tooltip.icons;
-                    return { name: indicator.shortName, calcParamsText: '', icons: [indicator.visible ? icons[1] : icons[0]] };
-                },
                 draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
@@ -272,34 +252,11 @@ window.WaveChartEngine = {
                 }
             });
 
-            
             // ─────────────────────────────────────────────────────────────
             // 5. VÙNG HLC AREA (ID 10) — Tách nền trên & dưới đường Close
             // ─────────────────────────────────────────────────────────────
             window.klinecharts.registerIndicator({
-                name: 'WA_HLC_AREA', 
-                shortName: 'HLC AREA', 
-                series: 'price', 
-                calc: (d) => d,
-                
-                figures: [
-                    { key: 'high', title: 'H: ', type: 'text' },
-                    { key: 'low', title: 'L: ', type: 'text' },
-                    { key: 'close', title: 'C: ', type: 'text' }
-                ],
-
-                // 🚀 BÊ ĐÚNG LOGIC TỪ CHART-INDICATORS SANG ĐỂ LỌC ICON
-                createTooltipDataSource: function({ indicator, defaultStyles }) {
-                    const icons = defaultStyles.tooltip.icons;
-                    // Lấy đúng icon Ẩn/Hiện dựa theo trạng thái hiển thị
-                    const eyeIcon = indicator.visible ? icons[1] : icons[0];
-                    return {
-                        name: indicator.shortName,
-                        calcParamsText: '', 
-                        icons: [eyeIcon] // Trả về duy nhất 1 icon con mắt, chém bay nút Xóa & Cài đặt
-                    };
-                },
-                
+                name: 'WA_HLC_AREA', shortName: ' ', series: 'price', calc: (d) => d,
                 draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
@@ -371,11 +328,6 @@ window.WaveChartEngine = {
             // ─────────────────────────────────────────────────────────────
             window.klinecharts.registerIndicator({
                 name: 'WA_BASELINE', shortName: ' ', series: 'price', calc: (d) => d,
-                // Thêm đoạn này:
-                createTooltipDataSource: function({ indicator, defaultStyles }) {
-                    const icons = defaultStyles.tooltip.icons;
-                    return { name: indicator.shortName, calcParamsText: '', icons: [indicator.visible ? icons[1] : icons[0]] };
-                },
                 draw: ({ ctx, indicator, visibleRange, bounding, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
@@ -492,9 +444,11 @@ window.WaveChartEngine = {
         // ✅ BẢN FIX: Nhắm chính xác mục tiêu. 
         // Thay vì xóa theo pane ('candle_pane') khiến các chỉ báo EMA/MA bị văng theo,
         // ta sẽ xóa chính xác bằng tên Indicator thông qua vòng lặp.
-        // ✅ BẢN FIX: Nhắm chính xác mục tiêu. 
         CUSTOM_CHART_IDS.forEach(id => { 
-            try { this.chartInstance.removeIndicator('candle_pane', id); } catch (e) {} 
+            try { 
+                // Xóa theo đúng name của indicator để không chạm vào các chỉ báo khác
+                this.chartInstance.removeIndicator('candle_pane', id); 
+            } catch (e) {} 
         });
 
         // Loại native
@@ -502,39 +456,13 @@ window.WaveChartEngine = {
         else if (c.chartType === 3) kcChartType = 'ohlc';
         else if (c.chartType === 6 || c.chartType === 9) { kcChartType = 'area'; isLine = (c.chartType === 6); }
 
-        // =========================================================================
-        // 🚀 BẢN FIX CUỐI CÙNG: DÙNG TRICK "KÝ TỰ TRẮNG" ĐỂ LÁCH LUẬT DEEP MERGE
-        // Giải thích: KLineCharts từ chối icon='' và size=0. Ta bắt buộc phải dùng 
-        // icon=' ' (dấu cách) và size=1 (truthy) để đè bẹp SVG răng cưa gốc thành 1px tàng hình.
-        // =========================================================================
-        // =========================================================================
-        // 🚀 BẢN FIX CUỐI CÙNG: TRIỆT TIÊU HOÀN TOÀN ICON BẰNG EMPTY SVG & FAKE ID
-        // =========================================================================
-        const ghostIcon = {
-            icon: 'M0,0', // Dùng Path SVG rỗng thay vì dấu cách để không render gì cả
-            size: 0.1,    // Kích thước tiệm cận 0 (lách luật cấm size=0 của KLineCharts)
-            color: 'transparent', activeColor: 'transparent',
-            backgroundColor: 'transparent', activeBackgroundColor: 'transparent',
-            marginLeft: 0, marginRight: 0, paddingLeft: 0, paddingRight: 0
-        };
-
-        // =========================================================================
-        // Không cần trick "ký tự trắng" hay ép size nữa vì đã xử lý ở DataSource
-        // =========================================================================
-        const mainSeriesStyle = {
-            tooltip: {
-                showRule: 'always'
-                // Bỏ sạch mảng icons ở đây đi cho gọn code
-            }
-        };
-
         // Loại custom
-        if      (c.chartType === 4)  { this.chartInstance.createIndicator({ name: 'WA_COL_CHART',   styles: mainSeriesStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 5)  { this.chartInstance.createIndicator({ name: 'WA_HL_CHART',    styles: mainSeriesStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 7)  { this.chartInstance.createIndicator({ name: 'WA_LINE_MARKER', styles: mainSeriesStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 8)  { this.chartInstance.createIndicator({ name: 'WA_STEP_LINE',   styles: mainSeriesStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 10) { this.chartInstance.createIndicator({ name: 'WA_HLC_AREA',    styles: mainSeriesStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 11) { this.chartInstance.createIndicator({ name: 'WA_BASELINE',    styles: mainSeriesStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
+        if      (c.chartType === 4)  { this.chartInstance.createIndicator('WA_COL_CHART',   true, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 5)  { this.chartInstance.createIndicator('WA_HL_CHART',    true, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 7)  { this.chartInstance.createIndicator('WA_LINE_MARKER', true, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 8)  { this.chartInstance.createIndicator('WA_STEP_LINE',   true, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 10) { this.chartInstance.createIndicator('WA_HLC_AREA',    true, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 11) { this.chartInstance.createIndicator('WA_BASELINE',    true, {id: 'candle_pane'}); hideCandle = true; }
 
         const isHollow       = (c.chartType === 2);
         const finalUpColor   = hideCandle ? 'transparent' : c.upColor;
