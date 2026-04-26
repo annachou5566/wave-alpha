@@ -3485,6 +3485,15 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     { key: 'volatility', label: 'BIẾN ĐỘNG' },
   ];
 
+  const SVG_ICONS = {
+    search: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
+    close: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+    eye: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
+    eyeOff: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>',
+    gear: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>',
+    trash: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>'
+  };
+
   function buildIndicatorModalHTML() {
     const catTabsHTML = CATEGORIES.map((cat, i) => `<button class="wa-cat-tab ${i === 0 ? 'active' : ''}" data-cat="${cat.key}">${cat.label}</button>`).join('');
     
@@ -3492,14 +3501,14 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
       <div id="sc-indicator-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:9999999; background:transparent; justify-content:center; align-items:center; opacity:0; visibility:hidden; transition:all 0.15s ease;">
         <div id="wa-ind-modal-box" class="wa-imm-box">
           
-          <div class="wa-imm-header">
+          <div class="wa-imm-header" style="cursor: grab; user-select: none;">
             <div style="font-size:16px; font-weight:700; color:#EAECEF;">Chỉ Báo Kỹ Thuật</div>
-            <button id="wa-ind-modal-close" style="background:transparent; border:none; color:#848e9c; cursor:pointer; font-size:18px; line-height:1; transition:0.2s;">✕</button>
+            <button id="wa-ind-modal-close" style="background:transparent; border:none; color:#848e9c; cursor:pointer; display:flex; padding:4px; margin:-4px; transition:0.2s;" onmouseover="this.style.color='#f6465d'" onmouseout="this.style.color='#848e9c'">${SVG_ICONS.close}</button>
           </div>
 
           <div style="padding:16px 24px; background:#131722; border-bottom:1px solid rgba(255,255,255,0.05);">
             <div style="position:relative; display:flex; align-items:center;">
-              <span style="position:absolute; left:12px; color:#848e9c; font-size:14px;">🔍</span>
+              <span style="position:absolute; left:12px; color:#848e9c; display:flex;">${SVG_ICONS.search}</span>
               <input id="wa-ind-search" type="text" placeholder="Tìm kiếm chỉ báo..." autocomplete="off" style="width:100%; background:#1e222d; border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:10px 12px 10px 36px; color:#EAECEF; font-size:13px; outline:none; transition:0.2s;">
             </div>
           </div>
@@ -3562,7 +3571,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
           </div>
           ${isActive 
             ? '<span style="font-size:10px; background:rgba(0,240,255,0.1); color:#00F0FF; padding:4px 8px; border-radius:4px; border:1px solid rgba(0,240,255,0.2); flex-shrink:0;">Đang dùng</span>'
-            : '<button class="wa-imm-add-btn">+ Thêm</button>'
+            : '<button class="wa-imm-add-btn" style="display:flex; align-items:center; gap:4px;">+ Thêm</button>'
           }
         `;
 
@@ -3592,9 +3601,9 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
             <div class="wa-imm-item-desc">Đang chạy trên biểu đồ</div>
           </div>
           <div class="wa-imm-actions">
-            <button class="wa-imm-action-btn toggle-vis" title="Ẩn/Hiện" style="color: ${isVisible ? '#848e9c' : '#f6465d'};">${isVisible ? '👁' : '🚫'}</button>
-            <button class="wa-imm-action-btn open-set" title="Cài đặt">⚙</button>
-            <button class="wa-imm-action-btn remove" title="Xóa">✖</button>
+            <button class="wa-imm-action-btn toggle-vis" title="Ẩn/Hiện" style="color: ${isVisible ? '#848e9c' : '#f6465d'}; display:flex; padding:6px;">${isVisible ? SVG_ICONS.eye : SVG_ICONS.eyeOff}</button>
+            <button class="wa-imm-action-btn open-set" title="Cài đặt" style="display:flex; padding:6px;">${SVG_ICONS.gear}</button>
+            <button class="wa-imm-action-btn remove" title="Xóa" style="display:flex; padding:6px;">${SVG_ICONS.trash}</button>
           </div>
         `;
 
@@ -3729,10 +3738,53 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         searchInp.value = '';
         
         renderIndicatorList('');
+        
+        // Đặt lại tọa độ tâm hoàn hảo bằng 3D
+        const modalBox = document.getElementById('wa-ind-modal-box');
+        if (modalBox) {
+            modalBox.style.transition = 'none'; // Tạm tắt hiệu ứng để ném box vào giữa màn hình tức thì
+            modalBox.style.transform = 'translate3d(-50%, -50%, 0)'; 
+            modalBox.style.left = '50%'; 
+            modalBox.style.top = '50%';
+            setTimeout(() => { modalBox.style.transition = ''; }, 50);
+        }
+
         modal.style.display = 'flex';
         void modal.offsetWidth; // Ép reflow để CSS kịp áp dụng
         modal.classList.add('show');
       };
+
+      // --- BỔ SUNG DRAG LOGIC (KÉO THẢ TRÊN MÁY TÍNH) ---
+      const modalBox = document.getElementById('wa-ind-modal-box');
+      const header = modalBox.querySelector('.wa-imm-header');
+      let isDragging = false, startX, startY, initLeft, initTop;
+
+      header.addEventListener('mousedown', (e) => {
+        if (window.innerWidth <= 768) return; // Khóa kéo thả khi ở trên điện thoại
+        isDragging = true; 
+        startX = e.clientX; startY = e.clientY;
+        const rect = modalBox.getBoundingClientRect();
+        initLeft = rect.left; initTop = rect.top;
+        modalBox.style.transform = 'translate3d(0, 0, 0)';
+        modalBox.style.left = initLeft + 'px'; 
+        modalBox.style.top = initTop + 'px';
+        modalBox.style.transition = 'none'; // Tắt hiệu ứng trượt để chuột không bị trễ nhịp
+        document.body.style.userSelect = 'none'; 
+      });
+      
+      window.addEventListener('mousemove', (e) => { 
+        if (!isDragging) return; 
+        modalBox.style.left = (initLeft + e.clientX - startX) + 'px'; 
+        modalBox.style.top = (initTop + e.clientY - startY) + 'px'; 
+      });
+      
+      window.addEventListener('mouseup', () => { 
+        if (isDragging) {
+          isDragging = false; 
+          modalBox.style.transition = ''; // Trả lại hiệu ứng mượt
+          document.body.style.userSelect = ''; 
+        }
+      });
     }
 
     // ── Topbar Buttons ──
