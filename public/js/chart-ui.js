@@ -1850,42 +1850,42 @@ window.closeProChart = function() {
     `;
     document.body.insertAdjacentHTML('beforeend', modalHTML + confirmHTML);
 
-    // 3. TẠO DATA CHO WAVEDROPDOWN
+    // 3. TẠO DATA CHO WAVEDROPDOWN (Đã sửa lại đúng chuẩn { val, text } của Core UI)
     const ddConfigs = [
         { 
             id: 'chartType', 
             wrapId: 'dd-wrapper-chartType', 
             inputId: 'csm-chart-type',
             options: [
-                { value: '1', label: 'Nến Nhật' }, { value: '2', label: 'Nến Rỗng' }, { value: '3', label: 'Thanh (Bars)' },
-                { value: '4', label: 'Cột (Columns)' }, { value: '5', label: 'Đỉnh-Đáy (H-L)' }, { value: '6', label: 'Đường (Line)' },
-                { value: '7', label: 'Đường + Điểm' }, { value: '8', label: 'Bậc Thang' }, { value: '9', label: 'Vùng (Area)' },
-                { value: '10', label: 'Vùng HLC (Pro)' }, { value: '11', label: 'Đường Cơ Sở (Pro)' }
+                { val: '1', text: 'Nến Nhật' }, { val: '2', text: 'Nến Rỗng' }, { val: '3', text: 'Thanh (Bars)' },
+                { val: '4', text: 'Cột (Columns)' }, { val: '5', text: 'Đỉnh-Đáy (H-L)' }, { val: '6', text: 'Đường (Line)' },
+                { val: '7', text: 'Đường + Điểm' }, { val: '8', text: 'Bậc Thang' }, { val: '9', text: 'Vùng (Area)' },
+                { val: '10', text: 'Vùng HLC (Pro)' }, { val: '11', text: 'Đường Cơ Sở (Pro)' }
             ]
         },
         {
             id: 'baselinePriceSource',
             wrapId: 'dd-wrapper-baselineSource',
             inputId: 'csm-baseline-source',
-            options: [{ value: 'close', label: 'Đóng cửa' }, { value: 'hl2', label: 'TB (H+L)/2' }, { value: 'ohlc4', label: 'TB Toàn phần' }]
+            options: [{ val: 'close', text: 'Đóng cửa' }, { val: 'hl2', text: 'TB (H+L)/2' }, { val: 'ohlc4', text: 'TB Toàn phần' }]
         },
         {
             id: 'yAxisMode',
             wrapId: 'dd-wrapper-yAxisMode',
             inputId: 'csm-yaxis-mode',
-            options: [{ value: 'normal', label: 'Bình thường' }, { value: 'percentage', label: 'Phần trăm (%)' }, { value: 'log', label: 'Logarit' }]
+            options: [{ val: 'normal', text: 'Bình thường' }, { val: 'percentage', text: 'Phần trăm (%)' }, { val: 'log', text: 'Logarit' }]
         },
         {
             id: 'bgType',
             wrapId: 'dd-wrapper-bgType',
             inputId: 'csm-bg-type',
-            options: [{ value: 'solid', label: 'Đơn sắc' }, { value: 'gradient', label: 'Gradient' }]
+            options: [{ val: 'solid', text: 'Đơn sắc' }, { val: 'gradient', text: 'Gradient' }]
         },
         {
             id: 'crosshairMode',
             wrapId: 'dd-wrapper-crosshairMode',
             inputId: 'csm-crosshair-mode',
-            options: [{ value: 'normal', label: 'Bình thường' }, { value: 'hidden', label: 'Ẩn' }]
+            options: [{ val: 'normal', text: 'Bình thường' }, { val: 'hidden', text: 'Ẩn' }]
         }
     ];
 
