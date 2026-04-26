@@ -1550,7 +1550,7 @@ window.closeProChart = function() {
         #wa-chart-settings-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999999; pointer-events: none; opacity: 0; transition: opacity 0.15s ease; }
         #wa-chart-settings-modal.show { display: block; opacity: 1; }
         .wa-csm-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e222d; width: 680px; height: 500px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; pointer-events: auto; }
-        .wa-csm-sidebar { width: 200px; background: #131722; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 20px 0; }
+        .wa-csm-sidebar { width: 200px; background: #131722; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 20px 0 0 0; }
         .wa-csm-tab { padding: 12px 24px; color: #848e9c; font-size: 13px; font-weight: 600; cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s; display: flex; align-items: center; gap: 10px; }
         .wa-csm-tab:hover { background: rgba(255,255,255,0.03); color: #EAECEF; }
         .wa-csm-tab.active { background: rgba(38,166,154,0.1); color: #26a69a; border-left-color: #26a69a; }
@@ -1586,9 +1586,9 @@ window.closeProChart = function() {
         .wcp-opacity-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #848e9c; }
         .wcp-opacity-slider { flex: 1; accent-color: #26a69a; }
 
-        /* BỔ SUNG: CSS Custom Confirm Modal */
-        #wa-custom-confirm-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(11, 14, 17, 0.85); z-index: 99999999; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
-        .wa-confirm-box { background: linear-gradient(180deg, #1c2127 0%, #161a1e 100%); border: 1px solid #2b3139; border-radius: 16px; width: 340px; padding: 24px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05); animation: waScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1); font-family: 'Be Vietnam Pro', 'Inter', sans-serif; }
+        /* CSS Custom Confirm Modal (BỎ NỀN ĐEN MỜ) */
+        #wa-custom-confirm-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: transparent; z-index: 99999999; align-items: center; justify-content: center; }
+        .wa-confirm-box { background: linear-gradient(180deg, #1c2127 0%, #161a1e 100%); border: 1px solid #2b3139; border-radius: 16px; width: 340px; padding: 24px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05); animation: waScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1); font-family: 'Be Vietnam Pro', 'Inter', sans-serif; }
         @keyframes waScaleUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .wa-confirm-icon { width: 56px; height: 56px; background: rgba(246, 70, 93, 0.1); border: 1px solid rgba(246, 70, 93, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; box-shadow: 0 0 20px rgba(246, 70, 93, 0.2); }
         .wa-confirm-icon i { color: #F6465D; font-size: 24px; }
@@ -1606,10 +1606,17 @@ window.closeProChart = function() {
         <div id="wa-chart-settings-modal">
             <div class="wa-csm-box" id="wa-csm-box">
                 <div class="wa-csm-sidebar">
-                    <div class="wa-csm-tab active" data-tab="csm-symbol">Biểu Tượng</div>
-                    <div class="wa-csm-tab" data-tab="csm-status">Trạng Thái</div>
-                    <div class="wa-csm-tab" data-tab="csm-appearance">Giao Diện</div>
-                    <div class="wa-csm-tab" data-tab="csm-pro">Nâng Cao</div>
+                    <div>
+                        <div class="wa-csm-tab active" data-tab="csm-symbol">Biểu Tượng</div>
+                        <div class="wa-csm-tab" data-tab="csm-status">Trạng Thái</div>
+                        <div class="wa-csm-tab" data-tab="csm-appearance">Giao Diện</div>
+                        <div class="wa-csm-tab" data-tab="csm-pro">Nâng Cao</div>
+                    </div>
+                    
+                    <div style="flex: 1;"></div>
+                    <div style="padding: 20px 16px; border-top: 1px solid rgba(255,255,255,0.05);">
+                        <button id="wa-btn-reset-cfg" style="width: 100%; background: rgba(246, 70, 93, 0.05); color: #F6465D; border: 1px dashed rgba(246, 70, 93, 0.3); padding: 10px 0; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; cursor: pointer; transition: 0.2s;">KHÔI PHỤC MẶC ĐỊNH</button>
+                    </div>
                 </div>
                 <div class="wa-csm-content">
                     <div class="wa-csm-header">
@@ -1707,12 +1714,6 @@ window.closeProChart = function() {
                         <div id="csm-pro" class="wa-csm-panel">
                             <div style="background: rgba(240,185,11,0.1); border: 1px dashed rgba(240,185,11,0.3); padding: 10px; border-radius: 6px; font-size: 11px; color: #F0B90B; margin-bottom: 10px;">🚀 Dự phòng cho Phase 4.</div>
                             <div class="wa-csm-row"><div class="wa-csm-label">PAC Coloring</div><label class="wa-switch"><input type="checkbox" data-bind="pacColoring"><span class="wa-slider"></span></label></div>
-                            
-                            <div style="display:flex; justify-content:center; align-items:center; margin-top:20px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.05);">
-                                <button id="wa-btn-reset-cfg" style="width: 100%; background: rgba(246, 70, 93, 0.1); color: #F6465D; border: 1px dashed rgba(246, 70, 93, 0.4); padding: 10px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s;">
-                                    🔄 KHÔI PHỤC VỀ MẶC ĐỊNH
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -1756,12 +1757,10 @@ window.closeProChart = function() {
         
         const cleanup = () => { 
             overlay.style.display = 'none'; 
-            // Gỡ bỏ event listeners bằng cách clone và replace node
             btnOk.replaceWith(btnOk.cloneNode(true)); 
             btnCancel.replaceWith(btnCancel.cloneNode(true)); 
         };
         
-        // Cần lấy lại node mới sau khi clone ở các lần trước đó (nếu có)
         const currentBtnCancel = document.getElementById('wa-btn-cancel-confirm');
         const currentBtnOk = document.getElementById('wa-btn-ok-confirm');
 
@@ -1952,11 +1951,17 @@ window.closeProChart = function() {
         }
     }, 200);
 
-    // ✅ ĐÃ FIX: Gọi Popup Custom thay cho hệ thống mặc định
+    // ✅ NÚT RESET: Bỏ Icon, chuyển ra Cột Trái, Hiện Modal Custom không có nền đen
     const btnReset = document.getElementById('wa-btn-reset-cfg');
     if (btnReset) {
-        btnReset.onmouseenter = () => btnReset.style.background = 'rgba(246, 70, 93, 0.2)';
-        btnReset.onmouseleave = () => btnReset.style.background = 'rgba(246, 70, 93, 0.1)';
+        btnReset.onmouseenter = () => {
+            btnReset.style.background = 'rgba(246, 70, 93, 0.15)';
+            btnReset.style.borderColor = 'rgba(246, 70, 93, 0.6)';
+        };
+        btnReset.onmouseleave = () => {
+            btnReset.style.background = 'rgba(246, 70, 93, 0.05)';
+            btnReset.style.borderColor = 'rgba(246, 70, 93, 0.3)';
+        };
         btnReset.onclick = () => {
             window.showCustomConfirm("Bạn có chắc chắn muốn khôi phục toàn bộ cài đặt biểu đồ về mặc định? Hành động này không thể hoàn tác.", () => {
                 localStorage.removeItem('wave_alpha_chart_config');
