@@ -3355,7 +3355,7 @@ if (!document.getElementById('wa-fb-rng-style')) {
             }
             btn.dataset.cur = newColor;
 
-            // 🚀 BẢN FIX: Tách Màu (Hex) và Độ Mờ (Alpha) để không bị lỗi Đen Màn Hình
+            // 1. Tách Màu (Hex) và Độ Mờ (Alpha)
             var safeHex = newColor;
             var alpha = 1;
             if (newColor.startsWith('rgba')) {
@@ -3375,30 +3375,40 @@ if (!document.getElementById('wa-fb-rng-style')) {
                 alpha = 0;
             }
 
-            // 1. Chỉ truyền mã HEX 6 số cho hàm lõi (Tránh lỗi NaN gây đen hình)
+            // 🚀 BẢN FIX: LƯU THẲNG OPACITY VÀO BỘ NHỚ (KHÔNG CẦN BẢNG CÀI ĐẶT)
+            if (typeof currentSelectedOverlay !== 'undefined' && currentSelectedOverlay) {
+                if (!currentSelectedOverlay.extendData) currentSelectedOverlay.extendData = {};
+                if (isBg) {
+                    currentSelectedOverlay.extendData.fillOpacity = alpha;
+                } else {
+                    currentSelectedOverlay.extendData.lineOpacity = alpha;
+                    currentSelectedOverlay.extendData.borderOpacity = alpha;
+                }
+            }
+
+            // Truyền mã Hex để đổi màu
             onChange(safeHex);
 
-            // 2. Tự động "ép" thanh trượt Opacity trong Bảng Cài Đặt chạy theo
+            // 🚀 Bồi thêm lệnh ép KLineChart vẽ lại hình với Opacity mới ngay lập tức
+            var chartEngine = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : (window.tvChart || null);
+            if (chartEngine && typeof currentSelectedOverlay !== 'undefined' && currentSelectedOverlay) {
+                chartEngine.overrideOverlay(currentSelectedOverlay);
+            }
+
+            // (Tùy chọn) Chỉ khi Bảng Cài đặt đang mở, mới vuốt thanh trượt để đồng bộ UI
             var pPanel = document.getElementById('wa-props-panel');
             if (pPanel) {
                 var sliders = pPanel.querySelectorAll('input[type="range"]');
                 var targetSlider = null;
-                
                 if (isBg) {
-                    // Nút nền thường liên kết với thanh trượt thứ 2 (Fill Opacity)
                     targetSlider = sliders.length > 1 ? sliders[1] : sliders[0];
                 } else {
-                    // Nút viền/chữ liên kết với thanh trượt thứ 1 (Line Opacity)
                     targetSlider = sliders[0];
                 }
-                
                 if (targetSlider) {
                     var max = parseFloat(targetSlider.max) || 1;
                     targetSlider.value = max > 10 ? Math.round(alpha * max) : alpha;
-                    
-                    // Kích hoạt Event để UI cập nhật số liệu và KLineChart lưu cấu hình
                     targetSlider.dispatchEvent(new Event('input')); 
-                    targetSlider.dispatchEvent(new Event('change')); 
                 }
             }
           });
