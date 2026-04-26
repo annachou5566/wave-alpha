@@ -3561,7 +3561,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
             <div class="wa-imm-item-desc">${ind.description}</div>
           </div>
           ${isActive 
-            ? '<span style="font-size:10px; background:rgba(0,240,255,0.1); color:#00F0FF; padding:4px 8px; border-radius:4px; border:1px solid rgba(0,240,255,0.2);">Đang dùng</span>'
+            ? '<span style="font-size:10px; background:rgba(0,240,255,0.1); color:#00F0FF; padding:4px 8px; border-radius:4px; border:1px solid rgba(0,240,255,0.2); flex-shrink:0;">Đang dùng</span>'
             : '<button class="wa-imm-add-btn">+ Thêm</button>'
           }
         `;
@@ -3745,27 +3745,61 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
               const style = document.createElement('style');
               style.id = 'wa-topbar-minimal-style';
               style.textContent = `
-                  .wa-topbar-container {
-                      display: flex !important; flex-wrap: nowrap !important; overflow-x: auto !important;
-                      scrollbar-width: none !important; -ms-overflow-style: none !important;
-                      align-items: center; gap: 2px; padding-right: 10px;
-                  }
-                  .wa-topbar-container::-webkit-scrollbar { display: none !important; }
-                  
-                  /* 🚀 SẮP XẾP LAYOUT CHUẨN XÁC BẰNG FLEX ORDER MÀ KHÔNG CẦN CHẠY JS LOOP */
-                  .sc-time-btn { padding: 6px 10px !important; margin: 0 !important; min-width: unset !important; flex-shrink: 0; order: 1 !important; }
-                  .wa-topbar-container > div { order: 2; } /* Lực hút: Kéo các nút Nến & Cài đặt từ file UI lọt vào chính giữa */
-                  #wa-toolbar-right { order: 3 !important; } /* Lực đẩy: Ép nhóm Indicator & Fullscreen sang bên phải cùng */
-                  
-                  /* Style Nút Toolbar & Tooltip chuyên nghiệp */
-                  .wa-topbtn {
-                      background: transparent; color: #848e9c; border: none; cursor: pointer;
-                      width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
-                      border-radius: 6px; transition: 0.2s; padding: 0; flex-shrink: 0; position: relative;
-                  }
-                  .wa-topbtn:hover { background: rgba(255,255,255,0.08); color: #EAECEF; }
-                  .wa-topbtn.active { background: rgba(0,240,255,0.1); color: #00F0FF; }
-              `;
+      /* FIX LỖI 3: Bỏ nền mờ đen (Vẫn cho phép click ra ngoài để đóng) */
+      #sc-indicator-modal.show { background: transparent !important; opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; }
+      
+      .wa-imm-box { position: absolute; top: 50%; left: 50%; transform: translate3d(-50%, -50%, 0); background: #1e222d; width: 560px; height: 600px; max-height: 85vh; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; flex-direction: column; overflow: hidden; font-family: 'Inter', sans-serif; pointer-events: auto; }
+      
+      .wa-imm-header { padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
+      #wa-ind-modal-close:hover { color: #f6465d !important; }
+      
+      #wa-ind-search:focus { border-color: #26a69a !important; }
+
+      .wa-imm-main-tab { padding: 12px 0; font-size: 12px; font-weight: 700; color: #848e9c; cursor: pointer; border-bottom: 2px solid transparent; transition: 0.2s; }
+      .wa-imm-main-tab.active { color: #26a69a; border-bottom-color: #26a69a; }
+
+      .wa-cat-tab { background: transparent; border: 1px solid transparent; border-radius: 6px; color: #848e9c; cursor: pointer; font-size: 11px; font-weight: 600; padding: 6px 12px; white-space: nowrap; transition: 0.2s; flex-shrink: 0; }
+      .wa-cat-tab:hover { color: #EAECEF; background: rgba(255,255,255,0.06); }
+      .wa-cat-tab.active { color: #00F0FF; border-color: rgba(0,240,255,0.3); background: rgba(0,240,255,0.05); }
+      
+      #wa-ind-cat-tabs::-webkit-scrollbar { display: none; }
+
+      /* FIX LỖI 2: Cho phép cuộn danh sách (overflow-y: auto) */
+      .wa-imm-content { flex: 1; overflow-y: auto; }
+      .wa-imm-content::-webkit-scrollbar { width: 4px; }
+      .wa-imm-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+      .wa-imm-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; transition: 0.2s; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.02); }
+      .wa-imm-item:last-child { border-bottom: none; }
+      .wa-imm-item:hover { background: rgba(255,255,255,0.03); }
+      
+      /* FIX LỖI 1: Cắt bớt chữ (ellipsis) nếu tên chỉ báo quá dài, không cho đẩy nút xuống hàng */
+      .wa-imm-item-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; padding-right: 12px; }
+      .wa-imm-item-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .wa-imm-item-desc { font-size: 11px; color: #527c82; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+      .wa-imm-add-btn { background: transparent; border: none; color: #26a69a; font-size: 12px; font-weight: 700; cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: 0.2s; flex-shrink: 0; }
+      .wa-imm-item:hover .wa-imm-add-btn { background: rgba(38,166,154,0.1); }
+
+      .wa-imm-actions { display: flex; gap: 8px; flex-shrink: 0; }
+      .wa-imm-action-btn { background: transparent; border: none; color: #848e9c; cursor: pointer; padding: 6px; font-size: 14px; transition: 0.2s; border-radius: 4px; }
+      .wa-imm-action-btn:hover { background: rgba(255,255,255,0.08); color: #EAECEF; }
+      .wa-imm-action-btn.remove:hover { color: #f6465d !important; background: rgba(246,70,93,0.1) !important; }
+
+      /* MOBILE BOTTOM SHEET */
+      @media (max-width: 768px) {
+        .wa-imm-box {
+          top: auto !important; bottom: 0 !important; left: 50% !important;
+          transform: translate3d(-50%, 100%, 0) !important;
+          width: 92vw !important; height: 85vh !important;
+          border-radius: 24px 24px 0 0 !important;
+          transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+        }
+        #sc-indicator-modal.show .wa-imm-box { transform: translate3d(-50%, 0, 0) !important; }
+        .wa-imm-header { padding-top: 24px; position: relative; border-bottom: none; }
+        .wa-imm-header::before { content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 40px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 4px; }
+      }
+    `;
               document.head.appendChild(style);
           }
 
