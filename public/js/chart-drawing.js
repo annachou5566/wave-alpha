@@ -4346,17 +4346,23 @@ function bindCoreEventsOnce() {
   });
 
   document.addEventListener('mousedown', function(e) {
-    var grip = e.target.closest('.wa-drag-grip');
-    if (!grip) return;
-    _isDragging = true;
-    _startX = e.clientX;
-    _startY = e.clientY;
+    if (isDrawingSessionActive) return;
+    var bar = document.getElementById('wa-float-bar');
+    if (bar && bar.contains(e.target)) return;
+    var panel = document.getElementById('wa-props-panel');
+    if (panel && panel.contains(e.target)) return;
     var tb = document.querySelector('.wa-toolbar');
-    _initLeft = tb ? tb.offsetLeft : 0;
-    _initTop  = tb ? tb.offsetTop  : 0;
-    _cachedToolbar = tb;
-    document.body.style.userSelect = 'none';
-  });
+    if (tb && tb.contains(e.target)) return;
+
+    // ✅ FIX TẬN GỐC: Cấp thẻ miễn trừ cho Bảng màu HSV (Để không bị đóng khi click)
+    if (e.target.closest('#wa-ucp') || e.target.id === 'wa-ucp-overlay') return;
+
+    var _container = document.getElementById('sc-chart-container');
+    if (_container && _container.classList.contains('wa-drawing-mode')) return;
+    
+    if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+    if (typeof hidePanel === 'function') hidePanel();
+  }, { passive: true });
 
   document.addEventListener('mousedown', function(e) {
     if (isDrawingSessionActive) return;
