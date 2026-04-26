@@ -256,7 +256,18 @@ window.WaveChartEngine = {
             // 5. VÙNG HLC AREA (ID 10) — Tách nền trên & dưới đường Close
             // ─────────────────────────────────────────────────────────────
             window.klinecharts.registerIndicator({
-                name: 'WA_HLC_AREA', shortName: ' ', series: 'price', calc: (d) => d,
+                name: 'WA_HLC_AREA', 
+                shortName: 'HLC AREA', // Tên sẽ hiện chình ình ở góc trái
+                series: 'price', 
+                calc: (d) => d,
+                
+                // Khai báo để hiện H L C khi di chuột (không dùng createTooltipDataSource nữa để tránh lỗi mất tên)
+                figures: [
+                    { key: 'high', title: 'H: ', type: 'text' },
+                    { key: 'low', title: 'L: ', type: 'text' },
+                    { key: 'close', title: 'C: ', type: 'text' }
+                ],
+                
                 draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
@@ -445,10 +456,7 @@ window.WaveChartEngine = {
         // Thay vì xóa theo pane ('candle_pane') khiến các chỉ báo EMA/MA bị văng theo,
         // ta sẽ xóa chính xác bằng tên Indicator thông qua vòng lặp.
         CUSTOM_CHART_IDS.forEach(id => { 
-            try { 
-                // Xóa theo đúng name của indicator để không chạm vào các chỉ báo khác
-                this.chartInstance.removeIndicator('candle_pane', id); 
-            } catch (e) {} 
+            try { this.chartInstance.removeIndicator('candle_pane', id); } catch (e) {} 
         });
 
         // Loại native
@@ -456,14 +464,25 @@ window.WaveChartEngine = {
         else if (c.chartType === 3) kcChartType = 'ohlc';
         else if (c.chartType === 6 || c.chartType === 9) { kcChartType = 'area'; isLine = (c.chartType === 6); }
 
-        // Loại custom - CẤU HÌNH STYLE ẨN NÚT CÀI ĐẶT & NÚT XÓA (CHỈ GIỮ LẠI CON MẮT)
+        // =========================================================================
+        // 🚀 BÍ QUYẾT LỌC ICON: Lấy icon gốc của thư viện và chỉ giữ lại Con Mắt
+        // =========================================================================
+        let eyeIconsOnly = [];
+        try {
+            const currentStyles = this.chartInstance.getStyles();
+            const defaultIcons = currentStyles.indicator.tooltip.icons || [];
+            // Lọc: Chỉ lấy object có id là 'visible' (mắt mở) và 'invisible' (mắt nhắm)
+            eyeIconsOnly = defaultIcons.filter(icon => icon.id === 'visible' || icon.id === 'invisible');
+        } catch(e) {}
+
         const mainSeriesStyle = {
             tooltip: {
                 showRule: 'always', 
-                icons: ['visible'] // Chỉ kích hoạt icon hiển thị/ẩn
+                icons: eyeIconsOnly // Trả mảng object chuẩn vào, KLineCharts sẽ hiểu!
             }
         };
 
+        // Loại custom
         if      (c.chartType === 4)  { this.chartInstance.createIndicator({ name: 'WA_COL_CHART',   styles: mainSeriesStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
         else if (c.chartType === 5)  { this.chartInstance.createIndicator({ name: 'WA_HL_CHART',    styles: mainSeriesStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
         else if (c.chartType === 7)  { this.chartInstance.createIndicator({ name: 'WA_LINE_MARKER', styles: mainSeriesStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
