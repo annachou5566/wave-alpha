@@ -261,7 +261,25 @@ window.WaveChartEngine = {
                 series: 'price', 
                 calc: (d) => d,
                 
-                // MẤU CHỐT BẢO VỆ CHỐNG CRASH: Trả về rỗng hoàn toàn, không phụ thuộc vào thư viện
+                // 🚀 BÍ QUYẾT TRIỆT TIÊU 100% KHOẢNG TRỐNG (GAP TRỤC Y)
+                // Ép margin, padding, size về 0 và xóa mảng icons của riêng chỉ báo này
+                styles: { 
+                    tooltip: { 
+                        showRule: 'none', 
+                        showName: false, 
+                        showParams: false,
+                        text: { 
+                            size: 0, 
+                            marginTop: 0, 
+                            marginBottom: 0, 
+                            paddingTop: 0, 
+                            paddingBottom: 0 
+                        },
+                        icons: [] // <== ĐÂY LÀ CHÌA KHÓA: Giết chết bộ icon (mắt, bánh răng) chiếm diện tích
+                    } 
+                },
+
+                // Vẫn giữ data rỗng để an toàn tuyệt đối khi chuyển Timeframe
                 createTooltipDataSource: function() { 
                     return { name: '', calcParamsText: '', values: [] }; 
                 },
