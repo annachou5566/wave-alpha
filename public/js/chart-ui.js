@@ -1648,15 +1648,7 @@ window.__wa_chart_settings_modal_initialized = true;
         input:checked + .wa-slider { background-color: rgba(38,166,154,0.3); }
         input:checked + .wa-slider:before { transform: translateX(16px); background-color: #26a69a; }
         .wa-csm-divider { font-size: 11px; font-weight: 800; color: #527c82; text-transform: uppercase; margin-top: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; }
-        #wa-color-picker { display: none; position: fixed; background: #1e222d; border: 1px solid #363c4e; border-radius: 8px; padding: 12px; z-index: 99999999; box-shadow: 0 10px 30px rgba(0,0,0,0.8); width: 220px; }
-        .wcp-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-bottom: 12px; }
-        .wcp-cell { width: 18px; height: 18px; border-radius: 3px; cursor: pointer; border: 1px solid transparent; transition: 0.1s; }
-        .wcp-cell:hover { border-color: #fff; transform: scale(1.1); }
-        .wcp-hex-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-        .wcp-hex-input { flex: 1; background: #131722; border: 1px solid #363c4e; color: #EAECEF; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 12px; outline: none; }
-        .wcp-opacity-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #848e9c; }
-        .wcp-opacity-slider { flex: 1; accent-color: #26a69a; }
-
+        
         /* CSS Custom Confirm Modal (BỎ NỀN ĐEN MỜ) */
         #wa-custom-confirm-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: transparent; z-index: 99999999; align-items: center; justify-content: center; }
         .wa-confirm-box { background: linear-gradient(180deg, #1c2127 0%, #161a1e 100%); border: 1px solid #2b3139; border-radius: 16px; width: 340px; padding: 24px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05); animation: waScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1); font-family: 'Be Vietnam Pro', 'Inter', sans-serif; }
@@ -1847,13 +1839,7 @@ window.__wa_chart_settings_modal_initialized = true;
         </div>
     `;
     
-    const pickerHTML = `
-        <div id="wa-color-picker">
-            <div class="wcp-grid" id="wcp-palette"></div>
-            <div class="wcp-hex-row"><span style="font-size:11px; color:#848e9c; font-weight:bold;">HEX</span><input type="text" class="wcp-hex-input" id="wcp-hex" maxlength="9"></div>
-            <div class="wcp-opacity-row"><span>OPACITY</span><input type="range" class="wcp-opacity-slider" id="wcp-opacity" min="0" max="1" step="0.05" value="1"></div>
-        </div>
-    `;
+    const pickerHTML = ``;
 
     // BỔ SUNG: HTML Cho Bảng Xác Nhận Custom
     const confirmHTML = `
@@ -2019,46 +2005,23 @@ document.addEventListener('click', () => {
         };
     });
 
-    const tvColors = ['#ffffff','#d1d4dc','#b2b5be','#848e9c','#5d606b','#363a45','#1e222d','#000000','#f23645','#ff9800','#f0b90b','#089981','#00bcd4','#2962ff','#673ab7','#9c27b0','#f7525f','#ffb74d','#ffe066','#2af592','#4dd0e1','#448aff','#9575cd','#ba68c8','#f98080','#ffcc80','#fff59d','#66bb6a','#80deea','#82b1ff','#b39ddb','#ce93d8'];
-    const palette = document.getElementById('wcp-palette'), hexInp = document.getElementById('wcp-hex'), opSlider = document.getElementById('wcp-opacity');
-    let activeSwatchBtn = null, activeBindKey = null;
-
-    tvColors.forEach(col => {
-        const cell = document.createElement('div'); cell.className = 'wcp-cell'; cell.style.background = col;
-        cell.onclick = () => applyColorToSwatch(col, opSlider.value);
-        palette.appendChild(cell);
-    });
-
-    function applyColorToSwatch(hexCode, opacity) {
-        if (!activeSwatchBtn) return;
-        
-        // Làm sạch chuỗi hex: nếu user gõ dư ký tự, chỉ lấy đúng chuẩn #RRGGBB
-        if (hexCode.startsWith('#') && hexCode.length >= 7) {
-            hexCode = hexCode.substring(0, 7);
-        }
-
-        let finalColor = hexCode;
-        if (opacity < 1 && hexCode.startsWith('#') && hexCode.length === 7) {
-            let r = parseInt(hexCode.slice(1,3), 16), g = parseInt(hexCode.slice(3,5), 16), b = parseInt(hexCode.slice(5,7), 16);
-            if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
-                finalColor = `rgba(${r},${g},${b},${opacity})`;
-            }
-        }
-        activeSwatchBtn.style.background = finalColor; 
-        hexInp.value = hexCode; // Giữ ô input luôn là mã Hex gọn gàng
-        if (window.WaveChartEngine) window.WaveChartEngine.update({ [activeBindKey]: finalColor });
-    }
-
     modal.querySelectorAll('.wa-color-swatch').forEach(swatch => {
         swatch.onclick = (e) => {
             e.stopPropagation();
             const key = swatch.dataset.colorBind;
-            const curColor = swatch.style.background || '#ffffff';
             
-            // ✅ Gọi Bảng màu HSV Toàn cục
+            // Đảm bảo lấy đúng màu nền hiện tại, nếu là chuỗi rỗng thì fallback màu trắng
+            let curColor = swatch.style.backgroundColor || swatch.style.background || '#ffffff';
+            
+            // Fix trường hợp trình duyệt tự parse rgba thành rgb khi opacity = 1
+            if (curColor.startsWith('rgb') && !curColor.includes('rgba')) {
+                 curColor = curColor.replace('rgb', 'rgba').replace(')', ', 1)');
+            }
+
+            // Gọi Bảng màu HSV Toàn cục
             if (window.WaveColorPicker) {
                 window.WaveColorPicker.open(swatch, curColor, (newColor) => {
-                    swatch.style.background = newColor;
+                    swatch.style.backgroundColor = newColor;
                     if (window.WaveChartEngine) {
                         window.WaveChartEngine.update({ [key]: newColor });
                     }
@@ -2066,19 +2029,6 @@ document.addEventListener('click', () => {
             }
         };
     });
-
-    hexInp.oninput = (e) => applyColorToSwatch(e.target.value, opSlider.value);
-    opSlider.oninput = (e) => applyColorToSwatch(hexInp.value, e.target.value);
-    
-    document.addEventListener('click', (e) => { if (!colorPicker.contains(e.target) && !e.target.classList.contains('wa-color-swatch')) colorPicker.style.display = 'none'; });
-    
-    // Tối ưu hàm rgb2hex an toàn hơn (thêm check fallback)
-    function rgb2hex(rgb) { 
-        if (rgb.search("rgb") === -1) return rgb; 
-        rgb = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/); 
-        if (!rgb) return '#ffffff'; 
-        return "#" + ("0" + parseInt(rgb[1]).toString(16)).slice(-2) + ("0" + parseInt(rgb[2]).toString(16)).slice(-2) + ("0" + parseInt(rgb[3]).toString(16)).slice(-2); 
-    }
 
     function updateDynamicUI(config) {
         const t = parseInt(config.chartType); 
@@ -2152,7 +2102,7 @@ document.addEventListener('click', () => {
 
     // Hàm đóng mượt mà
     window.closeChartSettings = function() {
-        colorPicker.style.display = 'none'; // Đóng bảng màu nếu đang lơ lửng
+        if (window.WaveColorPicker) window.WaveColorPicker.close(); // Đóng bảng màu HSV nếu đang mở
         modal.classList.remove('show');
         setTimeout(() => {
             modalBox.classList.remove('is-dragging');
@@ -2171,7 +2121,7 @@ document.addEventListener('click', () => {
 
     // BỔ SUNG UX: Đóng Color Picker khi lăn chuột để tránh picker lơ lửng
     modal.querySelector('.wa-csm-panels').addEventListener('scroll', () => {
-        colorPicker.style.display = 'none';
+        if (window.WaveColorPicker) window.WaveColorPicker.close();
     });
     modal.querySelectorAll('[data-bind]').forEach(el => {
         const eventType = el.type === 'range' ? 'input' : 'change';
