@@ -1540,7 +1540,7 @@ window.closeProChart = function() {
 })();
 
 // =========================================================================
-// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (ĐÃ FIX OPACITY, CUSTOM SELECT & CONFIRM)
+// ⚙️ BƯỚC 3: CHART SETTINGS MODAL (ĐÃ FIX LỖI LỆCH TRÁI + RESET THÔNG MINH)
 // =========================================================================
 (function initChartSettingsModal() {
     'use strict';
@@ -1586,7 +1586,7 @@ window.closeProChart = function() {
         .wcp-opacity-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #848e9c; }
         .wcp-opacity-slider { flex: 1; accent-color: #26a69a; }
 
-        /* Custom Select UI */
+        /* BỔ SUNG: CSS Custom Select & Confirm Modal */
         .wa-custom-select-wrapper { position: relative; width: 140px; user-select: none; }
         .wa-custom-select-trigger { background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .wa-custom-select-trigger:hover { border-color: rgba(0,240,255,0.3); }
@@ -1596,7 +1596,6 @@ window.closeProChart = function() {
         .wa-custom-select-option:hover { background: rgba(0,240,255,0.1); color: #00F0FF; }
         .wa-custom-select-option.selected { background: rgba(38,166,154,0.2); color: #26a69a; font-weight: bold; }
 
-        /* Custom Confirm Modal */
         #wa-custom-confirm-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); z-index: 99999999; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
         .wa-confirm-box { background: #1e222d; border: 1px solid #363c4e; border-radius: 8px; width: 320px; padding: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.8); animation: popIn 0.2s ease-out; }
         @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -1736,6 +1735,7 @@ window.closeProChart = function() {
         </div>
     `;
 
+    // BỔ SUNG: HTML Confirm Modal
     const confirmHTML = `
         <div id="wa-custom-confirm-overlay">
             <div class="wa-confirm-box">
@@ -1749,9 +1749,10 @@ window.closeProChart = function() {
         </div>
     `;
     
+    // BỔ SUNG: Chèn Confirm Modal vào body
     document.body.insertAdjacentHTML('beforeend', modalHTML + pickerHTML + confirmHTML);
 
-    // Global Confirm Handler
+    // BỔ SUNG: Logic hoạt động của Confirm Modal
     window.showCustomConfirm = function(msg, onConfirm) {
         const overlay = document.getElementById('wa-custom-confirm-overlay');
         document.getElementById('wa-confirm-msg').innerText = msg;
@@ -1764,7 +1765,7 @@ window.closeProChart = function() {
         btnOk.addEventListener('click', () => { cleanup(); if (onConfirm) onConfirm(); }, {once: true});
     };
 
-    // Custom Select Initialization
+    // BỔ SUNG: Logic hô biến thẻ <select> thành Custom UI
     function applyCustomSelects() {
         document.querySelectorAll('.wa-csm-select').forEach(select => {
             if (select.parentElement.classList.contains('wa-custom-select-wrapper')) return;
@@ -1810,7 +1811,7 @@ window.closeProChart = function() {
         document.addEventListener('click', () => document.querySelectorAll('.wa-custom-select-options').forEach(el => el.classList.remove('open')));
     }
 
-    // Update Custom Select UI
+    // BỔ SUNG: Đồng bộ chữ đang hiển thị trên Custom Select
     function syncCustomSelects() {
         document.querySelectorAll('.wa-custom-select-wrapper').forEach(wrapper => {
             const select = wrapper.querySelector('select');
@@ -1824,14 +1825,14 @@ window.closeProChart = function() {
         });
     }
 
-    applyCustomSelects();
+    applyCustomSelects(); // Khởi tạo Select ngay lập tức
 
     const modal = document.getElementById('wa-chart-settings-modal');
     const modalBox = document.getElementById('wa-csm-box');
     const header = modal.querySelector('.wa-csm-header');
     const colorPicker = document.getElementById('wa-color-picker');
 
-    // Drag logic
+    // Drag logic - Đảm bảo modal mượt mà
     let isDragging = false, startX, startY, initLeft, initTop;
     header.addEventListener('mousedown', (e) => {
         isDragging = true; startX = e.clientX; startY = e.clientY;
@@ -1866,7 +1867,11 @@ window.closeProChart = function() {
 
     function applyColorToSwatch(hexCode, opacity) {
         if (!activeSwatchBtn) return;
-        if (hexCode.startsWith('#') && hexCode.length >= 7) hexCode = hexCode.substring(0, 7);
+        
+        // Làm sạch chuỗi hex: nếu user gõ dư ký tự, chỉ lấy đúng chuẩn #RRGGBB
+        if (hexCode.startsWith('#') && hexCode.length >= 7) {
+            hexCode = hexCode.substring(0, 7);
+        }
 
         let finalColor = hexCode;
         if (opacity < 1 && hexCode.startsWith('#') && hexCode.length === 7) {
@@ -1876,7 +1881,7 @@ window.closeProChart = function() {
             }
         }
         activeSwatchBtn.style.background = finalColor; 
-        hexInp.value = hexCode; 
+        hexInp.value = hexCode; // Giữ ô input luôn là mã Hex gọn gàng
         if (window.WaveChartEngine) window.WaveChartEngine.update({ [activeBindKey]: finalColor });
     }
 
@@ -1885,6 +1890,7 @@ window.closeProChart = function() {
             e.stopPropagation(); activeSwatchBtn = swatch; activeBindKey = swatch.dataset.colorBind;
             let curColor = swatch.style.background || '#ffffff';
             
+            // FIX: Bóc tách Opacity hiện tại đưa lên thanh trượt, và ép màu vào ô Input thành chuẩn Hex
             let currentOpacity = 1;
             if (curColor.startsWith('rgba')) {
                 const m = curColor.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/);
@@ -1899,10 +1905,12 @@ window.closeProChart = function() {
     });
 
     hexInp.oninput = (e) => applyColorToSwatch(e.target.value, opSlider.value);
+    // FIX: Bỏ substring(0,7) ở đây vì hexInp.value giờ luôn là chuẩn Hex do hàm rgb2hex xử lý
     opSlider.oninput = (e) => applyColorToSwatch(hexInp.value, e.target.value);
     
     document.addEventListener('click', (e) => { if (!colorPicker.contains(e.target) && !e.target.classList.contains('wa-color-swatch')) colorPicker.style.display = 'none'; });
     
+    // Tối ưu hàm rgb2hex an toàn hơn (thêm check fallback)
     function rgb2hex(rgb) { 
         if (rgb.search("rgb") === -1) return rgb; 
         rgb = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/); 
@@ -1948,6 +1956,7 @@ window.closeProChart = function() {
         document.getElementById('csm-border-swatches').style.pointerEvents = config.borderIndependent ? 'auto' : 'none';
     }
 
+    // ✅ FIX VỊ TRÍ: Khởi tạo lại tâm màn hình mỗi khi click mở Modal
     window.openChartSettings = function() {
         if (!window.WaveChartEngine) return;
         const config = window.WaveChartEngine.getConfig();
@@ -1960,12 +1969,13 @@ window.closeProChart = function() {
             const key = swatch.dataset.colorBind; if (config[key]) swatch.style.background = config[key];
         });
         
+        // Đặt lại tọa độ tâm hoàn hảo để không bị lật trái
         modalBox.style.transform = 'translate(-50%, -50%)'; 
         modalBox.style.left = '50%'; 
         modalBox.style.top = '50%';
         
         updateDynamicUI(config);
-        syncCustomSelects(); // Sync Custom Select
+        syncCustomSelects(); // BỔ SUNG: Đồng bộ UI Dropdown
         modal.classList.add('show');
     };
 
@@ -1999,6 +2009,7 @@ window.closeProChart = function() {
         }
     }, 200);
 
+    // ✅ FIX RESET: BỔ SUNG GỌI WINDOW.SHOWCUSTOMCONFIRM
     const btnReset = document.getElementById('wa-btn-reset-cfg');
     if (btnReset) {
         btnReset.onmouseenter = () => btnReset.style.background = 'rgba(246, 70, 93, 0.2)';
@@ -2028,6 +2039,7 @@ window.closeProChart = function() {
                     window.WaveChartEngine.config = { ...defaultCfg };
                     window.WaveChartEngine.applyNow();
                     
+                    // Đồng bộ lại UI trong bảng Cài đặt
                     modal.querySelectorAll('[data-bind]').forEach(el => {
                         const key = el.dataset.bind;
                         if (defaultCfg[key] !== undefined) { 
@@ -2041,7 +2053,7 @@ window.closeProChart = function() {
                     });
                     
                     updateDynamicUI(defaultCfg);
-                    syncCustomSelects(); // Update Select UI sau khi Reset
+                    syncCustomSelects(); // BỔ SUNG: Update lại UI của Menu sau khi reset
                 }
             });
         };
