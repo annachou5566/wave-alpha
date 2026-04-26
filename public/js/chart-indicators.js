@@ -4117,7 +4117,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
   
 
   // =========================================================================
-  // ⚙️ BƯỚC 5: HỆ THỐNG QUẢN LÝ CÀI ĐẶT CHỈ BÁO NÂNG CAO (MINIMALIST UI PRO)
+  // ⚙️ BƯỚC 5: QUẢN LÝ CÀI ĐẶT CHỈ BÁO NÂNG CAO (MINIMALIST UI PRO - CLEAN DOM)
   // =========================================================================
   global.openIndicatorSettings = function (indicatorObj, paneId) {
     let targetName = null;
@@ -4141,13 +4141,10 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         return;
     }
 
-    // Xóa modal cũ nếu đang mở
+    // 1. XÓA BẢN SAO CŨ CHO SẠCH DOM
     const oldModal = document.getElementById('wa-ind-settings-modal');
     if (oldModal) oldModal.remove();
-    const oldPopover = document.getElementById('wa-ism-color-picker');
-    if (oldPopover) oldPopover.remove();
 
-    // Bộ Icon SVG đồng bộ toàn hệ thống
     const ICONS = {
         gear: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`,
         close: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
@@ -4156,15 +4153,14 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         trash: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`
     };
 
+    // 2. CSS SẠCH (ĐÃ XÓA MÃ CSS CỦA COLOR PICKER CŨ)
     const style = document.createElement('style');
     style.textContent = `
-        /* Core Modal */
         #wa-ind-settings-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999999; pointer-events: none; opacity: 0; visibility: hidden; transition: all 0.15s ease; transform: translateZ(0); }
         #wa-ind-settings-modal.show { opacity: 1; visibility: visible; pointer-events: auto; }
         .wa-ism-box { position: absolute; top: 50%; left: 50%; transform: translate3d(-50%, -50%, 0); background: #1e222d; width: 680px; height: 500px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; overflow: hidden; font-family: 'Inter', sans-serif; pointer-events: auto; }
         .wa-ism-box.is-dragging { transition: none !important; will-change: left, top; }
         
-        /* Sidebar Tabs */
         .wa-ism-sidebar { width: 220px; background: #131722; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 20px 0 0 0; overflow-y: auto; flex-shrink: 0; }
         .wa-ism-sidebar::-webkit-scrollbar { width: 4px; }
         .wa-ism-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
@@ -4173,34 +4169,29 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         .wa-ism-tab:hover { background: rgba(255,255,255,0.03); color: #EAECEF; }
         .wa-ism-tab.active { background: rgba(38,166,154,0.1); color: #26a69a; border-left-color: #26a69a; font-weight: 700; }
         
-        /* Tab Actions */
         .wa-ism-actions { display: none; gap: 6px; align-items: center; flex-shrink: 0; }
         .wa-ism-tab:hover .wa-ism-actions, .wa-ism-tab.active .wa-ism-actions { display: flex; }
         .wa-ism-btn { background: transparent; border: none; color: #848e9c; cursor: pointer; padding: 4px; border-radius: 4px; display: flex; transition: 0.2s; }
         .wa-ism-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
         .wa-ism-btn.delete:hover { color: #f6465d; background: rgba(246,70,93,0.1); }
 
-
-/* Content Area */
-          .wa-ism-content { flex: 1; display: flex; flex-direction: column; background: #1e222d; min-width: 0; min-height: 0; overflow: hidden; }
-          .wa-ism-header { padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; cursor: grab; user-select: none; flex-shrink: 0; }
-          .wa-ism-header:active { cursor: grabbing; }
-          .wa-ism-title { font-size: 16px; font-weight: 700; color: #EAECEF; display: flex; align-items: center; gap: 8px; pointer-events: none; text-transform: uppercase; letter-spacing: 0.5px; }
-          .wa-ism-close { color: #848e9c; cursor: pointer; display: flex; padding: 4px; margin: -4px; transition: 0.2s; }
-          .wa-ism-close:hover { color: #F6465D; }
-          
-          /* Params List */
-          .wa-ism-panels { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; -webkit-overflow-scrolling: touch; }
-          .wa-ism-panels::-webkit-scrollbar { width: 4px; }
-          .wa-ism-panels::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
-
+        .wa-ism-content { flex: 1; display: flex; flex-direction: column; background: #1e222d; min-width: 0; min-height: 0; overflow: hidden; }
+        .wa-ism-header { padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; cursor: grab; user-select: none; flex-shrink: 0; }
+        .wa-ism-header:active { cursor: grabbing; }
+        .wa-ism-title { font-size: 16px; font-weight: 700; color: #EAECEF; display: flex; align-items: center; gap: 8px; pointer-events: none; text-transform: uppercase; letter-spacing: 0.5px; }
+        .wa-ism-close { color: #848e9c; cursor: pointer; display: flex; padding: 4px; margin: -4px; transition: 0.2s; }
+        .wa-ism-close:hover { color: #F6465D; }
+        
+        .wa-ism-panels { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; -webkit-overflow-scrolling: touch; }
+        .wa-ism-panels::-webkit-scrollbar { width: 4px; }
+        .wa-ism-panels::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        
         .wa-ism-group-title { font-size: 11px; font-weight: 800; color: #527c82; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; margin-top: 4px; margin-bottom: 8px; }
         .wa-ism-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; gap: 16px; }
         .wa-ism-label { font-size: 13px; color: #b7bdc6; display: flex; flex-direction: column; flex: 1; min-width: 0; }
         .wa-ism-desc { font-size: 10px; color: #527c82; margin-top: 4px; }
         .wa-ism-control { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
         
-        /* Controls */
         .wa-ism-input { background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 4px; font-size: 12px; outline: none; transition: 0.2s; width: 100px; text-align: center; }
         .wa-ism-input:focus { border-color: #26a69a; }
         .wa-ism-select { background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 4px; font-size: 12px; outline: none; cursor: pointer; width: 140px; }
@@ -4211,16 +4202,6 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         .wa-ism-reset { background: rgba(246, 70, 93, 0.05); color: #F6465D; border: 1px dashed rgba(246, 70, 93, 0.3); padding: 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.2s; text-align: center; margin-top: 10px; width: 100%; display: flex; justify-content: center; align-items: center; letter-spacing: 0.5px; }
         .wa-ism-reset:hover { background: rgba(246, 70, 93, 0.15); border-color: rgba(246, 70, 93, 0.6); }
 
-        /* Color Popover */
-        #wa-ism-color-picker { display: none; position: fixed; background: #1e222d; border: 1px solid #363c4e; border-radius: 8px; padding: 12px; z-index: 99999999; box-shadow: 0 10px 30px rgba(0,0,0,0.8); width: 220px; }
-        .wa-icp-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-bottom: 12px; }
-        .wa-icp-cell { width: 18px; height: 18px; border-radius: 3px; cursor: pointer; border: 1px solid transparent; transition: 0.1s; }
-        .wa-icp-cell:hover { border-color: #fff; transform: scale(1.1); box-shadow: 0 0 6px rgba(255,255,255,0.3); }
-        .wa-icp-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11px; color: #848e9c; font-weight: bold; }
-        .wa-icp-hex { flex: 1; background: #131722; border: 1px solid #363c4e; color: #EAECEF; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 12px; outline: none; }
-        .wa-icp-slider { flex: 1; accent-color: #26a69a; }
-
-        /* Mobile Sync: Trượt từ dưới lên (Bottom Sheet) */
         @media (max-width: 768px) {
             .wa-ism-box { top: auto !important; bottom: 0 !important; left: 50% !important; transform: translate3d(-50%, 100%, 0) !important; width: 92vw !important; height: 85vh !important; border-radius: 24px 24px 0 0 !important; flex-direction: column !important; transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important; }
             #wa-ind-settings-modal.show .wa-ism-box { transform: translate3d(-50%, 0, 0) !important; }
@@ -4229,12 +4210,12 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
             .wa-ism-sidebar { width: 100% !important; flex-direction: row; padding: 10px 16px 0; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); overflow-x: auto; white-space: nowrap; flex-shrink: 0; }
             .wa-ism-tab { padding: 10px 16px; border-left: none; border-bottom: 2px solid transparent; border-radius: 4px 4px 0 0; font-size: 14px; }
             .wa-ism-tab.active { border-bottom-color: #26a69a; background: transparent; }
-            .wa-ism-actions { display: none !important; } /* Tắt icon rác trên điện thoại để tiết kiệm chỗ */
-            #wa-ism-color-picker { top: 50% !important; left: 50% !important; transform: translate(-50%, -50%) !important; position: fixed !important; }
+            .wa-ism-actions { display: none !important; }
         }
     `;
     document.head.appendChild(style);
 
+    // 3. HTML SẠCH (KHÔNG CÒN POPUP BẢNG MÀU NỮA)
     const modalHTML = `
         <div id="wa-ind-settings-modal">
             <div class="wa-ism-box" id="wa-ism-box">
@@ -4248,11 +4229,6 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 </div>
             </div>
         </div>
-        <div id="wa-ism-color-picker">
-            <div class="wa-icp-grid" id="wa-icp-palette"></div>
-            <div class="wa-icp-row">HEX <input type="text" class="wa-icp-hex" id="wa-icp-hex" maxlength="9"></div>
-            <div class="wa-icp-row" style="margin-bottom:0;">OPACITY <input type="range" class="wa-icp-slider" id="wa-icp-opacity" min="0" max="1" step="0.05" value="1"></div>
-        </div>
     `;
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 
@@ -4260,56 +4236,9 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     const modalBox = document.getElementById('wa-ism-box');
     const sidebar = document.getElementById('wa-ism-sidebar');
     const panels = document.getElementById('wa-ism-panels');
-    const colorPicker = document.getElementById('wa-ism-color-picker');
     let currentActiveIndName = null;
 
-    // ── COLOR PICKER ENGINE ──
-    const tvColors = ['transparent','#ffffff','#d1d4dc','#b2b5be','#848e9c','#5d606b','#363a45','#1e222d','#000000','#f23645','#ff9800','#f0b90b','#089981','#00bcd4','#2962ff','#673ab7','#9c27b0','#f7525f','#ffb74d','#ffe066','#2af592','#4dd0e1','#448aff','#9575cd','#ba68c8','#f98080','#ffcc80','#fff59d','#66bb6a','#80deea','#82b1ff','#b39ddb','#ce93d8'];
-    const palette = document.getElementById('wa-icp-palette'), hexInp = document.getElementById('wa-icp-hex'), opSlider = document.getElementById('wa-icp-opacity');
-    let activeSwatchBtn = null, activeParamIndex = null;
-
-    tvColors.forEach(col => {
-        const cell = document.createElement('div'); cell.className = 'wa-icp-cell'; 
-        if (col === 'transparent') cell.classList.add('wa-is-transparent'); else cell.style.background = col;
-        cell.onclick = () => applyColorToSwatch(col, opSlider.value);
-        palette.appendChild(cell);
-    });
-
-    function applyColorToSwatch(hexCode, opacity) {
-        if (!activeSwatchBtn) return;
-        if (hexCode === 'transparent') {
-            activeSwatchBtn.style.background = 'transparent';
-            activeSwatchBtn.classList.add('wa-is-transparent');
-            hexInp.value = 'transparent';
-        } else {
-            activeSwatchBtn.classList.remove('wa-is-transparent');
-            if (hexCode.startsWith('#') && hexCode.length >= 7) hexCode = hexCode.substring(0, 7);
-            let finalColor = hexCode;
-            if (opacity < 1 && hexCode.startsWith('#') && hexCode.length === 7) {
-                let r = parseInt(hexCode.slice(1,3), 16), g = parseInt(hexCode.slice(3,5), 16), b = parseInt(hexCode.slice(5,7), 16);
-                if (!isNaN(r) && !isNaN(g) && !isNaN(b)) finalColor = `rgba(${r},${g},${b},${opacity})`;
-            }
-            activeSwatchBtn.style.background = finalColor;
-            hexInp.value = hexCode;
-        }
-        
-        const indState = global.scActiveIndicators.find(x => x.name === currentActiveIndName);
-        if (indState) {
-            indState.params[activeParamIndex] = activeSwatchBtn.style.background;
-            try { global.tvChart.overrideIndicator({ name: currentActiveIndName, calcParams: indState.params }, indState.paneId); } catch (e) {}
-        }
-    }
-    hexInp.oninput = (e) => applyColorToSwatch(e.target.value, opSlider.value);
-    opSlider.oninput = (e) => applyColorToSwatch(hexInp.value, e.target.value);
-
-    function rgb2hex(rgb) { 
-        if (rgb === 'transparent' || rgb.search("rgb") === -1) return rgb; 
-        rgb = rgb.match(/^rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)(?:,\\s*(\\d+(?:\\.\\d+)?))?\\)$/); 
-        if (!rgb) return '#ffffff'; 
-        return "#" + ("0" + parseInt(rgb[1]).toString(16)).slice(-2) + ("0" + parseInt(rgb[2]).toString(16)).slice(-2) + ("0" + parseInt(rgb[3]).toString(16)).slice(-2); 
-    }
-
-    // ── DATA UPDATE ENGINE ──
+    // 4. DATA ENGINE
     const vpvrDescriptions = ["Thanh ngang (10-200)", "Lõi Volume (70%)", "Chiều ngang (%)", "0: Phải, 1: Trái", "0: Toàn, 1: Ngày, 2: Tuần", "0: Tắt, 1: Bật", "Lực Mua", "Lực Bán", "Point of Control", "Viền Giá Trị", "HVN Dày", "LVN Mỏng", "nPOC Chưa Test", "Icon Phe Áp Đảo", "Mờ trong VA", "Mờ ngoài VA", "Dày nét (1-5)", "Dày nét (1-4)", "0:Đứt 1:Chấm 2:Liền", "0:Đứt 1:Chấm 2:Dài", "Cỡ chữ (8-16)", "0:Ẩn 1:Hiện"];
 
     const liveUpdateChart = () => {
@@ -4320,7 +4249,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         const newParams = indState.params.map((val, idx) => {
             const inp = document.getElementById('wa-param-' + idx);
             if (inp) {
-                if (inp.classList.contains('wa-ism-swatch')) return inp.style.background || val;
+                if (inp.classList.contains('wa-ism-swatch')) return inp.style.backgroundColor || val;
                 return parseFloat(inp.value) || 0;
             }
             return val;
@@ -4329,7 +4258,6 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         try { global.tvChart.overrideIndicator({ name: currentActiveIndName, calcParams: newParams }, indState.paneId); } catch (e) {}
     };
 
-    // ── RENDER SIDEBAR (Chứa danh sách chỉ báo đang mở) ──
     function renderSidebar() {
         sidebar.innerHTML = '';
         global.scActiveIndicators.forEach(ind => {
@@ -4375,7 +4303,6 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         });
     }
 
-    // ── RENDER CONTENT (Hiển thị Input Settings) ──
     function renderContent(indName) {
         currentActiveIndName = indName;
         panels.innerHTML = '';
@@ -4408,42 +4335,35 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 
                 const row = document.createElement('div');
                 row.className = 'wa-ism-row';
-                
                 let descHTML = (isVPVR && vpvrDescriptions[idx]) ? `<div class="wa-ism-desc">${vpvrDescriptions[idx]}</div>` : '';
 
                 if (isColor) {
-                  let dVal = val;
-                  if (typeof val === 'number') {
-                      let hStr = Math.round(val).toString(16).toUpperCase();
-                      while(hStr.length < 6) hStr = '0' + hStr;
-                      dVal = '#' + hStr;
-                  }
-                  // FIX LỖI 1: Đổi style="background:..." thành style="background-color:..."
-                  row.innerHTML = `<div class="wa-ism-label">${lbl}${descHTML}</div>
-                                   <div class="wa-ism-control"><div id="wa-param-${idx}" class="wa-ism-swatch ${dVal==='transparent'?'wa-is-transparent':''}" style="background-color:${dVal}"></div></div>`;
-                  
-                  const swatch = row.querySelector('.wa-ism-swatch');
-                  swatch.onclick = (e) => {
-                      e.stopPropagation();
-                      // Gọi Bảng màu Toàn cục (Global HSV Color Picker)
-                      if (window.WaveColorPicker) {
-                          window.WaveColorPicker.open(swatch, dVal, (newColor) => {
-                              // Update nút màu
-                              swatch.style.backgroundColor = newColor;
-                              if (newColor === 'transparent') swatch.classList.add('wa-is-transparent');
-                              else swatch.classList.remove('wa-is-transparent');
-                              
-                              // FIX LỖI 2: Đẩy trực tiếp mã màu sạch vào Chart
-                              indState.params[idx] = newColor;
-                              try { global.tvChart.overrideIndicator({ name: indName, calcParams: indState.params }, indState.paneId); } catch (err) {}
-                          });
-                      }
-                  };
-              } else {
-                    // Xử lý Options (0=.., 1=..) tự động biến thành Dropdown
+                    let dVal = val;
+                    if (typeof val === 'number') {
+                        let hStr = Math.round(val).toString(16).toUpperCase();
+                        while(hStr.length < 6) hStr = '0' + hStr;
+                        dVal = '#' + hStr;
+                    }
+                    row.innerHTML = `<div class="wa-ism-label">${lbl}${descHTML}</div>
+                                     <div class="wa-ism-control"><div id="wa-param-${idx}" class="wa-ism-swatch ${dVal==='transparent'?'wa-is-transparent':''}" style="background-color:${dVal}"></div></div>`;
+                    
+                    const swatch = row.querySelector('.wa-ism-swatch');
+                    swatch.onclick = (e) => {
+                        e.stopPropagation();
+                        if (window.WaveColorPicker) {
+                            window.WaveColorPicker.open(swatch, dVal, (newColor) => {
+                                swatch.style.backgroundColor = newColor;
+                                if (newColor === 'transparent') swatch.classList.add('wa-is-transparent');
+                                else swatch.classList.remove('wa-is-transparent');
+                                indState.params[idx] = newColor;
+                                try { global.tvChart.overrideIndicator({ name: indName, calcParams: indState.params }, indState.paneId); } catch (err) {}
+                            });
+                        }
+                    };
+                } else {
                     let options = [];
                     let cleanLbl = lbl;
-                    const match = lbl.match(/\\((.*?=\\s*.*?)\\)/); 
+                    const match = lbl.match(/\((.*?=\s*.*?)\)/); 
                     if (match) {
                         const parts = match[1].split(',');
                         parts.forEach(p => {
@@ -4476,13 +4396,12 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         panels.appendChild(resetBtn);
     }
 
-    // Khởi chạy Render lần đầu
     renderSidebar();
     if (targetName) renderContent(targetName); else if (global.scActiveIndicators.length > 0) renderContent(global.scActiveIndicators[0].name);
 
-    // ── LOGIC MỞ/ĐÓNG & KÉO THẢ MƯỢT MÀ ──
+    // 5. EVENT BẬT/TẮT & DRAG MƯỢT
     window.closeIndicatorSettings = function() {
-        colorPicker.style.display = 'none';
+        if (window.WaveColorPicker) window.WaveColorPicker.close(); // Đóng picker toàn cục nếu đang mở
         modal.classList.remove('show');
         setTimeout(() => {
             modalBox.classList.remove('is-dragging');
@@ -4493,7 +4412,6 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         if (typeof global.saveIndicatorState === 'function') global.saveIndicatorState();
     };
 
-    // Đặt tọa độ Center 3D tuyệt đối khi mở
     modalBox.classList.remove('is-dragging');
     modalBox.style.transform = 'translate3d(-50%, -50%, 0)'; 
     modalBox.style.left = '50%'; modalBox.style.top = '50%';
@@ -4501,14 +4419,12 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
 
     document.getElementById('btn-wa-ism-close').onclick = window.closeIndicatorSettings;
     modal.addEventListener('mousedown', (e) => { if (e.target === modal) window.closeIndicatorSettings(); });
-
-    document.addEventListener('mousedown', (e) => { if (!colorPicker.contains(e.target) && !e.target.classList.contains('wa-ism-swatch')) colorPicker.style.display = 'none'; });
-    panels.addEventListener('scroll', () => { colorPicker.style.display = 'none'; });
+    panels.addEventListener('scroll', () => { if (window.WaveColorPicker) window.WaveColorPicker.close(); });
 
     const header = document.getElementById('wa-ism-header');
     let isDragging = false, startX, startY, initLeft, initTop;
     header.addEventListener('mousedown', (e) => {
-        if (window.innerWidth <= 768) return; // Khóa kéo thả khi ở trên Mobile Bottom Sheet
+        if (window.innerWidth <= 768) return; 
         isDragging = true; startX = e.clientX; startY = e.clientY;
         const rect = modalBox.getBoundingClientRect();
         initLeft = rect.left; initTop = rect.top;
