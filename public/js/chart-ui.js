@@ -1615,6 +1615,35 @@ window.__wa_chart_settings_modal_initialized = true;
         .wa-select-option:last-child { border-bottom: none; }
         .wa-select-option:hover { background: rgba(38,166,154,0.1); color: #EAECEF; padding-left: 16px; }
         .wa-select-option.selected { color: #26a69a; font-weight: bold; background: rgba(38,166,154,0.05); }
+        
+        /* ================= BỔ SUNG: MOBILE BOTTOM SHEET ================= */
+        @media (max-width: 768px) {
+            /* 1. Ép bảng xuống đáy màn hình, bo góc trên */
+            .wa-csm-box {
+                top: auto !important; bottom: 0 !important; left: 0 !important;
+                transform: translate3d(0, 100%, 0) !important;
+                width: 100vw !important; height: 85vh !important; min-width: 0 !important;
+                border-radius: 24px 24px 0 0 !important;
+                flex-direction: column !important;
+                transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+            }
+            #wa-chart-settings-modal.show .wa-csm-box {
+                transform: translate3d(0, 0, 0) !important;
+            }
+            /* 2. Cục gạch ngang (Drag Handle) báo hiệu có thể vuốt xuống */
+            .wa-csm-header { padding-top: 24px; position: relative; border-bottom: none; }
+            .wa-csm-header::before { content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 40px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 4px; }
+            /* 3. Bẻ cột Menu dọc thành thanh Cuộn ngang (Scrollable Tabs) */
+            .wa-csm-sidebar { width: 100% !important; flex-direction: row; padding: 10px 16px 0; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+            .wa-csm-sidebar::-webkit-scrollbar { display: none; }
+            .wa-csm-sidebar > div:first-child { display: flex; gap: 8px; width: 100%; }
+            .wa-csm-tab { padding: 10px 16px; border-left: none; border-bottom: 2px solid transparent; border-radius: 4px 4px 0 0; font-size: 14px; }
+            .wa-csm-tab.active { border-bottom-color: #26a69a; background: transparent; }
+            /* Ẩn nút Reset ở cột trái (nó đã có ở tab Nâng Cao) để tiết kiệm diện tích menu ngang */
+            .wa-csm-sidebar > div:last-child { display: none; }
+            /* 4. Tối ưu chạm cho ngón tay */
+            .wa-csm-row { padding: 6px 0; }
+        }
         `;
     document.head.appendChild(style);
 
@@ -1885,6 +1914,7 @@ document.addEventListener('click', () => {
     // Drag logic - Đảm bảo modal mượt mà
     let isDragging = false, startX, startY, initLeft, initTop;
     header.addEventListener('mousedown', (e) => {
+        if (window.innerWidth <= 768) return; 
         isDragging = true; startX = e.clientX; startY = e.clientY;
         const rect = modalBox.getBoundingClientRect();
         initLeft = rect.left; initTop = rect.top;
