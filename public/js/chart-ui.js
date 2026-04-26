@@ -1976,7 +1976,7 @@ document.addEventListener('click', () => {
     const modal = document.getElementById('wa-chart-settings-modal');
     const modalBox = document.getElementById('wa-csm-box');
     const header = modal.querySelector('.wa-csm-header');
-    const colorPicker = document.getElementById('wa-color-picker');
+    
 
     // Drag logic - Đảm bảo modal mượt mà
     let isDragging = false, startX, startY, initLeft, initTop;
