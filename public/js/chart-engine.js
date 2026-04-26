@@ -465,33 +465,25 @@ window.WaveChartEngine = {
         else if (c.chartType === 6 || c.chartType === 9) { kcChartType = 'area'; isLine = (c.chartType === 6); }
 
         // =========================================================================
-        // 🚀 BÍ QUYẾT TRIỆT TIÊU ICON: Ép size = 0 cho nút Cài đặt và Xóa
-        // Bắt buộc phải trả về đủ 4 slot icon, nhưng "Giết chết" diện tích của slot 3 và 4
+        // 🚀 BÍ QUYẾT CUỐI CÙNG: ÉP CHẾT 2 ICON CÀI ĐẶT & XÓA BẰNG CÁCH GHI ĐÈ INDEX
         // =========================================================================
-        let overriddenIcons = [];
-        try {
-            const defaultIcons = this.chartInstance.getStyles().indicator.tooltip.icons || [];
-            overriddenIcons = defaultIcons.map(icon => {
-                // Bắt id của nút Cài đặt ('setting') và nút Xóa ('close' hoặc 'cross')
-                if (icon.id === 'setting' || icon.id === 'close' || icon.id === 'cross') {
-                    return { 
-                        ...icon, 
-                        size: 0,          // Ép font icon về 0
-                        icon: '',         // Xóa ký tự SVG
-                        marginLeft: 0, 
-                        marginRight: 0, 
-                        paddingLeft: 0, 
-                        paddingRight: 0 
-                    };
-                }
-                return icon; // Giữ nguyên nút Con mắt (visible/invisible)
-            });
-        } catch(e) {}
+        const ghostIcon = { 
+            size: 0, 
+            icon: '', 
+            marginLeft: 0, marginRight: 0, paddingLeft: 0, paddingRight: 0,
+            color: 'transparent', activeColor: 'transparent', 
+            backgroundColor: 'transparent', activeBackgroundColor: 'transparent' 
+        };
 
         const mainSeriesStyle = {
             tooltip: {
                 showRule: 'always', 
-                icons: overriddenIcons // Truyền mảng đã được "bóp nghẹt" size vào
+                icons: [
+                    { id: 'visible' },     // Vị trí 0: Giữ nguyên mặc định (Mắt mở)
+                    { id: 'invisible' },   // Vị trí 1: Giữ nguyên mặc định (Mắt nhắm)
+                    { id: 'setting', ...ghostIcon }, // Vị trí 2: Răng cưa -> TÀNG HÌNH
+                    { id: 'close', ...ghostIcon }    // Vị trí 3: Dấu X -> TÀNG HÌNH
+                ]
             }
         };
 
