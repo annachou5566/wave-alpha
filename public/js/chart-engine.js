@@ -253,45 +253,23 @@ window.WaveChartEngine = {
             });
 
             // ─────────────────────────────────────────────────────────────
-            // 5. VÙNG HLC AREA (ID 10) — Tách nền trên & dưới đường Close
+            // 5. VÙNG HLC AREA (ID 10) — CHUYỂN ĐỔI THÀNH OVERLAY CHUYÊN NGHIỆP
             // ─────────────────────────────────────────────────────────────
-            window.klinecharts.registerIndicator({
-                name: 'WA_HLC_AREA', 
-                shortName: '', 
-                series: 'price', 
-                calc: (d) => d,
-                
-                // 🚀 BÍ QUYẾT TRIỆT TIÊU 100% CHIỀU CAO (KHÔNG CHỪA KHOẢNG TRỐNG)
-                styles: { 
-                    tooltip: { 
-                        showRule: 'none', 
-                        showName: false, 
-                        showParams: false,
-                        text: { 
-                            size: 0, // Đưa font chữ về 0
-                            marginTop: 0, // Xóa lề trên
-                            marginBottom: 0 // Xóa lề dưới
-                        },
-                        icons: [] // <== CHÌA KHÓA: Diệt sạch mảng icon (mắt, cài đặt) để nó không chiếm diện tích
-                    } 
-                },
-
-                // Giữ nguyên Data rỗng để an toàn tuyệt đối khi đổi Timeframe
-                createTooltipDataSource: function() { 
-                    return { name: '', calcParamsText: '', values: [] }; 
-                },
-
-                draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
-                    const c = window.WaveChartEngine.config;
-                    const { from, to } = visibleRange;
-                    const dataList = indicator.result;
-                    if (!dataList || dataList.length === 0) return true;
+            
+            // A. Đăng ký lõi vẽ (Figure) - Nơi chứa 100% logic vẽ cũ của bạn
+            window.klinecharts.registerFigure({
+                name: 'wa_hlc_area_figure',
+                draw: (ctx, { attrs }) => {
+                    const { dataList, visibleRange, xAxis, yAxis } = attrs;
+                    const c = window.WaveChartEngine.config; // Lấy config như cũ
+                    if (!dataList || dataList.length === 0) return;
 
                     ctx.save();
                     ctx.setLineDash([]);
+                    const { from, to } = visibleRange;
                     const start = Math.max(0, from - 1);
 
-                    // Pre-build 3 mảng điểm — tránh polygon lệch khi data gap
+                    // --- GIỮ NGUYÊN 100% ĐOẠN CODE VẼ POLYGON CỦA BẠN ---
                     const highPts = [], lowPts = [], closePts = [];
                     for (let i = start; i < to; i++) {
                         const kd = dataList[i];
@@ -301,9 +279,9 @@ window.WaveChartEngine = {
                         lowPts.push  ({x, y: yAxis.convertToPixel(kd.low)});
                         closePts.push({x, y: yAxis.convertToPixel(kd.close)});
                     }
-                    if (highPts.length < 2) { ctx.restore(); return true; }
+                    if (highPts.length < 2) { ctx.restore(); return; }
 
-                    // Nền nửa trên: High → Close
+                    // Nền nửa trên
                     ctx.beginPath();
                     ctx.fillStyle = window.WaveChartEngine._dimColor(c.hlcUpFillColor, c.hlcFillOpacity);
                     highPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
@@ -311,7 +289,7 @@ window.WaveChartEngine = {
                     ctx.closePath();
                     ctx.fill();
 
-                    // Nền nửa dưới: Close → Low
+                    // Nền nửa dưới
                     ctx.beginPath();
                     ctx.fillStyle = window.WaveChartEngine._dimColor(c.hlcDownFillColor, c.hlcFillOpacity);
                     closePts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
@@ -319,7 +297,7 @@ window.WaveChartEngine = {
                     ctx.closePath();
                     ctx.fill();
 
-                    // Viền High & Low (nếu bật)
+                    // Viền High & Low
                     if (c.hlcShowHighLow) {
                         ctx.lineWidth = 1;
                         ctx.strokeStyle = window.WaveChartEngine._dimColor(c.hlcHighColor, c.hlcHighLowOpacity);
@@ -333,7 +311,7 @@ window.WaveChartEngine = {
                         ctx.stroke();
                     }
 
-                    // Đường Close — dày & sắc nét nhất
+                    // Đường Close
                     ctx.beginPath();
                     ctx.strokeStyle = c.hlcCloseColor;
                     ctx.lineWidth   = 2;
@@ -343,7 +321,26 @@ window.WaveChartEngine = {
                     ctx.stroke();
 
                     ctx.restore();
-                    return true;
+                }
+            });
+
+            // B. Đăng ký Overlay làm vỏ bọc để nhúng vào biểu đồ
+            window.klinecharts.registerOverlay({
+                name: 'WA_HLC_AREA',
+                needDefaultPointFigure: false,
+                needDefaultXAxisFigure: false,
+                needDefaultYAxisFigure: false,
+                createPointFigures: ({ overlay, xAxis, yAxis }) => {
+                    const chart = overlay.getChart();
+                    return [{
+                        type: 'wa_hlc_area_figure', // Gọi lõi vẽ ở trên ra
+                        attrs: {
+                            dataList: chart.getDataList(),
+                            visibleRange: chart.getVisibleRange(),
+                            xAxis: xAxis,
+                            yAxis: yAxis
+                        }
+                    }];
                 }
             });
 
@@ -468,6 +465,7 @@ window.WaveChartEngine = {
         // ✅ BẢN FIX: Nhắm chính xác mục tiêu. 
         // Thay vì xóa theo pane ('candle_pane') khiến các chỉ báo EMA/MA bị văng theo,
         // ta sẽ xóa chính xác bằng tên Indicator thông qua vòng lặp.
+        // ✅ BẢN FIX: Nhắm chính xác mục tiêu.
         CUSTOM_CHART_IDS.forEach(id => { 
             try { 
                 // Xóa theo đúng name của indicator để không chạm vào các chỉ báo khác
@@ -475,18 +473,33 @@ window.WaveChartEngine = {
             } catch (e) {} 
         });
 
+        // Dọn dẹp sạch sẽ Overlay nếu người dùng đổi sang loại chart khác
+        try { this.chartInstance.removeOverlay({ groupId: 'custom_main_chart' }); } catch(e) {}
+
         // Loại native
         if      (c.chartType === 2) kcChartType = 'candle_stroke';
         else if (c.chartType === 3) kcChartType = 'ohlc';
         else if (c.chartType === 6 || c.chartType === 9) { kcChartType = 'area'; isLine = (c.chartType === 6); }
 
-        // Loại custom
-        if      (c.chartType === 4)  { this.chartInstance.createIndicator('WA_COL_CHART',   true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 5)  { this.chartInstance.createIndicator('WA_HL_CHART',    true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 7)  { this.chartInstance.createIndicator('WA_LINE_MARKER', true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 8)  { this.chartInstance.createIndicator('WA_STEP_LINE',   true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 10) { this.chartInstance.createIndicator('WA_HLC_AREA',    true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 11) { this.chartInstance.createIndicator('WA_BASELINE',    true, {id: 'candle_pane'}); hideCandle = true; }
+        // Loại custom - 🚀 BẢN FIX PRO: Tàng hình riêng cho 5 loại này, không ảnh hưởng MACD/EMA
+        const ghostStyle = { tooltip: { showRule: 'none', showName: false, showParams: false } };
+
+        if      (c.chartType === 4)  { this.chartInstance.createIndicator({ name: 'WA_COL_CHART',   styles: ghostStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 5)  { this.chartInstance.createIndicator({ name: 'WA_HL_CHART',    styles: ghostStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 7)  { this.chartInstance.createIndicator({ name: 'WA_LINE_MARKER', styles: ghostStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 8)  { this.chartInstance.createIndicator({ name: 'WA_STEP_LINE',   styles: ghostStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
+        
+        // RIÊNG THẰNG HLC_AREA (ID 10) ĐÃ ĐƯỢC THĂNG CẤP LÊN OVERLAY ĐỂ KHÔNG BỊ KHOẢNG TRỐNG:
+        else if (c.chartType === 10) { 
+            this.chartInstance.createOverlay({ 
+                name: 'WA_HLC_AREA', 
+                groupId: 'custom_main_chart', // Gắn group để khi đổi chart sẽ dọn dẹp dễ dàng
+                lock: true // Khóa cố định, không cho chuột tương tác click kéo thả
+            }, 'candle_pane'); 
+            hideCandle = true; 
+        }
+        
+        else if (c.chartType === 11) { this.chartInstance.createIndicator({ name: 'WA_BASELINE',    styles: ghostStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
 
         const isHollow       = (c.chartType === 2);
         const finalUpColor   = hideCandle ? 'transparent' : c.upColor;
