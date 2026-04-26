@@ -4427,18 +4427,19 @@ function bindCoreEventsOnce() {
     // Bảng cài đặt (Props Panel) giờ đây là BẤT TỬ, chỉ chết khi bấm dấu X.
   }, { passive: true });
 
-  document.addEventListener('touchstart', function(e) {
+  // 🔥 FIX: Phục hồi tính năng kéo thả thanh công cụ bằng Chuột (PC/Mouse)
+  document.addEventListener('mousedown', function(e) {
     var grip = e.target.closest('.wa-drag-grip');
-    if (!grip || !e.touches || !e.touches.length) return;
+    if (!grip) return;
     _isDragging = true;
-    _startX = e.touches[0].clientX;
-    _startY = e.touches[0].clientY;
+    _startX = e.clientX;
+    _startY = e.clientY;
     var tb = document.querySelector('.wa-toolbar');
     _initLeft = tb ? tb.offsetLeft : 0;
     _initTop  = tb ? tb.offsetTop  : 0;
     _cachedToolbar = tb;
     document.body.style.userSelect = 'none';
-  }, { passive: false });
+  });
 
   document.addEventListener('dblclick', function(e) {
     if (e.target.closest('.wa-drag-grip')) {
