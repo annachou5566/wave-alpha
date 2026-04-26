@@ -3354,7 +3354,53 @@ if (!document.getElementById('wa-fb-rng-style')) {
               }
             }
             btn.dataset.cur = newColor;
-            onChange(newColor);
+
+            // 🚀 BẢN FIX: Tách Màu (Hex) và Độ Mờ (Alpha) để không bị lỗi Đen Màn Hình
+            var safeHex = newColor;
+            var alpha = 1;
+            if (newColor.startsWith('rgba')) {
+                var m = newColor.match(/rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/);
+                if (m) {
+                    var r = parseInt(m[1]).toString(16).padStart(2, '0');
+                    var g = parseInt(m[2]).toString(16).padStart(2, '0');
+                    var b = parseInt(m[3]).toString(16).padStart(2, '0');
+                    alpha = parseFloat(m[4]);
+                    safeHex = '#' + r + g + b;
+                }
+            } else if (newColor.startsWith('#') && newColor.length === 9) {
+                safeHex = newColor.substring(0, 7);
+                alpha = parseInt(newColor.substring(7, 9), 16) / 255;
+            } else if (newColor === 'transparent') {
+                safeHex = '';
+                alpha = 0;
+            }
+
+            // 1. Chỉ truyền mã HEX 6 số cho hàm lõi (Tránh lỗi NaN gây đen hình)
+            onChange(safeHex);
+
+            // 2. Tự động "ép" thanh trượt Opacity trong Bảng Cài Đặt chạy theo
+            var pPanel = document.getElementById('wa-props-panel');
+            if (pPanel) {
+                var sliders = pPanel.querySelectorAll('input[type="range"]');
+                var targetSlider = null;
+                
+                if (isBg) {
+                    // Nút nền thường liên kết với thanh trượt thứ 2 (Fill Opacity)
+                    targetSlider = sliders.length > 1 ? sliders[1] : sliders[0];
+                } else {
+                    // Nút viền/chữ liên kết với thanh trượt thứ 1 (Line Opacity)
+                    targetSlider = sliders[0];
+                }
+                
+                if (targetSlider) {
+                    var max = parseFloat(targetSlider.max) || 1;
+                    targetSlider.value = max > 10 ? Math.round(alpha * max) : alpha;
+                    
+                    // Kích hoạt Event để UI cập nhật số liệu và KLineChart lưu cấu hình
+                    targetSlider.dispatchEvent(new Event('input')); 
+                    targetSlider.dispatchEvent(new Event('change')); 
+                }
+            }
           });
         }
       });
