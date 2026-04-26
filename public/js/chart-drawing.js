@@ -3004,11 +3004,36 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       _on(btn, 'click', function(ev) {
         ev.stopPropagation();
         if (window.WaveColorPicker) {
-          var curHex = toHex(btn.dataset.cur) || '#3B82F6';
+          var curHex = btn.dataset.cur || '#3B82F6';
           window.WaveColorPicker.open(btn, curHex, function(newColor) {
             var fEl = document.getElementById('_cpfc_'+cid);
             if (fEl) fEl.style.background = newColor || 'transparent';
             btn.dataset.cur = newColor;
+
+            // 🚀 BẢN FIX: ÉP ĐỒNG BỘ OPACITY TỪ BẢNG MÀU SANG THANH TRƯỢT CÀI ĐẶT
+            // Tìm thanh trượt Opacity gần nhất với nút màu vừa bấm
+            var row = btn.parentElement ? btn.parentElement.parentElement : null;
+            if (row) {
+                var slider = row.querySelector('input[type="range"]');
+                if (!slider && row.nextElementSibling) {
+                    slider = row.nextElementSibling.querySelector('input[type="range"]');
+                }
+                
+                // Nếu tìm thấy thanh trượt, bóc tách độ mờ (Alpha) và gạt thanh trượt
+                if (slider) {
+                    var alpha = 1;
+                    if (newColor.startsWith('rgba')) {
+                        var m = newColor.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/);
+                        if (m) alpha = parseFloat(m[1]);
+                    } else if (newColor.startsWith('#') && newColor.length === 9) {
+                        alpha = parseInt(newColor.slice(7, 9), 16) / 255;
+                    }
+                    var max = parseFloat(slider.max) || 1;
+                    slider.value = max > 10 ? Math.round(alpha * max) : alpha;
+                    slider.dispatchEvent(new Event('input')); // Ép UI cập nhật số liệu
+                }
+            }
+
             doAction();
           });
         }
