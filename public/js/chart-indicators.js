@@ -3860,28 +3860,26 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
           container.classList.add('wa-topbar-container');
           if (container.parentElement) container.parentElement.classList.add('wa-topbar-container');
 
-          // 3. SVG ICONS (ĐÃ DỌN SẠCH ICON BÁNH RĂNG CŨ KHỎI HỆ THỐNG)
+          // 3. SVG ICONS CHUẨN MINIMALIST & NÚT BẤM (ĐÃ ĐỒNG BỘ CSS)
           const TOP_ICONS = {
-              addInd: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>`,
-              manageInd: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>`,
-              fullscreen: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>`
-          };
+            addInd: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg><span style="font-size: 11px; font-weight: 600; padding-top: 1px;">CHỈ BÁO</span>`,
+            manageInd: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`,
+            fullscreen: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>`
+        };
 
-          // 4. KHUNG CHỨA NÚT MỚI (CHỈ CÒN NHÓM INDICATOR VÀ FULLSCREEN)
-          const tbWrap = document.createElement('div');
-          tbWrap.id = 'wa-toolbar-right'; // 🚀 ID NÀY GIÚP CSS ĐẨY KHỐI NÀY SANG PHẢI CÙNG
-          tbWrap.style.cssText = 'display:flex; align-items:center; gap:2px; flex-shrink:0;';
-          tbWrap.innerHTML = `
-              <div style="width:1px; height:18px; background:rgba(255,255,255,0.08); margin:0 6px;"></div>
+        // 4. KHUNG CHỨA NÚT MỚI
+        const tbWrap = document.createElement('div');
+        tbWrap.id = 'wa-toolbar-right'; 
+        tbWrap.style.cssText = 'display:flex; align-items:center; gap:6px; flex-shrink:0; margin-left:8px;';
+        
+        const btnStyle = "background: rgba(255,255,255,0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 0 8px; height: 26px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; transition: 0.2s; outline: none; font-family: 'Inter', sans-serif;";
 
-              <button id="btn-fx-indicator" class="wa-topbtn" data-tip="Thêm chỉ báo mới">${TOP_ICONS.addInd}</button>
-              <button id="btn-wa-manage-ind" class="wa-topbtn" data-tip="Cài đặt & Quản lý chỉ báo">${TOP_ICONS.manageInd}</button>
-
-              <div style="width:1px; height:18px; background:rgba(255,255,255,0.08); margin:0 6px;"></div>
-
-              <button id="btn-wa-fs" class="wa-topbtn" data-tip="Toàn màn hình">${TOP_ICONS.fullscreen}</button>
-          `;
-          container.appendChild(tbWrap);
+        tbWrap.innerHTML = `
+            <button id="btn-fx-indicator" data-tip="Thêm chỉ báo mới" style="${btnStyle}" onmouseover="this.style.color='#EAECEF'; this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.color='#848e9c'; this.style.background='rgba(255,255,255,0.05)'">${TOP_ICONS.addInd}</button>
+            <button id="btn-wa-manage-ind" data-tip="Cài đặt & Quản lý chỉ báo" style="${btnStyle}" onmouseover="this.style.color='#EAECEF'; this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.color='#848e9c'; this.style.background='rgba(255,255,255,0.05)'">${TOP_ICONS.manageInd}</button>
+            <button id="btn-wa-fs" data-tip="Toàn màn hình" style="${btnStyle}" onmouseover="this.style.color='#EAECEF'; this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.color='#848e9c'; this.style.background='rgba(255,255,255,0.05)'">${TOP_ICONS.fullscreen}</button>
+        `;
+        container.appendChild(tbWrap);
 
           // 5. GẮN SỰ KIỆN CHO CÁC NÚT
           document.getElementById('btn-fx-indicator').addEventListener('click', function (e) {
