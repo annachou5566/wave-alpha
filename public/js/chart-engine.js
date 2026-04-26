@@ -420,14 +420,8 @@ window.WaveChartEngine = {
         const c = this.config;
         let kcChartType = 'candle_solid', isLine = false, hideCandle = false;
 
-        // ✅ BẢN FIX: Nhắm chính xác mục tiêu. 
-        // Thay vì xóa theo pane ('candle_pane') khiến các chỉ báo EMA/MA bị văng theo,
-        // ta sẽ xóa chính xác bằng tên Indicator thông qua vòng lặp.
         CUSTOM_CHART_IDS.forEach(id => { 
-            try { 
-                // Xóa theo đúng name của indicator để không chạm vào các chỉ báo khác
-                this.chartInstance.removeIndicator('candle_pane', id); 
-            } catch (e) {} 
+            try { this.chartInstance.removeIndicator('candle_pane', id); } catch (e) {} 
         });
 
         // Loại native
@@ -435,13 +429,18 @@ window.WaveChartEngine = {
         else if (c.chartType === 3) kcChartType = 'ohlc';
         else if (c.chartType === 6 || c.chartType === 9) { kcChartType = 'area'; isLine = (c.chartType === 6); }
 
-        // Loại custom
-        if      (c.chartType === 4)  { this.chartInstance.createIndicator('WA_COL_CHART',   true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 5)  { this.chartInstance.createIndicator('WA_HL_CHART',    true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 7)  { this.chartInstance.createIndicator('WA_LINE_MARKER', true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 8)  { this.chartInstance.createIndicator('WA_STEP_LINE',   true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 10) { this.chartInstance.createIndicator('WA_HLC_AREA',    true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 11) { this.chartInstance.createIndicator('WA_BASELINE',    true, {id: 'candle_pane'}); hideCandle = true; }
+        // Loại custom (Tạo bằng createIndicator bình thường, vì Legend HTML đã chặn chúng lại)
+        if      (c.chartType === 4)  { this.chartInstance.createIndicator({ name: 'WA_COL_CHART' }, false, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 5)  { this.chartInstance.createIndicator({ name: 'WA_HL_CHART' },  false, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 7)  { this.chartInstance.createIndicator({ name: 'WA_LINE_MARKER'}, false, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 8)  { this.chartInstance.createIndicator({ name: 'WA_STEP_LINE' }, false, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 10) { this.chartInstance.createIndicator({ name: 'WA_HLC_AREA' },  false, {id: 'candle_pane'}); hideCandle = true; }
+        else if (c.chartType === 11) { this.chartInstance.createIndicator({ name: 'WA_BASELINE' },  false, {id: 'candle_pane'}); hideCandle = true; }
+
+        // 🚀 KÍCH HOẠT HỆ THỐNG LEGEND HTML PRO (Chỉ cần gọi 1 lần sau khi có chartInstance)
+        if (window.WaveHtmlLegend && this.chartInstance) {
+            window.WaveHtmlLegend.setup(this.chartInstance);
+        }
 
         const isHollow       = (c.chartType === 2);
         const finalUpColor   = hideCandle ? 'transparent' : c.upColor;
