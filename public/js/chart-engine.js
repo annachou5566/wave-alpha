@@ -253,32 +253,40 @@ window.WaveChartEngine = {
             });
 
             // ─────────────────────────────────────────────────────────────
-            // 5. VÙNG HLC AREA (ID 10) — CHUYỂN ĐỔI THÀNH OVERLAY CHUYÊN NGHIỆP
+            // 5. VÙNG HLC AREA (ID 10) — CHUYỂN ĐỔI OVERLAY AN TOÀN TUYỆT ĐỐI
             // ─────────────────────────────────────────────────────────────
             
-            // A. Đăng ký lõi vẽ (Figure) - Nơi chứa 100% logic vẽ cũ của bạn
+            // Lõi vẽ: Lấy dữ liệu trực tiếp từ engine gốc, cản 100% lỗi Crash
             window.klinecharts.registerFigure({
                 name: 'wa_hlc_area_figure',
-                draw: (ctx, { attrs }) => {
-                    const { dataList, visibleRange, xAxis, yAxis } = attrs;
-                    const c = window.WaveChartEngine.config; // Lấy config như cũ
+                draw: (ctx, { bounding, xAxis, yAxis }) => {
+                    const chart = window.WaveChartEngine.chartInstance;
+                    if (!chart) return;
+                    
+                    const dataList = chart.getDataList();
                     if (!dataList || dataList.length === 0) return;
+
+                    const c = window.WaveChartEngine.config;
+                    const width = bounding ? bounding.width : 5000;
 
                     ctx.save();
                     ctx.setLineDash([]);
-                    const { from, to } = visibleRange;
-                    const start = Math.max(0, from - 1);
 
-                    // --- GIỮ NGUYÊN 100% ĐOẠN CODE VẼ POLYGON CỦA BẠN ---
                     const highPts = [], lowPts = [], closePts = [];
-                    for (let i = start; i < to; i++) {
+                    // Quét dữ liệu và lọc những điểm nằm trong màn hình
+                    for (let i = 0; i < dataList.length; i++) {
                         const kd = dataList[i];
                         if (!kd || kd.high === undefined || kd.low === undefined || kd.close === undefined) continue;
+                        
                         const x = xAxis.convertToPixel(i);
+                        // Culling: Bỏ qua nến nằm khuất khỏi màn hình để Chart siêu mượt
+                        if (x < -100 || x > width + 100) continue;
+
                         highPts.push ({x, y: yAxis.convertToPixel(kd.high)});
                         lowPts.push  ({x, y: yAxis.convertToPixel(kd.low)});
                         closePts.push({x, y: yAxis.convertToPixel(kd.close)});
                     }
+
                     if (highPts.length < 2) { ctx.restore(); return; }
 
                     // Nền nửa trên
@@ -324,23 +332,14 @@ window.WaveChartEngine = {
                 }
             });
 
-            // B. Đăng ký Overlay làm vỏ bọc để nhúng vào biểu đồ
+            // Lớp bọc Overlay
             window.klinecharts.registerOverlay({
                 name: 'WA_HLC_AREA',
                 needDefaultPointFigure: false,
                 needDefaultXAxisFigure: false,
                 needDefaultYAxisFigure: false,
-                createPointFigures: ({ overlay, xAxis, yAxis }) => {
-                    const chart = overlay.getChart();
-                    return [{
-                        type: 'wa_hlc_area_figure', // Gọi lõi vẽ ở trên ra
-                        attrs: {
-                            dataList: chart.getDataList(),
-                            visibleRange: chart.getVisibleRange(),
-                            xAxis: xAxis,
-                            yAxis: yAxis
-                        }
-                    }];
+                createPointFigures: () => {
+                    return [{ type: 'wa_hlc_area_figure' }];
                 }
             });
 
@@ -462,26 +461,19 @@ window.WaveChartEngine = {
         const c = this.config;
         let kcChartType = 'candle_solid', isLine = false, hideCandle = false;
 
-        // ✅ BẢN FIX: Nhắm chính xác mục tiêu. 
-        // Thay vì xóa theo pane ('candle_pane') khiến các chỉ báo EMA/MA bị văng theo,
-        // ta sẽ xóa chính xác bằng tên Indicator thông qua vòng lặp.
-        // ✅ BẢN FIX: Nhắm chính xác mục tiêu.
         CUSTOM_CHART_IDS.forEach(id => { 
             try { 
-                // Xóa theo đúng name của indicator để không chạm vào các chỉ báo khác
                 this.chartInstance.removeIndicator('candle_pane', id); 
             } catch (e) {} 
         });
 
-        // Dọn dẹp sạch sẽ Overlay nếu người dùng đổi sang loại chart khác
+        // Dọn dẹp Overlay để tránh rác khi đổi biểu đồ
         try { this.chartInstance.removeOverlay({ groupId: 'custom_main_chart' }); } catch(e) {}
 
-        // Loại native
         if      (c.chartType === 2) kcChartType = 'candle_stroke';
         else if (c.chartType === 3) kcChartType = 'ohlc';
         else if (c.chartType === 6 || c.chartType === 9) { kcChartType = 'area'; isLine = (c.chartType === 6); }
 
-        // Loại custom - 🚀 BẢN FIX PRO: Tàng hình riêng cho 5 loại này, không ảnh hưởng MACD/EMA
         const ghostStyle = { tooltip: { showRule: 'none', showName: false, showParams: false } };
 
         if      (c.chartType === 4)  { this.chartInstance.createIndicator({ name: 'WA_COL_CHART',   styles: ghostStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
@@ -489,12 +481,13 @@ window.WaveChartEngine = {
         else if (c.chartType === 7)  { this.chartInstance.createIndicator({ name: 'WA_LINE_MARKER', styles: ghostStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
         else if (c.chartType === 8)  { this.chartInstance.createIndicator({ name: 'WA_STEP_LINE',   styles: ghostStyle }, false, {id: 'candle_pane'}); hideCandle = true; }
         
-        // RIÊNG THẰNG HLC_AREA (ID 10) ĐÃ ĐƯỢC THĂNG CẤP LÊN OVERLAY ĐỂ KHÔNG BỊ KHOẢNG TRỐNG:
+        // 🚀 KIẾN TRÚC MỚI: Dùng Overlay kèm Point Mồi chống sập
         else if (c.chartType === 10) { 
             this.chartInstance.createOverlay({ 
                 name: 'WA_HLC_AREA', 
-                groupId: 'custom_main_chart', // Gắn group để khi đổi chart sẽ dọn dẹp dễ dàng
-                lock: true // Khóa cố định, không cho chuột tương tác click kéo thả
+                groupId: 'custom_main_chart',
+                points: [{ timestamp: 0, value: 0 }], // <== CHÌA KHÓA: Điểm mồi giúp động cơ bắt đầu vẽ
+                lock: true 
             }, 'candle_pane'); 
             hideCandle = true; 
         }
