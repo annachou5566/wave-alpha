@@ -1552,7 +1552,7 @@ window.__wa_chart_settings_modal_initialized = true;
         #wa-chart-settings-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999999; pointer-events: none; opacity: 0; transition: opacity 0.15s ease; }
         #wa-chart-settings-modal.show { display: block; opacity: 1; }
         .wa-csm-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e222d; width: 680px; height: 500px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; pointer-events: auto; }
-        .wa-csm-box.is-dragging { transition: none !important; }
+        .wa-csm-box.is-dragging { transition: none !important; will-change: left, top; }
         .wa-csm-sidebar { width: 200px; background: #131722; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 20px 0 0 0; }
         .wa-csm-tab { padding: 12px 24px; color: #848e9c; font-size: 13px; font-weight: 600; cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s; display: flex; align-items: center; gap: 10px; }
         .wa-csm-tab:hover { background: rgba(255,255,255,0.03); color: #EAECEF; }
@@ -2015,7 +2015,15 @@ document.addEventListener('click', () => {
         
         modal.querySelectorAll('[data-bind]').forEach(el => {
             const key = el.dataset.bind;
-            if (config[key] !== undefined) { if (el.type === 'checkbox') el.checked = config[key]; else el.value = config[key]; }
+            // Dùng defaultCfg thay cho config nếu ở trong nút Reset nhé
+            const dataObj = typeof defaultCfg !== 'undefined' && defaultCfg[key] !== undefined ? defaultCfg : config;
+            
+            if (dataObj[key] !== undefined) { 
+                if (el.type === 'checkbox') el.checked = dataObj[key]; 
+                else el.value = dataObj[key]; 
+                // BỔ SUNG: Ép slider cập nhật lại con số Badge
+                if (el.type === 'range') el.dispatchEvent(new Event('input'));
+            }
         });
         modal.querySelectorAll('.wa-color-swatch').forEach(swatch => {
             const key = swatch.dataset.colorBind; if (config[key]) swatch.style.background = config[key];
@@ -2032,7 +2040,18 @@ document.addEventListener('click', () => {
     };
 
     document.getElementById('btn-wa-csm-close').onclick = () => modal.classList.remove('show');
-    
+    // BỔ SUNG UX: Bấm ra ngoài vùng tối để đóng Modal
+    modal.addEventListener('mousedown', (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('show');
+            colorPicker.style.display = 'none'; // Đóng luôn picker nếu đang mở
+        }
+    });
+
+    // BỔ SUNG UX: Đóng Color Picker khi lăn chuột để tránh picker lơ lửng
+    modal.querySelector('.wa-csm-panels').addEventListener('scroll', () => {
+        colorPicker.style.display = 'none';
+    });
     modal.querySelectorAll('[data-bind]').forEach(el => {
         const eventType = el.type === 'range' ? 'input' : 'change';
         el.addEventListener(eventType, (e) => {
@@ -2100,9 +2119,14 @@ document.addEventListener('click', () => {
                     // Đồng bộ lại UI trong bảng Cài đặt
                     modal.querySelectorAll('[data-bind]').forEach(el => {
                         const key = el.dataset.bind;
-                        if (defaultCfg[key] !== undefined) { 
-                            if (el.type === 'checkbox') el.checked = defaultCfg[key]; 
-                            else el.value = defaultCfg[key]; 
+                        // Dùng defaultCfg thay cho config nếu ở trong nút Reset nhé
+                        const dataObj = typeof defaultCfg !== 'undefined' && defaultCfg[key] !== undefined ? defaultCfg : config;
+                        
+                        if (dataObj[key] !== undefined) { 
+                            if (el.type === 'checkbox') el.checked = dataObj[key]; 
+                            else el.value = dataObj[key]; 
+                            // BỔ SUNG: Ép slider cập nhật lại con số Badge
+                            if (el.type === 'range') el.dispatchEvent(new Event('input'));
                         }
                     });
                     modal.querySelectorAll('.wa-color-swatch').forEach(swatch => {
