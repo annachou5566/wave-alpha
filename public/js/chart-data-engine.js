@@ -22,17 +22,18 @@
             const config = window.WaveChartEngine ? window.WaveChartEngine.getConfig() : null;
             if (!config) return JSON.parse(JSON.stringify(this.rawHistory));
 
-            this.lastChartType = config.chartType;
+            // Ép kiểu an toàn để so sánh
+            const cType = parseInt(config.chartType);
+            this.lastChartType = cType;
 
-            if (config.chartType === 12) {
-                console.log('[WaveDataEngine] 🪄 Biến đổi Lịch sử -> Heikin Ashi');
+            if (cType === 12) {
                 return this._toHeikinAshi(this.rawHistory);
             }
+            
             // 🚀 KÍCH HOẠT ĐỘNG CƠ RENKO (ID 14)
-            if (config.chartType === 14) {
-                console.log('[WaveDataEngine] 🧱 Ép khuôn Lịch sử -> Renko Bricks');
-                let pct = config.renkoBrickPct || 0.5; 
-                return this._toRenko(this.rawHistory, pct);
+            if (cType === 14) {
+                // 🚀 ĐÃ SỬA LỖI: Truyền toàn bộ cục 'config' xuống để thuật toán đọc được cài đặt của người dùng
+                return this._toRenko(this.rawHistory, config);
             }
             
             return JSON.parse(JSON.stringify(this.rawHistory)); 
