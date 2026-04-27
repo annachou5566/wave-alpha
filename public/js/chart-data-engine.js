@@ -179,7 +179,7 @@
             ghost.low = Math.min(ghost.open, ghost.close, curr.low);
 
             return ghost;
-        }
+        },
        
         
 
