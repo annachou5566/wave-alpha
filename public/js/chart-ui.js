@@ -1236,14 +1236,29 @@ window.dispatchEvent(new CustomEvent('WA_TOKEN_SWITCHED', {
 };
 
 // chart-ui.js — hàm changeChartInterval
-window.changeChartInterval = function(interval, btnEl) {
+window.changeChartInterval = function(interval, btnEl, force = false) {
     if (window.currentChartInterval === interval) return;
     
+    // 🚀 BẢO VỆ RENKO: Chặn đổi Timeframe nếu đang là Renko
+    const config = window.WaveChartEngine ? window.WaveChartEngine.getConfig() : null;
+    if (config && parseInt(config.chartType) === 14 && !force) {
+        const masterBtn = document.getElementById('btn-wa-timeframe-master');
+        if (masterBtn) {
+            // Nháy đỏ cảnh báo
+            masterBtn.style.background = 'rgba(246, 70, 93, 0.2)';
+            masterBtn.style.borderColor = '#F6465D';
+            setTimeout(() => {
+                masterBtn.style.background = 'rgba(255,255,255,0.03)';
+                masterBtn.style.borderColor = 'rgba(0,240,255,0.2)';
+            }, 300);
+        }
+        console.log("Renko không phụ thuộc thời gian. Đã chặn đổi Timeframe.");
+        return; // Dừng luôn, không đổi UI, không gọi API!
+    }
+
     // Cập nhật nhãn hiển thị trên nút Master mới
     const labelEl = document.getElementById('wa-current-tf-label');
     if (labelEl) labelEl.innerText = interval.toUpperCase();
-
-    
 
     document.querySelectorAll('.sc-time-btn').forEach(b => b.classList.remove('active'));
     if (btnEl) btnEl.classList.add('active');
@@ -1255,7 +1270,6 @@ window.changeChartInterval = function(interval, btnEl) {
     if (tfEl) tfEl.innerText = interval.toUpperCase();
 
     if (window.currentChartToken) {
-        // 🛡️ BẮN PHÁO HIỆU SANG ENGINE: ĐÃ ĐỔI TIMEFRAME (Không tự gọi logic nến nữa)
         window.dispatchEvent(new CustomEvent('WA_TIMEFRAME_CHANGED', {
             detail: { token: window.currentChartToken, interval: interval, oldInterval: window.oldChartInterval }
         }));
@@ -1450,12 +1464,15 @@ window.closeProChart = function() {
 
                     div.onclick = (e) => {
                         e.stopPropagation();
-                        // Gửi update thẳng vào Chart Engine
                         if (window.WaveChartEngine) {
                             window.WaveChartEngine.update({ chartType: item.id }, true);
                             
-                            // 🚀 ÉP LOAD LẠI DATA NẾU LÀ RENKO HOẶC HEIKIN ASHI
-                            if (item.id === 14 || item.id === 12) {
+                            // 🚀 ÉP ĐỒNG BỘ: Nếu chọn Renko mà chưa ở 1m -> Ép tải data 1m ngầm
+                            if (item.id === 14 && window.currentChartInterval !== '1m') {
+                                window.changeChartInterval('1m', null, true); // force = true
+                            } 
+                            // 🚀 Nếu đã ở 1m sẵn hoặc là Heikin Ashi -> Nấu lại data ngay lập tức
+                            else if (item.id === 14 || item.id === 12) {
                                 if (window.WaveDataEngine && window.WA_Chart) {
                                     let reprocessedData = window.WaveDataEngine.processHistory(window.WaveDataEngine.rawHistory, true);
                                     window.WA_Chart.applyNewData(reprocessedData);
@@ -2079,14 +2096,16 @@ window.closeProChart = function() {
             const key = el.dataset.bind;
             let value = el.type === 'checkbox' ? el.checked : el.value;
             if (el.dataset.type === 'number') value = parseFloat(value);
-            
             if (window.WaveChartEngine) window.WaveChartEngine.update({ [key]: value });
             updateDynamicUI(window.WaveChartEngine.getConfig());
 
-            // 🚀 ÉP LOAD LẠI DATA KHI ĐỔI CHART TYPE HOẶC THAY ĐỔI THÔNG SỐ RENKO
+            // 🚀 XỬ LÝ SÂU: ÉP LOAD LẠI DATA KHI ĐỔI CHART TYPE HOẶC THAY THÔNG SỐ RENKO
             if (key === 'chartType' || key.startsWith('renko')) {
                 const cType = parseInt(window.WaveChartEngine.getConfig().chartType);
-                if ((cType === 14 || cType === 12) && window.WaveDataEngine && window.WA_Chart) {
+                if (cType === 14 && window.currentChartInterval !== '1m') {
+                    // Tự động force về 1m để đảm bảo có đủ nến gốc vẽ gạch
+                    window.changeChartInterval('1m', null, true); 
+                } else if ((cType === 14 || cType === 12) && window.WaveDataEngine && window.WA_Chart) {
                     let reprocessedData = window.WaveDataEngine.processHistory(window.WaveDataEngine.rawHistory, true);
                     window.WA_Chart.applyNewData(reprocessedData);
                 }
