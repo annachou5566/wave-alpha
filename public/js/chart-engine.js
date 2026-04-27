@@ -459,7 +459,30 @@ window.WaveChartEngine = {
         // [REFACTOR] Ủy quyền toàn bộ logic tạo UI/Nến cho Tường lửa
         if (window.WA_Chart) {
             window.WA_Chart.setMainSeries(this.config);
-            
+
+            // 🚀 BỔ SUNG: Truyền lệnh Tắt/Mở Lưới cho KLineChart
+            if (typeof window.WA_Chart.setStyles === 'function') {
+                window.WA_Chart.setStyles({
+                    grid: {
+                        show: true,
+                        horizontal: {
+                            show: this.config.gridHorizontal,
+                            size: 1,
+                            color: this.config.gridColor,
+                            style: 'dashed',
+                            dashValue: [2, 2]
+                        },
+                        vertical: {
+                            show: this.config.gridVertical,
+                            size: 1,
+                            color: this.config.gridColor,
+                            style: 'dashed',
+                            dashValue: [2, 2]
+                        }
+                    }
+                });
+            }
+
             // Xử lý Background (DOM manipulation nên giữ ở ngoài biểu đồ)
             const container = document.getElementById('sc-chart-container');
             if (container) {
