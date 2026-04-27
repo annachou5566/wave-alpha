@@ -4,7 +4,7 @@
 // ==========================================
 
 
-window.WA_Chart = null;
+window.tvChart = null;
 window.tvLineSeries = null; 
 // ═══ CACHE DOM — tránh querySelector mỗi giây ═══
 const _UI = {
@@ -562,14 +562,14 @@ window.changeTheme = function() {
     }
 
     // 💡 VÁ LỖI: Chỉ đổi màu trực tiếp vào Canvas, KHÔNG xóa chart đi vẽ lại
-    if (window.WA_Chart) {
+    if (window.tvChart) {
         const isTrad = window.currentTheme === 'trad';
         const t_up = isTrad ? '#0ECB81' : '#2af592';
         const t_down = isTrad ? '#F6465D' : '#cb55e3';
         const t_text = isTrad ? '#848e9c' : '#527c82';
         const t_line = isTrad ? '#00F0FF' : '#41e6e7';
 
-        window.WA_Chart.setStyles({
+        window.tvChart.setStyles({
             candle: {
                 bar: { upColor: t_up, downColor: t_down, noChangeColor: t_text,
                        upBorderColor: t_up, downBorderColor: t_down,
@@ -588,7 +588,7 @@ window.changeTheme = function() {
 
 
 window.applyFishFilter = function() {
-    if (!window.WA_Chart) return;
+    if (!window.tvChart) return;
 
     try {
         // 🚀 TẠO TEMPLATE ĐỘC QUYỀN VỚI HÀNG RÀO BẢO VỆ CHỐNG CRASH
@@ -654,7 +654,7 @@ window.applyFishFilter = function() {
         // Nếu tắt filter hoặc ở khung lớn -> Xóa mượt mà
         if (activeTypes.length === 0 || (window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s')) {
             for (let oldId in window.activeWaveMarkers) {
-                try { window.WA_Chart.removeOverlay(oldId); } catch(e) {}
+                try { window.tvChart.removeOverlay(oldId); } catch(e) {}
             }
             window.activeWaveMarkers = {};
             return;
@@ -667,7 +667,7 @@ window.applyFishFilter = function() {
             return activeTypes.includes(type);
         });
 
-        let chartData = window.WA_Chart.getDataList();
+        let chartData = window.tvChart.getDataList();
         if (!chartData || chartData.length === 0) return;
 
         filteredMarkers.forEach((m, idx) => {
@@ -686,7 +686,7 @@ window.applyFishFilter = function() {
                     let yPrice = isBuy ? candle.low : candle.high;
 
                     try {
-                        window.WA_Chart.createOverlay({
+                        window.tvChart.createOverlay({
                             id: overlayId,
                             name: 'cyberMarker', 
                             extendData: { isBuy: isBuy, text: m.text, color: m.color },
@@ -700,7 +700,7 @@ window.applyFishFilter = function() {
         // Dọn dẹp marker cũ
         for (let oldId in window.activeWaveMarkers) {
             if (!newActiveMarkers[oldId]) { 
-                try { window.WA_Chart.removeOverlay(oldId); } catch(e) {}
+                try { window.tvChart.removeOverlay(oldId); } catch(e) {}
             }
         }
         window.activeWaveMarkers = newActiveMarkers;
@@ -712,8 +712,8 @@ window.applyFishFilter = function() {
 
 // Hàm hỗ trợ Xóa hình vẽ của User cho Bước 4 (không xóa Marker cá voi)
 window.clearUserDrawings = function() {
-    if (!window.WA_Chart) return;
-    window.WA_Chart.removeOverlay(); // Xóa sạch tất cả
+    if (!window.tvChart) return;
+    window.tvChart.removeOverlay(); // Xóa sạch tất cả
     window.applyFishFilter();       // Vẽ lại Marker cá voi
 };
 
@@ -805,10 +805,10 @@ document.head.appendChild(s);
     if (oldBackdrop) oldBackdrop.remove(); 
 
     const doResize = function() {
-        if (!window.WA_Chart) return;
+        if (!window.tvChart) return;
         const start = Date.now();
         const animate = function() {
-            if (window.WA_Chart) window.WA_Chart.resize();
+            if (window.tvChart) window.tvChart.resize();
             // Gọi liên tục trong 450ms (khớp với thời gian transition CSS)
             if (Date.now() - start < 450) {
                 requestAnimationFrame(animate);
@@ -865,10 +865,10 @@ window.togglePanelCollapse = function() {
             : '<i class="fas fa-chevron-left"></i>';
         toggleBtn.title = isCollapsed ? 'Mở panel' : 'Ẩn panel';
     }
-    if (window.WA_Chart) {
+    if (window.tvChart) {
         const start = Date.now();
         const animate = () => {
-            if (window.WA_Chart) window.WA_Chart.resize();
+            if (window.tvChart) window.tvChart.resize();
             if (Date.now() - start < 450) requestAnimationFrame(animate);
         };
         requestAnimationFrame(animate);
@@ -956,7 +956,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
         const container = document.getElementById('sc-chart-container');
 
     // Trong đoạn isTimeSwitch của openProChart
-if (isTimeSwitch && window.WA_Chart) {
+if (isTimeSwitch && window.tvChart) {
     let isTick = window.currentChartInterval === 'tick';
     
     // 🚀 FIX LỖI TIME-SWITCH: Tôn trọng WaveChartEngine, không tự ép nến đặc nữa!
@@ -964,7 +964,7 @@ if (isTimeSwitch && window.WA_Chart) {
         if (isTick) window.WaveChartEngine.update({ chartType: 9 }, true);
         else window.WaveChartEngine.applyNow(); // Vẽ lại nến Rỗng/Line/Bar y như cũ
     } else {
-        window.WA_Chart.setStyles({ candle: { type: isTick ? 'area' : 'candle_solid' } });
+        window.tvChart.setStyles({ candle: { type: isTick ? 'area' : 'candle_solid' } });
     }
 
     // ✅ THÊM: Reset waterfall ngay lập tức để không render nến zombie
@@ -976,7 +976,7 @@ if (isTimeSwitch && window.WA_Chart) {
         if (histData && histData.length > 0) {
             // 🚀 HOOK 1: Nấu data lịch sử trước khi nạp vào Chart
             let finalData = window.WaveDataEngine ? window.WaveDataEngine.processHistory(histData) : histData;
-            window.WA_Chart.applyNewData(finalData);
+            window.tvChart.applyNewData(finalData);
         }
         if (typeof window.__wa_onChartReady === 'function') window.__wa_onChartReady();
         if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, true);
@@ -992,7 +992,7 @@ if (isTimeSwitch && window.WA_Chart) {
         );
     }
     
-    if (window.WA_Chart) { try { klinecharts.dispose(container); } catch(e) {} window.WA_Chart = null; }
+    if (window.tvChart) { try { klinecharts.dispose(container); } catch(e) {} window.tvChart = null; }
     window.scActivePriceLines = [];
     
     // XÓA SẠCH CONTAINER (KHÔNG DÙNG WRAPPER ĐỂ TRÁNH VỠ LAYOUT)
@@ -1041,103 +1041,28 @@ if (isTimeSwitch && window.WA_Chart) {
 
         if (window.WaveIndicatorAPI) window.WaveIndicatorAPI.register();
 
-        // 1. KHỞI TẠO CHART 100% NATIVE KLINECHARTS
+        // 1. KHỞI TẠO CHART BẰNG BỨC TƯỜNG LỬA (WA_Chart)
         container.style.position = 'relative'; 
-        window.WA_Chart = klinecharts.init(container, {
-            styles: {
-                grid: { horizontal: { color: 'rgba(255,255,255,0.05)', style: 'dashed' }, vertical: { color: 'rgba(255,255,255,0.05)', style: 'dashed' } },
-                
-                // 🚀 TÍCH HỢP OHLC VÀO TOOLTIP CỦA NẾN
-                candle: {
-                    type: window.currentChartInterval === 'tick' ? 'area' : 'candle_solid',
-                    bar: { upColor: t_up, downColor: t_down, noChangeColor: t_text, upBorderColor: t_up, downBorderColor: t_down, upWickColor: t_up, downWickColor: t_down },
-                    area: { lineSize: 2, lineColor: t_line, backgroundColor: [{ offset: 0, color: isTrad ? 'rgba(0, 240, 255, 0.2)' : 'rgba(65, 230, 231, 0.2)' }, { offset: 1, color: 'rgba(0,0,0,0)' }] },
-                    tooltip: { 
-                        showRule: 'always',
-                        showType: 'standard',
-                        custom: function(calcData) {
-                            if (calcData.current) window.lastOHLC = calcData.current;
-                            const kLineData = window.lastOHLC || calcData.default;
-                            if (!kLineData) return [];
+        if (!window.WA_Chart.init('sc-chart-container')) return;
 
-                            const sym = (t.symbol || 'UNKNOWN').toUpperCase() + 'USDT';
-                            const tf = window.currentChartInterval.toUpperCase();
-                            const volStr = kLineData.volume >= 1e9 ? (kLineData.volume/1e9).toFixed(2)+'B' : (kLineData.volume >= 1e6 ? (kLineData.volume/1e6).toFixed(2)+'M' : (kLineData.volume >= 1e3 ? (kLineData.volume/1e3).toFixed(2)+'K' : (kLineData.volume || 0).toFixed(0)));
-                            const isUp = kLineData.close >= kLineData.open;
-
-                            // 🎯 CẤU TRÚC OBJECT MỚI GIÚP CANVAS NHẬN MÀU
-                            return [
-                                { title: { text: `${sym} ${tf}  |`, color: '#EAECEF' }, value: '' },
-                                { title: { text: ' O ', color: '#848e9c' }, value: { text: kLineData.open.toFixed(prec), color: '#848e9c' } },
-                                { title: { text: ' H ', color: '#848e9c' }, value: { text: kLineData.high.toFixed(prec), color: '#0ECB81' } },
-                                { title: { text: ' L ', color: '#848e9c' }, value: { text: kLineData.low.toFixed(prec), color: '#F6465D' } },
-                                { title: { text: ' C ', color: '#848e9c' }, value: { text: kLineData.close.toFixed(prec), color: isUp ? '#0ECB81' : '#F6465D' } },
-                                { title: { text: ' V ', color: '#848e9c' }, value: { text: volStr, color: '#848e9c' } }
-                            ];
-                        },
-                        text: { 
-                            size: 12, 
-                            // 🚀 BÍ QUYẾT TRỊ BỆNH CO CHỮ: Ghi thẳng tên Font, tuyệt đối không dùng var()
-                            family: 'Arial, "Segoe UI", sans-serif', 
-                            weight: 600, 
-                            color: '#848e9c', 
-                            marginLeft: 10, marginTop: 8, marginRight: 0, marginBottom: 0 
-                        }
-                    }
-                },
-                
-                // 🚀 CẤU HÌNH INDICATOR GLOBAL
-                indicator: {
-                    tooltip: {
-                        showRule: 'always',    
-                        showType: 'standard',  
-                        icons: [
-                            { id: 'visible', position: 'middle', marginLeft: 10, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '◉', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
-                            { id: 'invisible', position: 'middle', marginLeft: 10, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '◎', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
-                            { id: 'setting', position: 'middle', marginLeft: 6, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '⚙', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#F0B90B', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(240,185,11,0.1)' },
-                            { id: 'close', position: 'middle', marginLeft: 6, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '✕', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#F6465D', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(246,70,93,0.1)' }
-                        ]
-                    },
-                    // 🚀 THIẾT KẾ NHÃN REALTIME MINIMALIST (TẮT MẶC ĐỊNH CHO MỌI CHỈ BÁO)
-                    lastValueMark: {
-                        show: false, // <-- Tắt mặc định để chart không bị rác rưởi
-                        text: {
-                            show: true,
-                            color: '#ffffff',     // Chữ trắng tinh tế
-                            size: 11,             // Nhỏ gọn
-                            family: 'Arial, sans-serif',
-                            weight: 'bold',
-                            paddingLeft: 6,       // Căn lề trái phải rộng ra 1 xíu cho sang
-                            paddingRight: 6,
-                            paddingTop: 3,
-                            paddingBottom: 3,
-                            borderRadius: 3       // Bo góc nhẹ 3px
-                            // Không set backgroundColor -> KLineCharts sẽ tự động mượn màu của dây Line làm màu nền.
-                        }
-                    }
-                },
-                yAxis: { axisLine: { show: false }, tickText: { color: t_text } },
-            }
-        });
-
-// 🚀 KÍCH HOẠT WAVE CHART ENGINE NGAY SAU KHI KLINECHART VỪA INIT XONG
-if (window.WaveChartEngine && window.WA_Chart) {
-    window.WaveChartEngine.init(window.WA_Chart);
-}
+        // 🚀 KÍCH HOẠT WAVE CHART ENGINE ĐỂ TỰ ĐỒNG BỘ STYLE NẾN VÀ LƯỚI
+        if (window.WaveChartEngine) {
+            window.WaveChartEngine.init();
+        }
 
         // ĐĂNG KÝ CLICK ICON (Xử lý mượt cả VOL mặc định)
-        window.WA_Chart.subscribeAction('onTooltipIconClick', function(data) {
+        window.tvChart.subscribeAction('onTooltipIconClick', function(data) {
             if (!data.indicatorName) return;
             const indName = data.indicatorName;
             const paneId = data.paneId;
 
             if (data.iconId === 'visible') {
-                window.WA_Chart.overrideIndicator({ name: indName, visible: true }, paneId);
+                window.tvChart.overrideIndicator({ name: indName, visible: true }, paneId);
                 let ind = window.scActiveIndicators?.find(x => x.name === indName);
                 if (ind) ind.visible = true;
             } 
             else if (data.iconId === 'invisible') {
-                window.WA_Chart.overrideIndicator({ name: indName, visible: false }, paneId);
+                window.tvChart.overrideIndicator({ name: indName, visible: false }, paneId);
                 let ind = window.scActiveIndicators?.find(x => x.name === indName);
                 if (ind) ind.visible = false;
             } 
@@ -1146,7 +1071,7 @@ if (window.WaveChartEngine && window.WA_Chart) {
                     let calcParams;
                     // Bước 1: Thử lấy trực tiếp từ canvas
                     try {
-                        const instances = window.WA_Chart.getIndicators({ name: indName, paneId: paneId });
+                        const instances = window.tvChart.getIndicators({ name: indName, paneId: paneId });
                         if (instances && instances.length > 0) calcParams = instances[0].calcParams;
                     } catch(e) {}
                     
@@ -1167,7 +1092,7 @@ if (window.WaveChartEngine && window.WA_Chart) {
                     window.removeIndicatorFromChart(indName);
                 } 
                 // Fallback nếu người dùng bấm X xóa chỉ báo VOL mặc định
-                try { window.WA_Chart.removeIndicator(paneId, indName); } catch(e){}
+                try { window.tvChart.removeIndicator(paneId, indName); } catch(e){}
             }
         });
 
@@ -1177,8 +1102,8 @@ if (window.WaveChartEngine && window.WA_Chart) {
         customUI.innerHTML = `<div style="position: absolute; bottom: 25px; left: 15px; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px;">WAVE ALPHA</div>`;
         container.appendChild(customUI);
 
-        window.WA_Chart.setPriceVolumePrecision(prec, 2);
-        window.WA_Chart.createIndicator('VOL', false, { height: 80 });
+        window.tvChart.setPriceVolumePrecision(prec, 2);
+        window.tvChart.createIndicator('VOL', false, { height: 80 });
 
         // --- BẮT ĐẦU PATCH: TỐI ƯU RESIZE OBSERVER & CLEAR CACHE ---
         const chartArea = document.querySelector('.sc-chart-area');
@@ -1193,12 +1118,12 @@ if (window.WaveChartEngine && window.WA_Chart) {
         const isMobile = () => window.innerWidth <= 991;
         
         window._chartResizeObserver = new ResizeObserver(function() {
-            if (!window.WA_Chart) return;
+            if (!window.tvChart) return;
             if (_resizeRafId) cancelAnimationFrame(_resizeRafId);
             
             // Giới hạn call stack vẽ lại chart ở tốc độ 60fps của thiết bị
             _resizeRafId = requestAnimationFrame(function() {
-                if (window.WA_Chart) window.WA_Chart.resize();
+                if (window.tvChart) window.tvChart.resize();
                 _resizeRafId = null;
             });
         });
@@ -1227,7 +1152,7 @@ if (window.WaveChartEngine && window.WA_Chart) {
             // Tự động chuyển mode Hollow (nến rỗng) nếu màu thân nến là transparent
             const cType = (ub === 'transparent' || ub === 'rgba(0,0,0,0)') ? 'candle_up_stroke' : 'candle_solid';
 
-            window.WA_Chart.setStyles({
+            window.tvChart.setStyles({
                     grid: {
                         // SỬA LỖI Ở 2 DÒNG DƯỚI ĐÂY: Thêm chữ ws. vào trước showGrid
                         horizontal: { show: ws.showGrid !== false, color: 'rgba(255,255,255,0.05)', style: 'dashed' },
@@ -1248,9 +1173,9 @@ if (window.WaveChartEngine && window.WA_Chart) {
         }
 
         // 3. SỰ KIỆN RÊ CHUỘT
-        window.WA_Chart.subscribeAction('onCrosshairChange', function(param) {
+        window.tvChart.subscribeAction('onCrosshairChange', function(param) {
             if (!param || param.dataIndex === undefined || param.dataIndex < 0) return;
-            const dataList = window.WA_Chart.getDataList();
+            const dataList = window.tvChart.getDataList();
             const ohlc = dataList[param.dataIndex];
             if (!ohlc) return;
 
@@ -1283,7 +1208,7 @@ if (typeof window.fetchBinanceHistory === 'function') {
             
             // 🚀 HOOK 2: Nấu data lịch sử trước khi nạp vào Chart
             let finalData = window.WaveDataEngine ? window.WaveDataEngine.processHistory(histData) : histData;
-            window.WA_Chart.applyNewData(finalData);
+            window.tvChart.applyNewData(finalData);
         }
 
 if (window.WaveIndicatorAPI) {
@@ -1354,9 +1279,9 @@ window.closeProChart = function() {
     const overlay = document.getElementById('super-chart-overlay');
     if (overlay) { overlay.classList.remove('active'); document.body.classList.remove('overlay-active'); }
     if (window.chartWs) { window.chartWs.close(); window.chartWs = null; }
-    if (window.WA_Chart) { 
+    if (window.tvChart) { 
         try { klinecharts.dispose(document.getElementById('sc-chart-container')); } catch(e) {}
-        window.WA_Chart = null; 
+        window.tvChart = null; 
     }
     window.currentChartToken = null; 
 };
@@ -2307,12 +2232,12 @@ window.closeProChart = function() {
     // 🚀 PHÉP MÀU 60 FPS: Luôn neo Countdown ngay dưới nhãn giá cuối cùng
     function syncPosition60FPS() {
         const cd = document.getElementById('wa-overlay-countdown');
-        if (cd && window.WA_Chart) {
+        if (cd && window.tvChart) {
             try {
-                const dataList = window.WA_Chart.getDataList();
+                const dataList = window.tvChart.getDataList();
                 if (dataList && dataList.length > 0) {
                     const lastPrice = dataList[dataList.length - 1].close;
-                    const pixel = window.WA_Chart.convertToPixel({ value: lastPrice }, { paneId: 'candle_pane' });
+                    const pixel = window.tvChart.convertToPixel({ value: lastPrice }, { paneId: 'candle_pane' });
                     const y = typeof pixel === 'number' ? pixel : (pixel ? pixel.y : null);
                     
                     if (y !== null && !isNaN(y)) {

@@ -1,6 +1,6 @@
 // ==========================================
 // 🚀 FILE: public/js/wa-chart-core.js
-// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER V2 - FULL API)
+// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER)
 // ==========================================
 
 (function() {
@@ -15,11 +15,17 @@
 
                 _chartInstance = window.klinecharts.init(containerId);
 
-                // 🛡️ TẮT VĨNH VIỄN TOOLTIP/LEGEND CANVAS (Chuẩn bị Task 2)
+                // 🛡️ BẮT CẦU TƯƠNG THÍCH NGƯỢC (Lừa các file cũ không bị crash)
+                window.tvChart = this;
+
+                // 🛡️ TẮT VĨNH VIỄN TOOLTIP/LEGEND CANVAS
                 _chartInstance.setStyles({
                     crosshair: { show: true },
                     indicator: { tooltip: { showRule: 'none' } },
-                    candle: { tooltip: { showRule: 'none' } }
+                    candle: { 
+                        type: 'candle_solid', 
+                        tooltip: { showRule: 'none' } 
+                    }
                 });
 
                 const container = document.getElementById(containerId);
@@ -29,7 +35,7 @@
                     });
                     _resizeObserver.observe(container);
                 }
-                console.log('[WA_Chart] Firewall Active. No direct KLC allowed.');
+                console.log('[WA_Chart] Firewall Active. Backward compatibility ON.');
                 return true;
             } catch(e) {
                 console.error('[WA_Chart] Init Error', e);
@@ -52,6 +58,8 @@
         subscribeAction: function(type, cb) { try { if(_chartInstance) _chartInstance.subscribeAction(type, cb); } catch(e){} },
         createIndicator: function(name, isStack, options) { try { if(_chartInstance) _chartInstance.createIndicator(name, isStack, options); } catch(e){} },
         removeIndicator: function(paneId, name) { try { if(_chartInstance) _chartInstance.removeIndicator(paneId, name); } catch(e){} },
+        overrideIndicator: function(override, paneId) { try { if(_chartInstance) _chartInstance.overrideIndicator(override, paneId); } catch(e){} },
+        getIndicators: function(options) { try { return _chartInstance ? _chartInstance.getIndicators(options) : []; } catch(e){ return []; } },
         createOverlay: function(options) { try { if(_chartInstance) return _chartInstance.createOverlay(options); return null; } catch(e){ return null; } },
         removeOverlay: function(id) { try { if(_chartInstance) _chartInstance.removeOverlay(id); } catch(e){} },
         resize: function() { try { if(_chartInstance) _chartInstance.resize(); } catch(e){} },
@@ -64,7 +72,7 @@
         setMainSeries: function(config) {
             try {
                 if (!_chartInstance) return;
-                // Xóa Custom Cũ để lách lỗi Deep Merge
+                
                 const CUSTOM_CHART_IDS = ['WA_COL_CHART', 'WA_HL_CHART', 'WA_STEP_LINE', 'WA_LINE_MARKER', 'WA_HLC_AREA', 'WA_BASELINE'];
                 CUSTOM_CHART_IDS.forEach(id => { try { _chartInstance.removeIndicator('candle_pane', id); } catch(e){} });
 
@@ -90,7 +98,6 @@
                 const fUpW = hideCandle ? 'transparent' : (config.showWick ? (config.wickIndependent ? config.wickUpColor : config.upColor) : 'transparent');
                 const fDnW = hideCandle ? 'transparent' : (config.showWick ? (config.wickIndependent ? config.wickDownColor : config.downColor) : 'transparent');
 
-                // Xử lý màu Area mờ an toàn
                 const areaColorObj = (window.WaveChartEngine && window.WaveChartEngine._dimColor) 
                                      ? window.WaveChartEngine._dimColor(config.upColor, 0.25) 
                                      : config.upColor.replace(')', ', 0.25)').replace('rgb', 'rgba');
