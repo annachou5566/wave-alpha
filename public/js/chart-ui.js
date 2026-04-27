@@ -11,7 +11,17 @@ const _UI = {
     spVal: null, spMeter: null, dropEl: null, barBuy: null, barSell: null,
     volBuy: null, volSell: null, ratioTxt: null, verdictEl: null
 };
-
+window.getOptimalDataInterval = function(uiInterval) {
+    const config = window.WaveChartEngine ? window.WaveChartEngine.getConfig() : null;
+    if (config && parseInt(config.chartType) === 14) {
+        // 🚀 BÍ QUYẾT RENKO: Cần lịch sử dài để đủ biên độ vẽ gạch. 
+        // Nếu user chọn khung < 15m, ta âm thầm hack ép API tải dữ liệu 15m.
+        // 1000 nến 15m = 10 ngày. Đủ vẽ hàng trăm viên gạch!
+        const smallTFs = ['tick', '1s', '1m', '3m', '5m'];
+        if (smallTFs.includes(uiInterval)) return '15m'; 
+    }
+    return uiInterval;
+};
 window.__cacheCommandCenterUI = function() {
     _UI.nfEl       = document.getElementById('cc-net-flow');
     _UI.nfBox      = document.getElementById('cc-nf-box');
@@ -1227,9 +1237,15 @@ window.openProChart = function(t, isTimeSwitch = false) {
         });
 
         
-// KH// 🛡️ BẮN PHÁO HIỆU: ĐÃ ĐỔI TOKEN MỚI (Event Hub sẽ lo tải data và dựng nến)
+// 🛡️ BẮN PHÁO HIỆU: ĐÃ ĐỔI TOKEN MỚI
+let dataInterval = window.getOptimalDataInterval(window.currentChartInterval);
+        
 window.dispatchEvent(new CustomEvent('WA_TOKEN_SWITCHED', {
-    detail: { token: t, interval: window.currentChartInterval }
+    detail: { 
+        token: t, 
+        interval: dataInterval, 
+        uiInterval: window.currentChartInterval 
+    }
 }));
 
 }, 100); 
@@ -1269,9 +1285,18 @@ window.changeChartInterval = function(interval, btnEl, force = false) {
     let tfEl = document.getElementById('chart-legend-tf');
     if (tfEl) tfEl.innerText = interval.toUpperCase();
 
+    // TÌM ĐOẠN NÀY ĐỂ XÓA VÀ THAY THẾ:
     if (window.currentChartToken) {
+        // 🚀 GỌI HÀM INTERCEPTOR ĐỂ TRÁO ĐỔI THỜI GIAN NẾU ĐANG LÀ RENKO
+        let dataInterval = window.getOptimalDataInterval(interval);
+
         window.dispatchEvent(new CustomEvent('WA_TIMEFRAME_CHANGED', {
-            detail: { token: window.currentChartToken, interval: interval, oldInterval: window.oldChartInterval }
+            detail: { 
+                token: window.currentChartToken, 
+                interval: dataInterval,  // Gửi 15m cho API Binance tải data
+                oldInterval: window.oldChartInterval,
+                uiInterval: interval // Truyền thêm để biết UI thực chất đang ở đâu
+            }
         }));
     }
 };
@@ -2019,17 +2044,33 @@ window.closeProChart = function() {
         if (!window.WaveChartEngine) return;
         const config = window.WaveChartEngine.getConfig();
         
-        // Cập nhật giá trị UI chung
-        modal.querySelectorAll('[data-bind]').forEach(el => {
+        // Lắng nghe thay đổi từ Hidden Input (do WaveDropdown bắn ra) và Checkbox/Range
+    modal.querySelectorAll('[data-bind]').forEach(el => {
+        const eventType = el.type === 'range' ? 'input' : 'change';
+        el.addEventListener(eventType, (e) => {
             const key = el.dataset.bind;
-            const dataObj = typeof defaultCfg !== 'undefined' && defaultCfg[key] !== undefined ? defaultCfg : config;
+            let value = el.type === 'checkbox' ? el.checked : el.value;
+            if (el.dataset.type === 'number') value = parseFloat(value);
             
-            if (dataObj[key] !== undefined) { 
-                if (el.type === 'checkbox') el.checked = dataObj[key]; 
-                else el.value = dataObj[key]; 
-                if (el.type === 'range') el.dispatchEvent(new Event('input'));
+            if (window.WaveChartEngine) window.WaveChartEngine.update({ [key]: value });
+            updateDynamicUI(window.WaveChartEngine.getConfig());
+
+            // 🚀 KÍCH HOẠT ĐỒNG BỘ: KHI ĐỔI CHART TYPE HOẶC THÔNG SỐ RENKO
+            if (key === 'chartType') {
+                // Bất kể bật hay tắt Renko, ép hệ thống gọi lại API với khung thời gian chuẩn
+                let dataInterval = window.getOptimalDataInterval(window.currentChartInterval);
+                window.dispatchEvent(new CustomEvent('WA_TIMEFRAME_CHANGED', {
+                    detail: { token: window.currentChartToken, interval: dataInterval, oldInterval: window.currentChartInterval }
+                }));
+            } else if (key.startsWith('renko') || parseInt(window.WaveChartEngine.getConfig().chartType) === 12) {
+                // Chỉ đổi kích thước gạch (Size, ATR) -> Chỉ cần nấu lại data cũ, không tốn API
+                if (window.WaveDataEngine && window.WA_Chart) {
+                    let reprocessedData = window.WaveDataEngine.processHistory(window.WaveDataEngine.rawHistory, true);
+                    window.WA_Chart.applyNewData(reprocessedData);
+                }
             }
         });
+    });
 
         // 5. RENDER WAVEDROPDOWN
         ddConfigs.forEach(dd => {
