@@ -1896,14 +1896,18 @@ window.closeProChart = function() {
     });
 
     function updateDynamicUI(config) {
-        const t = parseInt(config.chartType); 
-        const isCandles = (t === 1 || t === 2 || t === 3 || t === 4 || t === 5 || t === 12);
-        const isLines = (t === 6 || t === 7 || t === 9);
+        const t = parseInt(config.chartType) || 1; 
+        
+        // 🚀 ĐÃ SỬA: Bao gồm tất cả các loại biểu đồ Pro (13-21) để không bị mất bảng màu
+        const isCandles = [1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21].includes(t);
+        const isLines = [6, 7, 9].includes(t);
         const isStep = (t === 8);
         const isHLC = (t === 10);
         const isBaseline = (t === 11);
 
-        document.getElementById('csm-ui-candles').style.display = isCandles ? 'flex' : 'none';
+        let candleEl = document.getElementById('csm-ui-candles');
+        if (candleEl) candleEl.style.display = isCandles ? 'flex' : 'none';
+
         let linesEl = document.getElementById('csm-ui-lines');
         if(linesEl) {
             linesEl.style.display = isLines ? 'flex' : 'none';
@@ -1923,11 +1927,20 @@ window.closeProChart = function() {
         let hlcEl = document.getElementById('csm-ui-hlc'); if(hlcEl) hlcEl.style.display = isHLC ? 'flex' : 'none';
         let baseEl = document.getElementById('csm-ui-baseline'); if(baseEl) baseEl.style.display = isBaseline ? 'flex' : 'none';
 
-        document.getElementById('csm-bg2-swatch').style.display = config.bgType === 'gradient' ? 'block' : 'none';
-        document.getElementById('csm-wick-swatches').style.opacity = config.wickIndependent ? '1' : '0.5';
-        document.getElementById('csm-wick-swatches').style.pointerEvents = config.wickIndependent ? 'auto' : 'none';
-        document.getElementById('csm-border-swatches').style.opacity = config.borderIndependent ? '1' : '0.5';
-        document.getElementById('csm-border-swatches').style.pointerEvents = config.borderIndependent ? 'auto' : 'none';
+        let bg2Swatch = document.getElementById('csm-bg2-swatch');
+        if (bg2Swatch) bg2Swatch.style.display = config.bgType === 'gradient' ? 'block' : 'none';
+        
+        let wickSwatches = document.getElementById('csm-wick-swatches');
+        if(wickSwatches) {
+            wickSwatches.style.opacity = config.wickIndependent ? '1' : '0.5';
+            wickSwatches.style.pointerEvents = config.wickIndependent ? 'auto' : 'none';
+        }
+        
+        let borderSwatches = document.getElementById('csm-border-swatches');
+        if(borderSwatches) {
+            borderSwatches.style.opacity = config.borderIndependent ? '1' : '0.5';
+            borderSwatches.style.pointerEvents = config.borderIndependent ? 'auto' : 'none';
+        }
     }
 
     window.openChartSettings = function() {
@@ -2146,48 +2159,64 @@ window.closeProChart = function() {
     let countdownInterval = null;
     let countdownRafId = null;
 
-    window.addEventListener('wa_chart_config_updated', (e) => {
-        const config = e.detail;
+    // 🚀 MASTER LISTENER: Xử lý Giao diện Tức thời (Trị dứt điểm 4 lỗi)
+    const handleConfigUpdate = (e) => {
+        const config = e.detail || {};
         const container = document.getElementById('sc-chart-container');
-        if (!container) return;
-
-        // 1. WATERMARK
+        
+        // 1. CHỮ CHÌM (WATERMARK)
         let wm = document.getElementById('wa-overlay-watermark');
-        if (config.showWatermark) {
-            if (!wm) {
+        if (config.showWatermark !== false) {
+            if (!wm && container) {
                 wm = document.createElement('div');
                 wm.id = 'wa-overlay-watermark';
                 wm.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: "Inter", sans-serif; font-weight: 800; font-size: clamp(40px, 8vw, 120px); letter-spacing: 2px; pointer-events: none; z-index: 1; white-space: nowrap; transition: opacity 0.2s;';
                 container.appendChild(wm);
             }
-            const sym = window.currentChartToken ? window.currentChartToken.symbol : 'WAVE ALPHA';
-            const tf = (window.currentChartInterval || '1D').toUpperCase();
-            wm.innerText = `${sym} • ${tf}`;
-            wm.style.color = `rgba(255,255,255, ${config.watermarkOpacity})`;
-        } else if (wm) {
-            wm.remove();
-        }
+            if (wm) {
+                const sym = window.currentChartToken ? window.currentChartToken.symbol : 'WAVE ALPHA';
+                const tf = (window.currentChartInterval || '1D').toUpperCase();
+                wm.innerText = `${sym} • ${tf}`;
+                wm.style.color = `rgba(255,255,255, ${config.watermarkOpacity || 0.05})`;
+            }
+        } else if (wm) { wm.remove(); }
 
-        // 2. COUNTDOWN (ĐẾM NGƯỢC HÒA VÀO TRỤC Y)
+        // 2. ĐẾM NGƯỢC (COUNTDOWN)
         let cd = document.getElementById('wa-overlay-countdown');
-        if (config.showCountdown) {
-            if (!cd) {
+        if (config.showCountdown !== false) {
+            if (!cd && container) {
                 cd = document.createElement('div');
                 cd.id = 'wa-overlay-countdown';
-                // 🚀 STYLE MỚI: Xóa viền/nền bự, biến nó thành Text chìm hòa vào cột Y-Axis bên phải
                 cd.style.cssText = 'position: absolute; right: 0; width: 64px; text-align: center; font-family: "Trebuchet MS", sans-serif; font-size: 11px; font-weight: 600; padding: 2px 0; color: #b7bdc6; pointer-events: none; z-index: 100;';
                 container.appendChild(cd);
-                
                 if (countdownInterval) clearInterval(countdownInterval);
                 countdownInterval = setInterval(updateCountdownText, 1000);
-                syncPosition60FPS(); // Kích hoạt bám đuôi
+                syncPosition60FPS(); 
             }
         } else {
             if (cd) cd.remove();
             if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
             if (countdownRafId) { cancelAnimationFrame(countdownRafId); countdownRafId = null; }
         }
-    });
+
+        // 3. TẮT/MỞ OHLC LEGEND
+        const uiLayer = document.getElementById('wa-custom-ui-layer');
+        if (uiLayer && uiLayer.children.length > 0) {
+            // Thẻ div đầu tiên trong uiLayer chính là dải OHLC
+            uiLayer.children[0].style.display = config.showOHLC === false ? 'none' : 'flex';
+        }
+
+        // 4. TẮT/MỞ TÂM NGẮM (CROSSHAIR)
+        if (window.WA_Chart) {
+            window.WA_Chart.setStyles({
+                crosshair: { show: config.crosshairMode !== 'hidden' }
+            });
+        }
+    };
+
+    // Lắng nghe cả chữ Hoa lẫn chữ Thường để không bao giờ bị trượt lệnh
+    window.addEventListener('wa_chart_config_updated', handleConfigUpdate);
+    window.addEventListener('WA_CHART_CONFIG_UPDATED', handleConfigUpdate);
 
     function updateCountdownText() {
         const cd = document.getElementById('wa-overlay-countdown');
