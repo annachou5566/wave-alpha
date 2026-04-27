@@ -552,8 +552,8 @@ window.startWaterfallEngine = function() {
         
         if (document.hidden) return;
         
-        // 🛡️ ÉP XUNG LÊN 60 FPS (16ms) ĐỂ CỰC MƯỢT
-        if (time - lastDraw < 16) return; 
+        // 🛡️ BẢO VỆ GPU TABLET: Khóa ở 30 FPS (35ms) để COB chạy mượt mà
+        if (time - lastDraw < 35) return;
 
         let t = window._waTargetCandle;
         let c = window._waCurrentCandle;
