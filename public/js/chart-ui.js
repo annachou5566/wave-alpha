@@ -1097,10 +1097,26 @@ if (isTimeSwitch && window.tvChart) {
         });
 
         // 2. CHỈ TẠO LỚP KÍNH HTML CHỨA ĐÚNG LOGO WATERMARK (ĐÃ XÓA SẠCH HTML LEGEND RÁC)
-        const customUI = document.createElement('div');
-        customUI.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;';
-        customUI.innerHTML = `<div style="position: absolute; bottom: 25px; left: 15px; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px;">WAVE ALPHA</div>`;
-        container.appendChild(customUI);
+        // 🛡️ TẠO LỚP UI HTML NỔI (CHỨA OHLC LEGEND VÀ WATERMARK)
+        let customUI = document.getElementById('wa-custom-ui-layer');
+        if (!customUI) {
+            customUI = document.createElement('div');
+            customUI.id = 'wa-custom-ui-layer';
+            customUI.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;';
+            
+            customUI.innerHTML = `
+                <div style="position: absolute; top: 6px; left: 10px; font-family: Arial, sans-serif; font-size: 12px; font-weight: 600; display: flex; gap: 8px; flex-wrap: wrap; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">
+                    <span id="tp-symbol" style="color: #EAECEF; margin-right: 4px;">---</span>
+                    <span><span style="color: #848e9c;">O</span> <span id="tp-o" style="color: #848e9c;">---</span></span>
+                    <span><span style="color: #848e9c;">H</span> <span id="tp-h" style="color: #0ECB81;">---</span></span>
+                    <span><span style="color: #848e9c;">L</span> <span id="tp-l" style="color: #F6465D;">---</span></span>
+                    <span><span style="color: #848e9c;">C</span> <span id="tp-c" style="color: #848e9c;">---</span></span>
+                    <span><span style="color: #848e9c;">V</span> <span id="tp-v" style="color: #848e9c;">---</span></span>
+                </div>
+                <div style="position: absolute; bottom: 25px; left: 15px; font-family: var(--font-main, Arial); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px;">WAVE ALPHA</div>
+            `;
+            container.appendChild(customUI);
+        }
 
         window.tvChart.setPriceVolumePrecision(prec, 2);
         window.tvChart.createIndicator('VOL', false, { height: 80 });

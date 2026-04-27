@@ -18,25 +18,28 @@
                 // 🛡️ BẮT CẦU TƯƠNG THÍCH NGƯỢC (Lừa các file cũ không bị crash)
                 window.tvChart = this;
 
-                // 🛡️ TẮT VĨNH VIỄN TOOLTIP/LEGEND CANVAS
-                // 🛡️ CẤU HÌNH LEGEND TÁCH BIỆT: Tắt nến (Dùng HTML) - Bật Indicator (Dùng Canvas)
+                // 🛡️ CẤU HÌNH LEGEND TÁCH BIỆT: Tắt nến (Dùng HTML) - Bật Indicator (Đẩy margin xuống 26px)
                 _chartInstance.setStyles({
                     crosshair: { show: true },
                     indicator: { 
                         tooltip: { 
                             showRule: 'always',
                             showType: 'standard',
+                            text: { 
+                                size: 12, family: 'Arial, sans-serif', weight: 600, color: '#848e9c', 
+                                marginLeft: 10, marginTop: 26, marginRight: 0, marginBottom: 0 // Đẩy Text xuống 26px
+                            },
                             icons: [
-                                { id: 'visible', position: 'middle', marginLeft: 10, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '◉', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
-                                { id: 'invisible', position: 'middle', marginLeft: 10, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '◎', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
-                                { id: 'setting', position: 'middle', marginLeft: 6, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '⚙', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#F0B90B', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(240,185,11,0.1)' },
-                                { id: 'close', position: 'middle', marginLeft: 6, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '✕', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#F6465D', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(246,70,93,0.1)' }
+                                { id: 'visible', position: 'middle', marginLeft: 10, marginTop: 25, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '◉', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
+                                { id: 'invisible', position: 'middle', marginLeft: 10, marginTop: 25, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '◎', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
+                                { id: 'setting', position: 'middle', marginLeft: 6, marginTop: 25, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '⚙', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#F0B90B', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(240,185,11,0.1)' },
+                                { id: 'close', position: 'middle', marginLeft: 6, marginTop: 25, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '✕', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#F6465D', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(246,70,93,0.1)' }
                             ]
                         } 
                     },
                     candle: { 
                         type: 'candle_solid', 
-                        tooltip: { showRule: 'none' } // Tắt vĩnh viễn của nến vì đã có HTML lo
+                        tooltip: { showRule: 'none' } 
                     }
                 });
 
