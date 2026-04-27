@@ -922,10 +922,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
     window._fetchAbortCtrl = new AbortController();
     const _abortSignal = window._fetchAbortCtrl.signal;
 
-    // THÊM ĐOẠN NÀY ĐỂ BÁO LƯU TRƯỚC KHI ĐỔI ĐỒNG COIN MỚI:
-    if (!isTimeSwitch && window.currentChartToken && window.currentChartToken.symbol !== t.symbol) {
-        if (window.__wa_onSymbolChange) window.__wa_onSymbolChange(t.symbol);
-    }
+    
 
     window.currentChartToken = t; 
     overlay.classList.add('active');
@@ -1219,7 +1216,7 @@ window.changeChartInterval = function(interval, btnEl) {
     const labelEl = document.getElementById('wa-current-tf-label');
     if (labelEl) labelEl.innerText = interval.toUpperCase();
 
-    if (window.__wa_onIntervalChange) window.__wa_onIntervalChange(interval);
+    
 
     document.querySelectorAll('.sc-time-btn').forEach(b => b.classList.remove('active'));
     if (btnEl) btnEl.classList.add('active');
