@@ -19,6 +19,7 @@
                 window.tvChart = this;
 
                 // 🛡️ CẤU HÌNH LEGEND TÁCH BIỆT: Tắt nến (Dùng HTML) - Bật Indicator (Đẩy margin xuống 26px)
+                // 🛡️ CẤU HÌNH LEGEND TÁCH BIỆT: Nến tàng hình giữ chỗ - Indicator hiện chuẩn khít rịt
                 _chartInstance.setStyles({
                     crosshair: { show: true },
                     indicator: { 
@@ -27,19 +28,30 @@
                             showType: 'standard',
                             text: { 
                                 size: 12, family: 'Arial, sans-serif', weight: 600, color: '#848e9c', 
-                                marginLeft: 10, marginTop: 26, marginRight: 0, marginBottom: 0 // Đẩy Text xuống 26px
+                                marginLeft: 10, marginTop: 8, marginRight: 0, marginBottom: 0 // 🚀 TRẢ VỀ KHOẢNG CÁCH CHUẨN KÍCH THƯỚC NHỎ GỌN
                             },
                             icons: [
-                                { id: 'visible', position: 'middle', marginLeft: 10, marginTop: 25, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '◉', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
-                                { id: 'invisible', position: 'middle', marginLeft: 10, marginTop: 25, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '◎', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
-                                { id: 'setting', position: 'middle', marginLeft: 6, marginTop: 25, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '⚙', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#F0B90B', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(240,185,11,0.1)' },
-                                { id: 'close', position: 'middle', marginLeft: 6, marginTop: 25, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '✕', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#F6465D', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(246,70,93,0.1)' }
+                                { id: 'visible', position: 'middle', marginLeft: 10, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '◉', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
+                                { id: 'invisible', position: 'middle', marginLeft: 10, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '◎', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
+                                { id: 'setting', position: 'middle', marginLeft: 6, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '⚙', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#F0B90B', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(240,185,11,0.1)' },
+                                { id: 'close', position: 'middle', marginLeft: 6, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '✕', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#F6465D', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(246,70,93,0.1)' }
                             ]
                         } 
                     },
                     candle: { 
                         type: 'candle_solid', 
-                        tooltip: { showRule: 'none' } 
+                        tooltip: { 
+                            showRule: 'always',
+                            showType: 'standard',
+                            custom: function() {
+                                // 🛡️ TRICK: Nến tàng hình chiếm đúng 1 dòng để nhường chỗ cho HTML OHLC
+                                return [{ title: { text: ' ', color: 'transparent' }, value: { text: ' ', color: 'transparent' } }];
+                            },
+                            text: { 
+                                size: 12, family: 'Arial, sans-serif', weight: 600, color: 'transparent',
+                                marginLeft: 10, marginTop: 8, marginRight: 0, marginBottom: 0 
+                            }
+                        } 
                     }
                 });
 
