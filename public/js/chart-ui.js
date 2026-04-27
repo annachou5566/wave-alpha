@@ -1453,6 +1453,14 @@ window.closeProChart = function() {
                         // Gửi update thẳng vào Chart Engine
                         if (window.WaveChartEngine) {
                             window.WaveChartEngine.update({ chartType: item.id }, true);
+                            
+                            // 🚀 ÉP LOAD LẠI DATA NẾU LÀ RENKO HOẶC HEIKIN ASHI
+                            if (item.id === 14 || item.id === 12) {
+                                if (window.WaveDataEngine && window.WA_Chart) {
+                                    let reprocessedData = window.WaveDataEngine.processHistory(window.WaveDataEngine.rawHistory, true);
+                                    window.WA_Chart.applyNewData(reprocessedData);
+                                }
+                            }
                         }
                         
                         // Đổi Icon trên nút
@@ -2071,8 +2079,18 @@ window.closeProChart = function() {
             const key = el.dataset.bind;
             let value = el.type === 'checkbox' ? el.checked : el.value;
             if (el.dataset.type === 'number') value = parseFloat(value);
+            
             if (window.WaveChartEngine) window.WaveChartEngine.update({ [key]: value });
             updateDynamicUI(window.WaveChartEngine.getConfig());
+
+            // 🚀 ÉP LOAD LẠI DATA KHI ĐỔI CHART TYPE HOẶC THAY ĐỔI THÔNG SỐ RENKO
+            if (key === 'chartType' || key.startsWith('renko')) {
+                const cType = parseInt(window.WaveChartEngine.getConfig().chartType);
+                if ((cType === 14 || cType === 12) && window.WaveDataEngine && window.WA_Chart) {
+                    let reprocessedData = window.WaveDataEngine.processHistory(window.WaveDataEngine.rawHistory, true);
+                    window.WA_Chart.applyNewData(reprocessedData);
+                }
+            }
         });
     });
 
