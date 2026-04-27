@@ -56,10 +56,7 @@
         },
 
         // ==========================================
-        // 🧱 THUẬT TOÁN NINZARENKO CHUẨN
-        //    Brick Size / Trend Threshold
-        //    Open Offset = Brick Size – Trend Threshold
-        //    Reversal Threshold = Trend Threshold (auto, đối xứng)
+        // 🧱 THUẬT TOÁN NINZARENKO CHUẨN (FIX LỖI NẾN SIÊU NHỎ)
         // ==========================================
         _toRenko: function(data, config) {
             let renkoData = [];
@@ -81,15 +78,15 @@
 
             // ── 2. NinZaRenko Parameters ───────────────────────────────
             let trendThreshold = (config.renkoTrendThreshold != null && config.renkoTrendThreshold > 0)
-                ? Math.min(config.renkoTrendThreshold, brickSize)  // clamp: không vượt brickSize
-                : brickSize;  // default: Standard Renko behavior
+                ? Math.min(config.renkoTrendThreshold, brickSize)  
+                : brickSize;  
 
             let openOffset = brickSize - trendThreshold;
 
             // ── 3. Khởi tạo viên gạch đầu tiên ────────────────────────
             let lastBrickClose = data[0].close;
             let lastBrickOpen  = lastBrickClose - brickSize;
-            let lastDir        = 1; // 1=up, -1=down
+            let lastDir        = 1; 
 
             let runningHigh = data[0].high;
             let runningLow  = data[0].low;
@@ -117,33 +114,24 @@
                     brickAdded = false;
 
                     if (lastDir === 1) {
-                        // ▲ Brick trước là UP
                         if (price >= lastBrickClose + trendThreshold) {
-                            // 🟢 Tiếp diễn UP
                             lastBrickOpen  = lastBrickClose - openOffset;
                             lastBrickClose = lastBrickOpen  + brickSize; 
                             lastDir = 1;
                             brickAdded = true;
-
                         } else if (price <= lastBrickClose - trendThreshold) {
-                            // 🔴 Đảo chiều DOWN
                             lastBrickOpen  = lastBrickClose + openOffset;
                             lastBrickClose = lastBrickOpen  - brickSize; 
                             lastDir = -1;
                             brickAdded = true;
                         }
-
                     } else {
-                        // ▼ Brick trước là DOWN
                         if (price <= lastBrickClose - trendThreshold) {
-                            // 🔴 Tiếp diễn DOWN
                             lastBrickOpen  = lastBrickClose + openOffset;
                             lastBrickClose = lastBrickOpen  - brickSize;
                             lastDir = -1;
                             brickAdded = true;
-
                         } else if (price >= lastBrickClose + trendThreshold) {
-                            // 🟢 Đảo chiều UP
                             lastBrickOpen  = lastBrickClose - openOffset;
                             lastBrickClose = lastBrickOpen  + brickSize;
                             lastDir = 1;
@@ -154,11 +142,9 @@
                     if (brickAdded) {
                         renkoData.push({
                             ...curr,
-                            // Offset timestamp để chart không bị chồng trục X
                             timestamp: curr.timestamp + renkoData.length * 100,
                             open:   lastBrickOpen,
                             close:  lastBrickClose,
-                            // 🚀 Wick thực tế: kéo dài theo đỉnh/đáy thị trường tích lũy
                             high:   Math.max(lastBrickOpen, lastBrickClose, runningHigh),
                             low:    Math.min(lastBrickOpen, lastBrickClose, runningLow),
                             volume: curr.volume,
@@ -169,18 +155,28 @@
                         runningLow  = Math.min(lastBrickOpen, lastBrickClose);
                     }
 
-                } while (brickAdded); // Xử lý nhiều brick trong cùng 1 nến nếu giá nhảy mạnh
+                } while (brickAdded); 
             }
+
+            // 🚀 BƯỚC NGOẶT: LƯU TRẠNG THÁI CUỐI CÙNG VÀO BỘ NHỚ (CACHE)
+            // Tuyệt đối không để hàm Realtime tự đọc biểu đồ nữa
+            this._renkoState = {
+                brickSize: brickSize,
+                trendThreshold: trendThreshold,
+                openOffset: openOffset,
+                lastBrickClose: lastBrickClose,
+                lastDir: lastDir,
+                lastTimestamp: renkoData[renkoData.length - 1].timestamp
+            };
 
             return renkoData.length > 1 ? renkoData : data;
         },
 
         // ──────────────────────────────────────────────────────────────
-        // Tính ATR chuẩn (Wilder's ATR – Simple Average)
+        // Tính ATR chuẩn 
         // ──────────────────────────────────────────────────────────────
         _calculateATR: function(data, length) {
             if (!data || data.length <= length) return (data?.[0]?.close ?? 1) * 0.005;
-
             let sumTR = 0;
             for (let i = 1; i <= length; i++) {
                 const curr = data[data.length - i];
@@ -196,45 +192,55 @@
         },
 
         // ──────────────────────────────────────────────────────────────
-        // Ghost Bar (Realtime Tick) – Chuẩn NinZaRenko
+        // Ghost Bar (Realtime Tick) – Không bao giờ bị teo nhỏ nữa
         // ──────────────────────────────────────────────────────────────
         _updateRenkoTick: function(curr, chartData, config) {
-            const lastBrick = chartData[chartData.length - 1];
-            const lastDir   = lastBrick.close > lastBrick.open ? 1 : -1;
-            const price     = curr.close;
+            // Lấy trực tiếp từ bộ nhớ an toàn (Cache)
+            const state = this._renkoState;
+            if (!state) return curr; 
 
-            // Lấy lại brickSize từ body của brick cuối (body = brickSize theo chuẩn NinZaRenko)
-            const brickSize = Math.abs(lastBrick.close - lastBrick.open);
-
-            // Tính lại trendThreshold và openOffset (đồng bộ với _toRenko)
-            const trendThreshold = (config.renkoTrendThreshold != null && config.renkoTrendThreshold > 0)
-                ? Math.min(config.renkoTrendThreshold, brickSize)
-                : brickSize;
-            const openOffset = brickSize - trendThreshold;
-
+            const price = curr.close;
             const ghost = { ...curr };
 
-            // ── Neo Open theo chiều giá đang đi so với lastClose ──────
-            if (lastDir === 1) {
-                // Brick cuối là UP
-                ghost.open = (price >= lastBrick.close)
-                    ? lastBrick.close - openOffset   // tiếp diễn up
-                    : lastBrick.close + openOffset;  // hướng đảo chiều
+            // Neo tĩnh timestamp để KLineChart chỉ render 1 slot nến ma
+            ghost.timestamp = state.lastTimestamp + 100;
+
+            // ── Neo Open theo chiều giá đang đi so với lastClose thực ──────
+            if (state.lastDir === 1) {
+                ghost.open = (price >= state.lastBrickClose)
+                    ? state.lastBrickClose - state.openOffset   
+                    : state.lastBrickClose + state.openOffset;  
             } else {
-                // Brick cuối là DOWN
-                ghost.open = (price <= lastBrick.close)
-                    ? lastBrick.close + openOffset   // tiếp diễn down
-                    : lastBrick.close - openOffset;  // hướng đảo chiều
+                ghost.open = (price <= state.lastBrickClose)
+                    ? state.lastBrickClose + state.openOffset   
+                    : state.lastBrickClose - state.openOffset;  
             }
 
             ghost.close = price;
-
-            // 🚀 Realtime Wick: kéo râu theo đỉnh/đáy tick hiện tại
             ghost.high = Math.max(ghost.open, ghost.close, curr.high);
             ghost.low  = Math.min(ghost.open, ghost.close, curr.low);
 
+            // 🚀 TỰ ĐỘNG CHỐT GẠCH NẾU GIÁ CHẠY ĐỦ NGƯỠNG REALTIME
+            let shouldBake = false;
+            if (state.lastDir === 1) {
+                if (price >= state.lastBrickClose + state.trendThreshold || price <= state.lastBrickClose - state.trendThreshold) shouldBake = true;
+            } else {
+                if (price <= state.lastBrickClose - state.trendThreshold || price >= state.lastBrickClose + state.trendThreshold) shouldBake = true;
+            }
+
+            if (shouldBake) {
+                // Ép nấu lại toàn bộ dữ liệu ngay lập tức để đúc viên gạch mới!
+                if (window._renkoBakeTimeout) clearTimeout(window._renkoBakeTimeout);
+                window._renkoBakeTimeout = setTimeout(() => {
+                    if (window.WaveChartEngine && window.WaveDataEngine && window.WA_Chart) {
+                        let reprocessed = window.WaveDataEngine.processHistory(window.WaveDataEngine.rawHistory, true);
+                        window.WA_Chart.applyNewData(reprocessed);
+                    }
+                }, 10);
+            }
+
             return ghost;
-        },
+        }
 
         // ==========================================
         // 🧪 THUẬT TOÁN HEIKIN ASHI CHUẨN XÁC
