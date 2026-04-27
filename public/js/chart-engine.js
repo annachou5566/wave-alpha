@@ -1398,7 +1398,11 @@ window.addEventListener('WA_TOKEN_SWITCHED', function(e) {
         }
         
         // 3. Khởi động các hệ thống vệ tinh
-        if (window.WaveIndicatorAPI && typeof window.WaveIndicatorAPI.initUI === 'function') window.WaveIndicatorAPI.initUI();
+        if (window.WaveIndicatorAPI) {
+            if (typeof window.WaveIndicatorAPI.initUI === 'function') window.WaveIndicatorAPI.initUI();
+            // 🚀 VÁ LỖI MẤT CHỈ BÁO KHI ĐỔI COIN: Gọi hàm phục hồi để vẽ lại EMA/MACD lên Chart mới
+            if (typeof window.WaveIndicatorAPI.restore === 'function') window.WaveIndicatorAPI.restore();
+        }
         if (typeof window.__wa_onChartReady === 'function') window.__wa_onChartReady();
         if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, false);
         if (typeof window.startFuturesEngine === 'function') window.startFuturesEngine(t.symbol);
@@ -1428,6 +1432,12 @@ window.addEventListener('WA_TIMEFRAME_CHANGED', function(e) {
             let finalData = window.WaveDataEngine ? window.WaveDataEngine.processHistory(histData) : histData;
             if (window.WA_Chart) window.WA_Chart.applyNewData(finalData);
         }
+        
+        // 🚀 Đảm bảo chỉ báo luôn bám chặt theo biểu đồ khi đổi Timeframe
+        if (window.WaveIndicatorAPI && typeof window.WaveIndicatorAPI.restore === 'function') {
+            window.WaveIndicatorAPI.restore();
+        }
+        
         if (typeof window.__wa_onChartReady === 'function') window.__wa_onChartReady();
         if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, true);
     });
