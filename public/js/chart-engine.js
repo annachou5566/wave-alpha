@@ -550,10 +550,21 @@ window.startWaterfallEngine = function() {
         
         requestAnimationFrame(renderLoop);
         
+        // 💡 BẢO VỆ GPU: Nếu tab đang bị ẩn/thu nhỏ, ngưng vẽ
         if (document.hidden) return;
+
+        // 🚀 TUYỆT CHIÊU CỨU RỖI CON CHUỘT (CROSSHAIR PAUSE)
+        // Nếu người dùng đang rê chuột xem Tooltip, TẠM DỪNG hiệu ứng trượt 30FPS
+        // Nhường 100% CPU cho việc vẽ Crosshair. Khi nhấc chuột ra, biểu đồ tự trượt lại!
+        if (window._isCrosshairActive) {
+            // Vẫn chốt giá ngầm để không bị sai lệch dữ liệu, nhưng không gọi lệnh vẽ nặng nề
+            window._waCurrentCandle.close = window._waTargetCandle.close;
+            lastDraw = time;
+            return; 
+        }
         
-        // 🛡️ BẢO VỆ GPU TABLET: Khóa ở 30 FPS (35ms) để COB chạy mượt mà
-        if (time - lastDraw < 35) return;
+        // 🛡️ BẢO VỆ GPU TABLET: Khóa ở 30 FPS (35ms)
+        if (time - lastDraw < 35) return; 
 
         let t = window._waTargetCandle;
         let c = window._waCurrentCandle;
