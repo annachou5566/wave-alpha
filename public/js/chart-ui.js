@@ -2046,61 +2046,40 @@ window.closeProChart = function() {
         if (!window.WaveChartEngine) return;
         const config = window.WaveChartEngine.getConfig();
         
-        // Lắng nghe thay đổi từ Hidden Input (do WaveDropdown bắn ra) và Checkbox/Range
-    modal.querySelectorAll('[data-bind]').forEach(el => {
-        const eventType = el.type === 'range' ? 'input' : 'change';
-        el.addEventListener(eventType, (e) => {
+        // 🚀 ĐÃ SỬA: Chỉ điền giá trị cũ vào ô cài đặt, KHÔNG gắn thêm event lắng nghe ảo
+        modal.querySelectorAll('[data-bind]').forEach(el => {
             const key = el.dataset.bind;
-            let value = el.type === 'checkbox' ? el.checked : el.value;
-            if (el.dataset.type === 'number') value = parseFloat(value);
-            
-            if (window.WaveChartEngine) window.WaveChartEngine.update({ [key]: value });
-            updateDynamicUI(window.WaveChartEngine.getConfig());
-
-            // 🚀 KÍCH HOẠT ĐỒNG BỘ: KHI ĐỔI CHART TYPE HOẶC THÔNG SỐ RENKO
-            if (key === 'chartType') {
-                let dataInterval = window.getOptimalDataInterval(window.currentChartInterval);
+            if (config[key] !== undefined) {
+                if (el.type === 'checkbox') el.checked = config[key];
+                else el.value = config[key];
                 
-                if (parseInt(value) === 14 && window.currentChartInterval !== '1m') {
-                    // Ép API tải lại nếu là Renko mà chưa đúng khung giờ
-                    window.dispatchEvent(new CustomEvent('WA_TIMEFRAME_CHANGED', {
-                        detail: { token: window.currentChartToken, interval: dataInterval, oldInterval: window.currentChartInterval }
-                    }));
-                } else {
-                    // 🚀 SỬA LỖI: Ép giải phóng bộ nhớ Renko để vẽ lại Nến Nhật ngay lập tức
-                    if (window.WaveDataEngine && window.WA_Chart) {
-                        let reprocessedData = window.WaveDataEngine.processHistory(window.WaveDataEngine.rawHistory, true);
-                        window.WA_Chart.applyNewData(reprocessedData);
-                    }
-                }
-            } else if (key.startsWith('renko') || parseInt(window.WaveChartEngine.getConfig().chartType) === 12) {
-                // Chỉ đổi kích thước gạch (Size, ATR) -> Chỉ cần nấu lại data cũ, không tốn API
-                if (window.WaveDataEngine && window.WA_Chart) {
-                    let reprocessedData = window.WaveDataEngine.processHistory(window.WaveDataEngine.rawHistory, true);
-                    window.WA_Chart.applyNewData(reprocessedData);
+                if (el.type === 'range') {
+                    const badge = el.parentNode.querySelector('span');
+                    if (badge) badge.innerText = el.max > 10 ? el.value + 'px' : parseFloat(el.value).toFixed(2);
                 }
             }
         });
-    });
 
-        // 5. RENDER WAVEDROPDOWN
+        // 🚀 ĐÃ SỬA LỖI ĐỨNG BẢNG SETTINGS: Chặn WaveDropdown kích hoạt sự kiện khi vừa khởi tạo
         ddConfigs.forEach(dd => {
             const wrapper = document.getElementById(dd.wrapId);
             const hiddenInput = document.getElementById(dd.inputId);
-            const currVal = String(config[dd.id]); // Đảm bảo mapping đúng kiểu chuỗi
+            const currVal = String(config[dd.id]);
 
             if (window.WaveDropdown) {
-                // Xóa instance cũ (nếu có) trước khi tạo lại để tránh đè nội dung
                 wrapper.innerHTML = ''; 
+                let isInitializing = true; // Cờ chặn chạy hàm Change khi mới mở lên
                 window.WaveDropdown.create(wrapper, dd.options, currVal, (newVal) => {
                     hiddenInput.value = newVal;
-                    hiddenInput.dispatchEvent(new Event('change'));
+                    if (!isInitializing) hiddenInput.dispatchEvent(new Event('change'));
                 });
+                isInitializing = false;
             }
         });
 
         modal.querySelectorAll('.wa-ism-swatch').forEach(swatch => {
-            const key = swatch.dataset.colorBind; if (config[key]) swatch.style.background = config[key];
+            const key = swatch.dataset.colorBind; 
+            if (config[key]) swatch.style.background = config[key];
         });
         
         modalBox.classList.remove('is-dragging');
@@ -2148,16 +2127,26 @@ window.closeProChart = function() {
             const key = el.dataset.bind;
             let value = el.type === 'checkbox' ? el.checked : el.value;
             if (el.dataset.type === 'number') value = parseFloat(value);
+            
             if (window.WaveChartEngine) window.WaveChartEngine.update({ [key]: value });
             updateDynamicUI(window.WaveChartEngine.getConfig());
 
-            // 🚀 XỬ LÝ SÂU: ÉP LOAD LẠI DATA KHI ĐỔI CHART TYPE HOẶC THAY THÔNG SỐ RENKO
-            if (key === 'chartType' || key.startsWith('renko')) {
-                const cType = parseInt(window.WaveChartEngine.getConfig().chartType);
-                if (cType === 14 && window.currentChartInterval !== '1m') {
-                    // Tự động force về 1m để đảm bảo có đủ nến gốc vẽ gạch
-                    window.changeChartInterval('1m', null, true); 
-                } else if ((cType === 14 || cType === 12) && window.WaveDataEngine && window.WA_Chart) {
+            // 🚀 XỬ LÝ SÂU: KHI ĐỔI CHART TYPE HOẶC THAY THÔNG SỐ RENKO
+            if (key === 'chartType') {
+                if (parseInt(value) === 14 && window.currentChartInterval !== '1m') {
+                    // Nếu bấm sang Renko mà chưa ở 1m -> Ép tải Data API 15m ngầm
+                    let dataInterval = window.getOptimalDataInterval(window.currentChartInterval);
+                    window.dispatchEvent(new CustomEvent('WA_TIMEFRAME_CHANGED', {
+                        detail: { token: window.currentChartToken, interval: dataInterval, oldInterval: window.currentChartInterval }
+                    }));
+                } else if (window.WaveDataEngine && window.WA_Chart) {
+                    // 🚀 SỬA LỖI KẸT GẠCH: Ép hệ thống nhả bộ nhớ Renko và vẽ lại nến nguyên bản lập tức
+                    let reprocessedData = window.WaveDataEngine.processHistory(window.WaveDataEngine.rawHistory, true);
+                    window.WA_Chart.applyNewData(reprocessedData);
+                }
+            } else if (key.startsWith('renko') || parseInt(window.WaveChartEngine.getConfig().chartType) === 12) {
+                // Đổi thông số gạch/nến -> Cập nhật trực tiếp lên màn hình
+                if (window.WaveDataEngine && window.WA_Chart) {
                     let reprocessedData = window.WaveDataEngine.processHistory(window.WaveDataEngine.rawHistory, true);
                     window.WA_Chart.applyNewData(reprocessedData);
                 }
