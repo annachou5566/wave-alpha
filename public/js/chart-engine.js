@@ -542,6 +542,7 @@ window.startWaterfallEngine = function() {
     let lastDraw = 0;
 
     function renderLoop(time) {
+        // 💡 VÁ LỖI: Trả lại trạng thái false để lần sau mở Chart động cơ còn biết đường chạy lại
         if (!window._waTargetCandle) {
             window._waRafRunning = false; 
             return; 
@@ -549,11 +550,11 @@ window.startWaterfallEngine = function() {
         
         requestAnimationFrame(renderLoop);
         
+        // 💡 BẢO VỆ GPU: Nếu tab đang bị ẩn/thu nhỏ, tạm ngưng vẽ nến để tiết kiệm 100% tài nguyên Card Màn Hình
         if (document.hidden) return;
-
-        // 🚀 THÁO MỌI BỘ HÃM - CHẠY MAX PING 60 FPS (16ms)
-        // Không kìm hãm Crosshair, không chặn Price Diff nữa!
-        if (time - lastDraw < 16) return; 
+        
+        // 🛡️ BẢO VỆ CPU: Khóa render ở mức 30 FPS (khoảng 30-33ms). 
+        if (time - lastDraw < 30) return;
 
         let t = window._waTargetCandle;
         let c = window._waCurrentCandle;
@@ -568,19 +569,16 @@ window.startWaterfallEngine = function() {
         let diff = t.close - c.close;
         
         if (diff !== 0) {
-            // Trượt mượt 35% y hệt bản gốc chuẩn mực của bạn
-            c.close += diff * 0.35; 
+            c.close += diff * 0.35; // Trượt 35% quãng đường (Tạo cảm giác Waterfall)
             
             c.high = Math.max(c.high, t.high, c.close);
             c.low = Math.min(c.low, t.low, c.close);
             c.volume = t.volume;
 
-            // Neo giá an toàn
             if (Math.abs(t.close - c.close) < (t.close * 0.000001)) {
                 c.close = t.close;
             }
 
-            // Gọi thẳng KLineChart vẽ ở tốc độ 60FPS
             window.safeUpdateChartData(c);
             lastDraw = time;
         }
