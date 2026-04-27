@@ -123,6 +123,7 @@
                 if (config.chartType === 2) kcChartType = 'candle_stroke';
                 else if (config.chartType === 3) kcChartType = 'ohlc';
                 else if (config.chartType === 6 || config.chartType === 9) { kcChartType = 'area'; isLine = (config.chartType === 6); }
+                else if (config.chartType === 14) kcChartType = 'candle_solid'; // Kích hoạt nến đặc cho Renko
 
                 if (config.chartType === 4) { _chartInstance.createIndicator('WA_COL_CHART', true, {id: 'candle_pane'}); hideCandle = true; }
                 else if (config.chartType === 5) { _chartInstance.createIndicator('WA_HL_CHART', true, {id: 'candle_pane'}); hideCandle = true; }
@@ -132,13 +133,17 @@
                 else if (config.chartType === 11) { _chartInstance.createIndicator('WA_BASELINE', true, {id: 'candle_pane'}); hideCandle = true; }
 
                 const isHollow = (config.chartType === 2);
+                const forceHideWick = (config.chartType === 14); // 🚀 Tàng hình râu nến cho Renko
+
                 const fUp = hideCandle ? 'transparent' : config.upColor;
                 const fDown = hideCandle ? 'transparent' : config.downColor;
                 const fNo = hideCandle ? 'transparent' : '#787b86';
                 const fUpBd = hideCandle ? 'transparent' : (config.showBorder ? (config.borderIndependent ? config.borderUpColor : config.upColor) : (isHollow ? config.upColor : 'transparent'));
                 const fDnBd = hideCandle ? 'transparent' : (config.showBorder ? (config.borderIndependent ? config.borderDownColor : config.downColor) : (isHollow ? config.downColor : 'transparent'));
-                const fUpW = hideCandle ? 'transparent' : (config.showWick ? (config.wickIndependent ? config.wickUpColor : config.upColor) : 'transparent');
-                const fDnW = hideCandle ? 'transparent' : (config.showWick ? (config.wickIndependent ? config.wickDownColor : config.downColor) : 'transparent');
+                
+                // Ép transparent râu nến nếu là Renko
+                const fUpW = (hideCandle || forceHideWick) ? 'transparent' : (config.showWick ? (config.wickIndependent ? config.wickUpColor : config.upColor) : 'transparent');
+                const fDnW = (hideCandle || forceHideWick) ? 'transparent' : (config.showWick ? (config.wickIndependent ? config.wickDownColor : config.downColor) : 'transparent');
 
                 const areaColorObj = (window.WaveChartEngine && window.WaveChartEngine._dimColor) 
                                      ? window.WaveChartEngine._dimColor(config.upColor, 0.25) 

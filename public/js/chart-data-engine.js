@@ -15,7 +15,6 @@
         processHistory: function (rawData, isReapply = false) {
             if (!rawData || rawData.length === 0) return [];
             
-            // CHỈ LƯU VÀO KÉT SẮT NẾU LÀ DATA TỪ API (Không lưu đè khi đang Re-apply)
             if (!isReapply) {
                 this.rawHistory = JSON.parse(JSON.stringify(rawData)); 
             }
@@ -25,27 +24,88 @@
 
             this.lastChartType = config.chartType;
 
-            // KIỂM TRA: Nếu user chọn loại Heikin Ashi (ID 12)
             if (config.chartType === 12) {
                 console.log('[WaveDataEngine] 🪄 Biến đổi Lịch sử -> Heikin Ashi');
-                return this._toHeikinAshi(this.rawHistory); // Luôn nấu từ bản gốc
+                return this._toHeikinAshi(this.rawHistory);
+            }
+            // 🚀 KÍCH HOẠT ĐỘNG CƠ RENKO (ID 14)
+            if (config.chartType === 14) {
+                console.log('[WaveDataEngine] 🧱 Ép khuôn Lịch sử -> Renko Bricks');
+                let pct = config.renkoBrickPct || 0.5; 
+                return this._toRenko(this.rawHistory, pct);
             }
             
-            // Trả về bản sao của nến Nhật gốc (Tránh việc KLineChart làm biến đổi bản gốc)
             return JSON.parse(JSON.stringify(this.rawHistory)); 
         },
 
-        /**
-         * Chế biến từng nhịp tick realtime
-         */
         processTick: function (rawTick, currentChartData) {
             const config = window.WaveChartEngine ? window.WaveChartEngine.getConfig() : null;
             if (!config || !currentChartData || currentChartData.length === 0) return rawTick;
 
-            if (config.chartType === 12) {
-                return this._updateHeikinAshiTick(rawTick, currentChartData);
+            if (config.chartType === 12) return this._updateHeikinAshiTick(rawTick, currentChartData);
+            
+            // 🚀 ÉP KHUÔN REALTIME CHO RENKO
+            if (config.chartType === 14) {
+                let pct = config.renkoBrickPct || 0.5;
+                return this._updateRenkoTick(rawTick, currentChartData, pct);
             }
+
             return rawTick;
+        },
+
+        // ==========================================
+        // 🧱 THUẬT TOÁN RENKO (CHỐNG NHIỄU GIÁ)
+        // ==========================================
+        _toRenko: function(data, brickPct) {
+            let renkoData = [];
+            if (!data || data.length === 0) return renkoData;
+
+            let brickSize = data[0].open * (brickPct / 100);
+            if (brickSize <= 0) brickSize = 1;
+
+            let lastBrickClose = data[0].close;
+            let lastBrickOpen = data[0].open;
+
+            renkoData.push({ 
+                ...data[0], 
+                open: lastBrickOpen, close: lastBrickClose, 
+                high: Math.max(lastBrickOpen, lastBrickClose), low: Math.min(lastBrickOpen, lastBrickClose) 
+            });
+
+            for (let i = 1; i < data.length; i++) {
+                let curr = data[i];
+                let priceDiff = curr.close - lastBrickClose;
+
+                if (Math.abs(priceDiff) >= brickSize) {
+                    let brickCount = Math.floor(Math.abs(priceDiff) / brickSize);
+                    let dir = priceDiff > 0 ? 1 : -1;
+
+                    for (let b = 0; b < brickCount; b++) {
+                        let bOpen = lastBrickClose;
+                        let bClose = lastBrickClose + (brickSize * dir);
+                        
+                        renkoData.push({
+                            timestamp: curr.timestamp + b, 
+                            open: bOpen, close: bClose,
+                            high: Math.max(bOpen, bClose), low: Math.min(bOpen, bClose),
+                            volume: curr.volume / brickCount
+                        });
+                        lastBrickClose = bClose;
+                    }
+                }
+            }
+            return renkoData.length > 0 ? renkoData : data; 
+        },
+
+        _updateRenkoTick: function(curr, chartData, brickPct) {
+            let lastBrick = chartData[chartData.length - 1];
+            
+            let ghost = { ...curr };
+            ghost.open = lastBrick.open; 
+            ghost.high = Math.max(ghost.open, ghost.close);
+            ghost.low = Math.min(ghost.open, ghost.close);
+
+            return ghost;
         },
 
         // ==========================================

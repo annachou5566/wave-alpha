@@ -1715,7 +1715,15 @@ window.closeProChart = function() {
                                     </div>
                                 </div>
                             </div>
-
+<div id="csm-ui-renko" style="display:none; flex-direction:column; gap:20px;">
+                                <div class="wa-csm-divider">Thông số Renko</div>
+                                <div class="wa-csm-row">
+                                    <div class="wa-csm-label" title="Tính theo % giá trị của đồng coin hiện tại">Kích thước gạch (%)</div>
+                                    <div class="wa-csm-control">
+                                        <input type="number" step="0.1" min="0.1" max="10" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;" data-bind="renkoBrickPct" data-type="number" placeholder="0.5">
+                                    </div>
+                                </div>
+                            </div>
                             <div class="wa-csm-divider">Trục Y</div>
                             <div class="wa-csm-row">
                                 <div class="wa-csm-label">Thang đo giá</div>
@@ -1908,7 +1916,7 @@ window.closeProChart = function() {
         const isStep = (t === 8);
         const isHLC = (t === 10);
         const isBaseline = (t === 11);
-
+        const isRenko = (t === 14); // 🚀 THÊM DÒNG NÀY
         let candleEl = document.getElementById('csm-ui-candles');
         if (candleEl) candleEl.style.display = isCandles ? 'flex' : 'none';
 
@@ -1930,7 +1938,7 @@ window.closeProChart = function() {
         
         let hlcEl = document.getElementById('csm-ui-hlc'); if(hlcEl) hlcEl.style.display = isHLC ? 'flex' : 'none';
         let baseEl = document.getElementById('csm-ui-baseline'); if(baseEl) baseEl.style.display = isBaseline ? 'flex' : 'none';
-
+        let renkoEl = document.getElementById('csm-ui-renko'); if(renkoEl) renkoEl.style.display = isRenko ? 'flex' : 'none';
         let bg2Swatch = document.getElementById('csm-bg2-swatch');
         if (bg2Swatch) bg2Swatch.style.display = config.bgType === 'gradient' ? 'block' : 'none';
         
@@ -2076,7 +2084,8 @@ window.closeProChart = function() {
                         hlcHighLowOpacity: 0.35, hlcFillOpacity: 0.15, hlcShowHighLow: true,
                         baselineUpColor: '#0ECB81', baselineDownColor: '#F6465D',
                         baselineUpFill: '#0ECB81', baselineDownFill: '#F6465D',
-                        baselineFillOpacity: 0.2, baselineValue: 50, baselinePriceSource: 'close'
+                        baselineFillOpacity: 0.2, baselineValue: 50, baselineFillOpacity: 0.2, baselineValue: 50, baselinePriceSource: 'close',
+                        renkoBrickPct: 0.5
                     };
                     
                     window.WaveChartEngine.config = { ...defaultCfg };
