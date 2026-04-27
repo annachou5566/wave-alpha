@@ -1715,15 +1715,30 @@ window.closeProChart = function() {
                                     </div>
                                 </div>
                             </div>
-<div id="csm-ui-renko" style="display:none; flex-direction:column; gap:20px;">
-                                <div class="wa-csm-divider">Thông số Renko</div>
-                                <div class="wa-csm-row">
-                                    <div class="wa-csm-label" title="Tính theo % giá trị của đồng coin hiện tại">Kích thước gạch (%)</div>
-                                    <div class="wa-csm-control">
-                                        <input type="number" step="0.1" min="0.1" max="10" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;" data-bind="renkoBrickPct" data-type="number" placeholder="0.5">
-                                    </div>
-                                </div>
-                            </div>
+<div id="csm-ui-renko" style="display:none; flex-direction:column; gap:16px;">
+    <div class="wa-csm-divider">Cấu hình Renko Brick</div>
+    <div class="wa-csm-row">
+        <div class="wa-csm-label">Nguồn giá</div>
+        <div class="wa-csm-control"><div id="dd-wrapper-renkoSource"></div><input type="hidden" id="csm-renko-source" data-bind="renkoSource"></div>
+    </div>
+    <div class="wa-csm-row">
+        <div class="wa-csm-label">Phương pháp tính</div>
+        <div class="wa-csm-control"><div id="dd-wrapper-renkoMethod"></div><input type="hidden" id="csm-renko-method" data-bind="renkoMethod"></div>
+    </div>
+    
+    <div class="wa-csm-row" id="row-renko-atr">
+        <div class="wa-csm-label">Độ dài ATR</div>
+        <div class="wa-csm-control"><input type="number" class="wa-csm-input-num" data-bind="renkoAtrLength" data-type="number"></div>
+    </div>
+    <div class="wa-csm-row" id="row-renko-trad" style="display:none;">
+        <div class="wa-csm-label">Kích thước gạch</div>
+        <div class="wa-csm-control"><input type="number" class="wa-csm-input-num" data-bind="renkoBoxSize" data-type="number"></div>
+    </div>
+    <div class="wa-csm-row" id="row-renko-perc" style="display:none;">
+        <div class="wa-csm-label">Phần trăm LTP (%)</div>
+        <div class="wa-csm-control"><input type="number" step="0.1" class="wa-csm-input-num" data-bind="renkoPercentage" data-type="number"></div>
+    </div>
+</div>
                             <div class="wa-csm-divider">Trục Y</div>
                             <div class="wa-csm-row">
                                 <div class="wa-csm-label">Thang đo giá</div>
@@ -1804,6 +1819,18 @@ window.closeProChart = function() {
                 { val: '7', text: 'Đường + Điểm' }, { val: '8', text: 'Bậc Thang' }, { val: '9', text: 'Vùng (Area)' },
                 { val: '10', text: 'Vùng HLC (Pro)' }, { val: '11', text: 'Đường Cơ Sở (Pro)' }
             ]
+        },
+        {
+            id: 'renkoMethod',
+            wrapId: 'dd-wrapper-renkoMethod',
+            inputId: 'csm-renko-method',
+            options: [{ val: 'atr', text: 'Average True Range (ATR)' }, { val: 'traditional', text: 'Truyền thống' }, { val: 'percentage', text: 'Tỷ lệ phần trăm (LTP)' }]
+        },
+        {
+            id: 'renkoSource',
+            wrapId: 'dd-wrapper-renkoSource',
+            inputId: 'csm-renko-source',
+            options: [{ val: 'close', text: 'Giá đóng cửa' }, { val: 'ohlc', text: 'Giá OHLC' }]
         },
         {
             id: 'baselinePriceSource',
@@ -1952,6 +1979,13 @@ window.closeProChart = function() {
         if(borderSwatches) {
             borderSwatches.style.opacity = config.borderIndependent ? '1' : '0.5';
             borderSwatches.style.pointerEvents = config.borderIndependent ? 'auto' : 'none';
+        }
+        // Logic ẩn hiện thông số Renko theo phương pháp đã chọn
+        if (isRenko) {
+            const method = config.renkoMethod || 'atr';
+            document.getElementById('row-renko-atr').style.display = (method === 'atr') ? 'flex' : 'none';
+            document.getElementById('row-renko-trad').style.display = (method === 'traditional') ? 'flex' : 'none';
+            document.getElementById('row-renko-perc').style.display = (method === 'percentage') ? 'flex' : 'none';
         }
     }
 

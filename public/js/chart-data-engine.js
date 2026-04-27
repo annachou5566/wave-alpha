@@ -54,18 +54,27 @@
         },
 
         // ==========================================
-        // 🧱 THUẬT TOÁN RENKO (CHỐNG NHIỄU GIÁ)
+        // 🧱 THUẬT TOÁN RENKO NÂNG CAO (ATR / TRAD / LTP)
         // ==========================================
-        _toRenko: function(data, brickPct) {
+        _toRenko: function(data, config) {
             let renkoData = [];
             if (!data || data.length === 0) return renkoData;
 
-            let brickSize = data[0].open * (brickPct / 100);
+            // 1. Xác định kích thước Brick dựa trên phương pháp
+            let brickSize = 1;
+            if (config.renkoMethod === 'atr') {
+                brickSize = this._calculateATR(data, config.renkoAtrLength || 14);
+            } else if (config.renkoMethod === 'percentage') {
+                brickSize = data[data.length - 1].close * ((config.renkoPercentage || 1) / 100);
+            } else {
+                brickSize = config.renkoBoxSize || 10;
+            }
             if (brickSize <= 0) brickSize = 1;
 
             let lastBrickClose = data[0].close;
             let lastBrickOpen = data[0].open;
 
+            // Viên gạch đầu tiên
             renkoData.push({ 
                 ...data[0], 
                 open: lastBrickOpen, close: lastBrickClose, 
@@ -74,7 +83,8 @@
 
             for (let i = 1; i < data.length; i++) {
                 let curr = data[i];
-                let priceDiff = curr.close - lastBrickClose;
+                let price = (config.renkoSource === 'ohlc') ? (curr.high + curr.low + curr.close) / 3 : curr.close;
+                let priceDiff = price - lastBrickClose;
 
                 if (Math.abs(priceDiff) >= brickSize) {
                     let brickCount = Math.floor(Math.abs(priceDiff) / brickSize);
@@ -83,7 +93,6 @@
                     for (let b = 0; b < brickCount; b++) {
                         let bOpen = lastBrickClose;
                         let bClose = lastBrickClose + (brickSize * dir);
-                        
                         renkoData.push({
                             timestamp: curr.timestamp + b, 
                             open: bOpen, close: bClose,
@@ -94,17 +103,29 @@
                     }
                 }
             }
-            return renkoData.length > 0 ? renkoData : data; 
+            return renkoData;
         },
 
-        _updateRenkoTick: function(curr, chartData, brickPct) {
+        // Helper tính ATR cho Renko
+        _calculateATR: function(data, length) {
+            if (data.length < length) return data[0].close * 0.01;
+            let sumTR = 0;
+            for (let i = 1; i <= length; i++) {
+                let curr = data[data.length - i];
+                let prev = data[data.length - i - 1];
+                let tr = Math.max(curr.high - curr.low, Math.abs(curr.high - prev.close), Math.abs(curr.low - prev.close));
+                sumTR += tr;
+            }
+            return sumTR / length;
+        },
+
+        _updateRenkoTick: function(curr, chartData, config) {
             let lastBrick = chartData[chartData.length - 1];
-            
+            // Render "Thanh chiếu" (Ghost Brick) đang hình thành
             let ghost = { ...curr };
             ghost.open = lastBrick.open; 
             ghost.high = Math.max(ghost.open, ghost.close);
             ghost.low = Math.min(ghost.open, ghost.close);
-
             return ghost;
         },
 

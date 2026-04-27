@@ -35,15 +35,18 @@ const DEFAULT_CHART_CONFIG = {
     gridVertical: true, gridHorizontal: true, gridColor: 'rgba(255,255,255,0.06)',
     sessionBreaks: false, crosshairMode: 'normal', rightMargin: 10, timezone: 'Asia/Ho_Chi_Minh',
 
-    // 🚀 STEP LINE SETTING
-    stepLineSingleColor: false,
+    // 🧱 RENKO FULL SETTINGS (Mặc định chuẩn ATR 14)
+    renkoMethod: 'atr',         // 'atr', 'traditional', 'percentage'
+    renkoAtrLength: 14,         // Độ dài ATR mặc định
+    renkoBoxSize: 10,           // Kích thước gạch cho phương pháp Truyền thống
+    renkoPercentage: 1,         // 1% cho phương pháp LTP
+    renkoSource: 'close',       // Nguồn giá: close hoặc ohlc
 
-    // 🚀 HLC AREA SETTINGS
+    // 🚀 STEP LINE & OTHERS
+    stepLineSingleColor: false,
     hlcCloseColor: '#00F0FF', hlcHighColor: '#0ECB81', hlcLowColor: '#F6465D',
     hlcUpFillColor: '#0ECB81', hlcDownFillColor: '#F6465D',
     hlcHighLowOpacity: 0.35, hlcFillOpacity: 0.15, hlcShowHighLow: true,
-
-    // 🚀 BASELINE SETTINGS
     baselineUpColor: '#0ECB81', baselineDownColor: '#F6465D',
     baselineUpFill: '#0ECB81', baselineDownFill: '#F6465D',
     baselineFillOpacity: 0.2, baselineValue: 50, baselinePriceSource: 'close'
