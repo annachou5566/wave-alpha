@@ -540,7 +540,6 @@ window.startWaterfallEngine = function() {
     if (window._waRafRunning) return;
     window._waRafRunning = true;
     let lastDraw = 0;
-    let lastUpdatePrice = 0; // Đã khai báo biến này để hết bị lỗi Reference
 
     function renderLoop(time) {
         if (!window._waTargetCandle) {
@@ -552,10 +551,9 @@ window.startWaterfallEngine = function() {
         
         if (document.hidden) return;
 
-        // 🚀 CHẾ ĐỘ THÍCH ỨNG: Rê chuột 4 FPS (250ms), buông chuột 30 FPS (35ms)
-        let frameDelay = window._isCrosshairActive ? 250 : 35;
-
-        if (time - lastDraw < frameDelay) return; 
+        // 🚀 THÁO MỌI BỘ HÃM - CHẠY MAX PING 60 FPS (16ms)
+        // Không kìm hãm Crosshair, không chặn Price Diff nữa!
+        if (time - lastDraw < 16) return; 
 
         let t = window._waTargetCandle;
         let c = window._waCurrentCandle;
@@ -563,7 +561,6 @@ window.startWaterfallEngine = function() {
         if (!c || c.timestamp !== t.timestamp) {
             window._waCurrentCandle = { ...t };
             window.safeUpdateChartData(window._waCurrentCandle);
-            lastUpdatePrice = window._waCurrentCandle.close;
             lastDraw = time;
             return;
         }
@@ -571,22 +568,20 @@ window.startWaterfallEngine = function() {
         let diff = t.close - c.close;
         
         if (diff !== 0) {
-            // Rê chuột -> Nảy số liền (tiết kiệm GPU). Buông chuột -> Trượt mượt (0.35)
-            c.close += window._isCrosshairActive ? diff : (diff * 0.35); 
+            // Trượt mượt 35% y hệt bản gốc chuẩn mực của bạn
+            c.close += diff * 0.35; 
             
             c.high = Math.max(c.high, t.high, c.close);
             c.low = Math.min(c.low, t.low, c.close);
             c.volume = t.volume;
 
+            // Neo giá an toàn
             if (Math.abs(t.close - c.close) < (t.close * 0.000001)) {
                 c.close = t.close;
             }
 
-            if (Math.abs(lastUpdatePrice - c.close) > 1e-8) {
-                window.safeUpdateChartData(c);
-                lastUpdatePrice = c.close;
-            }
-            
+            // Gọi thẳng KLineChart vẽ ở tốc độ 60FPS
+            window.safeUpdateChartData(c);
             lastDraw = time;
         }
     }
