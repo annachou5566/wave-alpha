@@ -540,9 +540,9 @@ window.startWaterfallEngine = function() {
     if (window._waRafRunning) return;
     window._waRafRunning = true;
     let lastDraw = 0;
+    let lastUpdatePrice = 0; // 🚀 BỘ ĐỆM GIÁ TRỊ: Chốt chặn hiệu suất
 
     function renderLoop(time) {
-        // 💡 VÁ LỖI: Trả lại trạng thái false để lần sau mở Chart động cơ còn biết đường chạy lại
         if (!window._waTargetCandle) {
             window._waRafRunning = false; 
             return; 
@@ -550,11 +550,10 @@ window.startWaterfallEngine = function() {
         
         requestAnimationFrame(renderLoop);
         
-        // 💡 BẢO VỆ GPU: Nếu tab đang bị ẩn/thu nhỏ, tạm ngưng vẽ nến để tiết kiệm 100% tài nguyên Card Màn Hình
         if (document.hidden) return;
         
-        // 🛡️ BẢO VỆ CPU: Khóa render ở mức 30 FPS (khoảng 30-33ms). 
-        if (time - lastDraw < 30) return;
+        // 🛡️ ÉP XUNG LÊN 60 FPS (16ms) ĐỂ CỰC MƯỢT
+        if (time - lastDraw < 16) return; 
 
         let t = window._waTargetCandle;
         let c = window._waCurrentCandle;
@@ -562,6 +561,7 @@ window.startWaterfallEngine = function() {
         if (!c || c.timestamp !== t.timestamp) {
             window._waCurrentCandle = { ...t };
             window.safeUpdateChartData(window._waCurrentCandle);
+            lastUpdatePrice = window._waCurrentCandle.close; // Ghi nhớ mức giá vừa vẽ
             lastDraw = time;
             return;
         }
@@ -569,8 +569,7 @@ window.startWaterfallEngine = function() {
         let diff = t.close - c.close;
         
         if (diff !== 0) {
-            c.close += diff * 0.35; // Trượt 35% quãng đường (Tạo cảm giác Waterfall)
-            
+            c.close += diff * 0.35; 
             c.high = Math.max(c.high, t.high, c.close);
             c.low = Math.min(c.low, t.low, c.close);
             c.volume = t.volume;
@@ -579,7 +578,13 @@ window.startWaterfallEngine = function() {
                 c.close = t.close;
             }
 
-            window.safeUpdateChartData(c);
+            // 🚀 BÍ QUYẾT TỐI ƯU TABLET: 
+            // Chỉ gọi lệnh Vẽ (rất tốn CPU) nếu giá trượt đi một khoảng đáng kể (> 0.00000001)
+            if (Math.abs(lastUpdatePrice - c.close) > 1e-8) {
+                window.safeUpdateChartData(c);
+                lastUpdatePrice = c.close;
+            }
+            
             lastDraw = time;
         }
     }
