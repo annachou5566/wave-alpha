@@ -1372,3 +1372,63 @@ window.evaluateQuantVerdict = function() {
 
     scheduleVerdictRender(hftObj, mftObj, lftObj, q.flags);
 };
+
+// ==========================================
+// 🛡️ BƯỚC 1: WAVE ALPHA EVENT HUB (Tách ghép Tight-Coupling)
+// Hệ thống thần kinh trung ương xử lý mọi sự kiện biểu đồ
+// ==========================================
+
+window.addEventListener('WA_TOKEN_SWITCHED', function(e) {
+    const t = e.detail.token;
+    const interval = e.detail.interval;
+    console.log('📡 [Event Hub] Nhận lệnh đổi Token sang:', t.symbol);
+
+    // 1. Dập tắt động cơ cũ và dọn rác
+    window._waRafRunning = false;
+    window._waTargetCandle = null;
+    window._waCurrentCandle = null;
+    if (window.chartWs) { window.chartWs.close(); window.chartWs = null; }
+    if (window.liquidationWs) { window.liquidationWs.close(); window.liquidationWs = null; }
+
+    // 2. Trực tiếp kéo Data lịch sử & Đổ vào Tường Lửa
+    window.fetchBinanceHistory(t, interval, interval === 'tick').then(histData => {
+        if (histData && histData.length > 0) {
+            let finalData = window.WaveDataEngine ? window.WaveDataEngine.processHistory(histData) : histData;
+            if (window.WA_Chart) window.WA_Chart.applyNewData(finalData);
+        }
+        
+        // 3. Khởi động các hệ thống vệ tinh
+        if (window.WaveIndicatorAPI && typeof window.WaveIndicatorAPI.initUI === 'function') window.WaveIndicatorAPI.initUI();
+        if (typeof window.__wa_onChartReady === 'function') window.__wa_onChartReady();
+        if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, false);
+        if (typeof window.startFuturesEngine === 'function') window.startFuturesEngine(t.symbol);
+    });
+});
+
+window.addEventListener('WA_TIMEFRAME_CHANGED', function(e) {
+    const t = e.detail.token;
+    const interval = e.detail.interval;
+    const oldInterval = e.detail.oldInterval;
+    console.log('📡 [Event Hub] Nhận lệnh đổi Timeframe:', oldInterval, '->', interval);
+
+    // 1. Tạm ngưng nội suy Waterfall
+    window._waRafRunning = false;
+    window._waTargetCandle = null;
+    window._waCurrentCandle = null;
+
+    // 2. Chuyển đổi giao diện (VD: đổi sang Line nếu là khung Tick)
+    if (window.WaveChartEngine) {
+        if (interval === 'tick') window.WaveChartEngine.update({ chartType: 9 }, true);
+        else window.WaveChartEngine.applyNow();
+    }
+
+    // 3. Kéo Data mới và đảo luồng WebSocket
+    window.fetchBinanceHistory(t, interval, interval === 'tick').then(histData => {
+        if (histData && histData.length > 0) {
+            let finalData = window.WaveDataEngine ? window.WaveDataEngine.processHistory(histData) : histData;
+            if (window.WA_Chart) window.WA_Chart.applyNewData(finalData);
+        }
+        if (typeof window.__wa_onChartReady === 'function') window.__wa_onChartReady();
+        if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, true);
+    });
+});

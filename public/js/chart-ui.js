@@ -955,35 +955,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
 
         const container = document.getElementById('sc-chart-container');
 
-    // Trong đoạn isTimeSwitch của openProChart
-if (isTimeSwitch && window.tvChart) {
-    let isTick = window.currentChartInterval === 'tick';
     
-    // 🚀 FIX LỖI TIME-SWITCH: Tôn trọng WaveChartEngine, không tự ép nến đặc nữa!
-    if (window.WaveChartEngine) {
-        if (isTick) window.WaveChartEngine.update({ chartType: 9 }, true);
-        else window.WaveChartEngine.applyNow(); // Vẽ lại nến Rỗng/Line/Bar y như cũ
-    } else {
-        window.tvChart.setStyles({ candle: { type: isTick ? 'area' : 'candle_solid' } });
-    }
-
-    // ✅ THÊM: Reset waterfall ngay lập tức để không render nến zombie
-    window._waTargetCandle = null;
-    window._waCurrentCandle = null;
-    window._waRafRunning = false; // ← Dừng RAF cũ
-
-    window.fetchBinanceHistory(t, window.currentChartInterval, isTick).then(histData => {
-        if (histData && histData.length > 0) {
-            // 🚀 HOOK 1: Nấu data lịch sử trước khi nạp vào Chart
-            let finalData = window.WaveDataEngine ? window.WaveDataEngine.processHistory(histData) : histData;
-            window.tvChart.applyNewData(finalData);
-        }
-        if (typeof window.__wa_onChartReady === 'function') window.__wa_onChartReady();
-        if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, true);
-    });
-    return;
-}
-
     // [WA-DRAWING] Lưu drawings của timeframe CŨ trước khi destroy chart
     if (window.__wa_onBeforeChartInit) {
         window.__wa_onBeforeChartInit(
@@ -1231,35 +1203,12 @@ if (isTimeSwitch && window.tvChart) {
         });
 
         
-// KHI ĐỔI COIN: Vẫn rebuild bình thường như cũ
-if (typeof window.fetchBinanceHistory === 'function') {
-    window.fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
-        // ✅ FIX 3: Nếu lệnh fetch đã bị hủy do user bấm qua tab khác, bỏ qua không đổ nến nữa
-        if (_abortSignal.aborted) return; 
-        
-        if (histData && histData.length > 0) {
-            // 🛑 VÁ LỖI KHỰNG: Giết chết "cây nến bóng ma" của Token cũ
-            window._waTargetCandle = null;
-            window._waCurrentCandle = null;
-            
-            // 🚀 HOOK 2: Nấu data lịch sử trước khi nạp vào Chart
-            let finalData = window.WaveDataEngine ? window.WaveDataEngine.processHistory(histData) : histData;
-            window.tvChart.applyNewData(finalData);
-        }
+// KH// 🛡️ BẮN PHÁO HIỆU: ĐÃ ĐỔI TOKEN MỚI (Event Hub sẽ lo tải data và dựng nến)
+window.dispatchEvent(new CustomEvent('WA_TOKEN_SWITCHED', {
+    detail: { token: t, interval: window.currentChartInterval }
+}));
 
-if (window.WaveIndicatorAPI) {
-    if(typeof window.WaveIndicatorAPI.initUI === 'function') window.WaveIndicatorAPI.initUI();
-    if(typeof window.WaveIndicatorAPI.restore === 'function') window.WaveIndicatorAPI.restore();
-}
-
-if (typeof window.__wa_onChartReady === 'function') {
-    window.__wa_onChartReady();
-}
-
-if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, isTimeSwitch);
-});
-}
-    }, 100); 
+}, 100); 
 };
 
 // chart-ui.js — hàm changeChartInterval
@@ -1281,14 +1230,11 @@ window.changeChartInterval = function(interval, btnEl) {
     let tfEl = document.getElementById('chart-legend-tf');
     if (tfEl) tfEl.innerText = interval.toUpperCase();
 
-    // ❌ XÓA ĐOẠN NÀY (nó giết WS một cách vô ích)
-    // if (window.chartWs) {
-    //     window.chartWs.close();
-    //     window.chartWs = null;
-    // }
-
     if (window.currentChartToken) {
-        window.openProChart(window.currentChartToken, true);
+        // 🛡️ BẮN PHÁO HIỆU SANG ENGINE: ĐÃ ĐỔI TIMEFRAME (Không tự gọi logic nến nữa)
+        window.dispatchEvent(new CustomEvent('WA_TIMEFRAME_CHANGED', {
+            detail: { token: window.currentChartToken, interval: interval, oldInterval: window.oldChartInterval }
+        }));
     }
 };
 
