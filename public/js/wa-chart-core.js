@@ -32,10 +32,11 @@
                                 marginLeft: 8, marginTop: 8, marginRight: 0, marginBottom: 0 
                             },
                             icons: [
-                                // 🚀 Ép marginTop: 8 (bằng với text) và size: 11 để icon vừa vặn, không bị lồi lõm
-                                { id: 'visible', position: 'middle', marginLeft: 8, marginTop: 8, marginRight: 0, marginBottom: 0, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf06e', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 11, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
+                                // Hiện khi đang TẮT (Click để Mở) -> Dùng Mắt Nhắm có gạch (\uf070)
+                                { id: 'visible', position: 'middle', marginLeft: 8, marginTop: 8, marginRight: 0, marginBottom: 0, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf070', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 11, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
                                 
-                                { id: 'invisible', position: 'middle', marginLeft: 8, marginTop: 8, marginRight: 0, marginBottom: 0, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf070', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 11, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
+                                // Hiện khi đang MỞ (Click để Tắt) -> Dùng Mắt Mở không gạch (\uf06e)
+                                { id: 'invisible', position: 'middle', marginLeft: 8, marginTop: 8, marginRight: 0, marginBottom: 0, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf06e', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 11, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
                                 
                                 { id: 'setting', position: 'middle', marginLeft: 6, marginTop: 8, marginRight: 0, marginBottom: 0, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf013', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 11, color: '#848e9c', activeColor: '#F0B90B', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(240,185,11,0.1)' },
                                 
