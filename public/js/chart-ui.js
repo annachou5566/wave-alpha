@@ -4,7 +4,7 @@
 // ==========================================
 
 
-window.tvChart = null;
+window.WA_Chart = null;
 window.tvLineSeries = null; 
 // ═══ CACHE DOM — tránh querySelector mỗi giây ═══
 const _UI = {
@@ -562,14 +562,14 @@ window.changeTheme = function() {
     }
 
     // 💡 VÁ LỖI: Chỉ đổi màu trực tiếp vào Canvas, KHÔNG xóa chart đi vẽ lại
-    if (window.tvChart) {
+    if (window.WA_Chart) {
         const isTrad = window.currentTheme === 'trad';
         const t_up = isTrad ? '#0ECB81' : '#2af592';
         const t_down = isTrad ? '#F6465D' : '#cb55e3';
         const t_text = isTrad ? '#848e9c' : '#527c82';
         const t_line = isTrad ? '#00F0FF' : '#41e6e7';
 
-        window.tvChart.setStyles({
+        window.WA_Chart.setStyles({
             candle: {
                 bar: { upColor: t_up, downColor: t_down, noChangeColor: t_text,
                        upBorderColor: t_up, downBorderColor: t_down,
@@ -588,7 +588,7 @@ window.changeTheme = function() {
 
 
 window.applyFishFilter = function() {
-    if (!window.tvChart) return;
+    if (!window.WA_Chart) return;
 
     try {
         // 🚀 TẠO TEMPLATE ĐỘC QUYỀN VỚI HÀNG RÀO BẢO VỆ CHỐNG CRASH
@@ -654,7 +654,7 @@ window.applyFishFilter = function() {
         // Nếu tắt filter hoặc ở khung lớn -> Xóa mượt mà
         if (activeTypes.length === 0 || (window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s')) {
             for (let oldId in window.activeWaveMarkers) {
-                try { window.tvChart.removeOverlay(oldId); } catch(e) {}
+                try { window.WA_Chart.removeOverlay(oldId); } catch(e) {}
             }
             window.activeWaveMarkers = {};
             return;
@@ -667,7 +667,7 @@ window.applyFishFilter = function() {
             return activeTypes.includes(type);
         });
 
-        let chartData = window.tvChart.getDataList();
+        let chartData = window.WA_Chart.getDataList();
         if (!chartData || chartData.length === 0) return;
 
         filteredMarkers.forEach((m, idx) => {
@@ -686,7 +686,7 @@ window.applyFishFilter = function() {
                     let yPrice = isBuy ? candle.low : candle.high;
 
                     try {
-                        window.tvChart.createOverlay({
+                        window.WA_Chart.createOverlay({
                             id: overlayId,
                             name: 'cyberMarker', 
                             extendData: { isBuy: isBuy, text: m.text, color: m.color },
@@ -700,7 +700,7 @@ window.applyFishFilter = function() {
         // Dọn dẹp marker cũ
         for (let oldId in window.activeWaveMarkers) {
             if (!newActiveMarkers[oldId]) { 
-                try { window.tvChart.removeOverlay(oldId); } catch(e) {}
+                try { window.WA_Chart.removeOverlay(oldId); } catch(e) {}
             }
         }
         window.activeWaveMarkers = newActiveMarkers;
@@ -712,8 +712,8 @@ window.applyFishFilter = function() {
 
 // Hàm hỗ trợ Xóa hình vẽ của User cho Bước 4 (không xóa Marker cá voi)
 window.clearUserDrawings = function() {
-    if (!window.tvChart) return;
-    window.tvChart.removeOverlay(); // Xóa sạch tất cả
+    if (!window.WA_Chart) return;
+    window.WA_Chart.removeOverlay(); // Xóa sạch tất cả
     window.applyFishFilter();       // Vẽ lại Marker cá voi
 };
 
@@ -805,10 +805,10 @@ document.head.appendChild(s);
     if (oldBackdrop) oldBackdrop.remove(); 
 
     const doResize = function() {
-        if (!window.tvChart) return;
+        if (!window.WA_Chart) return;
         const start = Date.now();
         const animate = function() {
-            if (window.tvChart) window.tvChart.resize();
+            if (window.WA_Chart) window.WA_Chart.resize();
             // Gọi liên tục trong 450ms (khớp với thời gian transition CSS)
             if (Date.now() - start < 450) {
                 requestAnimationFrame(animate);
@@ -865,10 +865,10 @@ window.togglePanelCollapse = function() {
             : '<i class="fas fa-chevron-left"></i>';
         toggleBtn.title = isCollapsed ? 'Mở panel' : 'Ẩn panel';
     }
-    if (window.tvChart) {
+    if (window.WA_Chart) {
         const start = Date.now();
         const animate = () => {
-            if (window.tvChart) window.tvChart.resize();
+            if (window.WA_Chart) window.WA_Chart.resize();
             if (Date.now() - start < 450) requestAnimationFrame(animate);
         };
         requestAnimationFrame(animate);
@@ -966,7 +966,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
         );
     }
     
-    if (window.tvChart) { try { klinecharts.dispose(container); } catch(e) {} window.tvChart = null; }
+    if (window.WA_Chart) { try { klinecharts.dispose(container); } catch(e) {} window.WA_Chart = null; }
     window.scActivePriceLines = [];
     
     // XÓA SẠCH CONTAINER (KHÔNG DÙNG WRAPPER ĐỂ TRÁNH VỠ LAYOUT)
@@ -1025,18 +1025,18 @@ window.openProChart = function(t, isTimeSwitch = false) {
         }
 
         // ĐĂNG KÝ CLICK ICON (Xử lý mượt cả VOL mặc định)
-        window.tvChart.subscribeAction('onTooltipIconClick', function(data) {
+        window.WA_Chart.subscribeAction('onTooltipIconClick', function(data) {
             if (!data.indicatorName) return;
             const indName = data.indicatorName;
             const paneId = data.paneId;
 
             if (data.iconId === 'visible') {
-                window.tvChart.overrideIndicator({ name: indName, visible: true }, paneId);
+                window.WA_Chart.overrideIndicator({ name: indName, visible: true }, paneId);
                 let ind = window.scActiveIndicators?.find(x => x.name === indName);
                 if (ind) ind.visible = true;
             } 
             else if (data.iconId === 'invisible') {
-                window.tvChart.overrideIndicator({ name: indName, visible: false }, paneId);
+                window.WA_Chart.overrideIndicator({ name: indName, visible: false }, paneId);
                 let ind = window.scActiveIndicators?.find(x => x.name === indName);
                 if (ind) ind.visible = false;
             } 
@@ -1045,7 +1045,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     let calcParams;
                     // Bước 1: Thử lấy trực tiếp từ canvas
                     try {
-                        const instances = window.tvChart.getIndicators({ name: indName, paneId: paneId });
+                        const instances = window.WA_Chart.getIndicators({ name: indName, paneId: paneId });
                         if (instances && instances.length > 0) calcParams = instances[0].calcParams;
                     } catch(e) {}
                     
@@ -1066,7 +1066,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     window.removeIndicatorFromChart(indName);
                 } 
                 // Fallback nếu người dùng bấm X xóa chỉ báo VOL mặc định
-                try { window.tvChart.removeIndicator(paneId, indName); } catch(e){}
+                try { window.WA_Chart.removeIndicator(paneId, indName); } catch(e){}
             }
         });
 
@@ -1092,8 +1092,8 @@ window.openProChart = function(t, isTimeSwitch = false) {
             container.appendChild(customUI);
         }
 
-        window.tvChart.setPriceVolumePrecision(prec, 2);
-        window.tvChart.createIndicator('VOL', false, { height: 80 });
+        window.WA_Chart.setPriceVolumePrecision(prec, 2);
+        window.WA_Chart.createIndicator('VOL', false, { height: 80 });
 
         // --- BẮT ĐẦU PATCH: TỐI ƯU RESIZE OBSERVER & CLEAR CACHE ---
         const chartArea = document.querySelector('.sc-chart-area');
@@ -1108,12 +1108,12 @@ window.openProChart = function(t, isTimeSwitch = false) {
         const isMobile = () => window.innerWidth <= 991;
         
         window._chartResizeObserver = new ResizeObserver(function() {
-            if (!window.tvChart) return;
+            if (!window.WA_Chart) return;
             if (_resizeRafId) cancelAnimationFrame(_resizeRafId);
             
             // Giới hạn call stack vẽ lại chart ở tốc độ 60fps của thiết bị
             _resizeRafId = requestAnimationFrame(function() {
-                if (window.tvChart) window.tvChart.resize();
+                if (window.WA_Chart) window.WA_Chart.resize();
                 _resizeRafId = null;
             });
         });
@@ -1142,7 +1142,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
             // Tự động chuyển mode Hollow (nến rỗng) nếu màu thân nến là transparent
             const cType = (ub === 'transparent' || ub === 'rgba(0,0,0,0)') ? 'candle_up_stroke' : 'candle_solid';
 
-            window.tvChart.setStyles({
+            window.WA_Chart.setStyles({
                     grid: {
                         // SỬA LỖI Ở 2 DÒNG DƯỚI ĐÂY: Thêm chữ ws. vào trước showGrid
                         horizontal: { show: ws.showGrid !== false, color: 'rgba(255,255,255,0.05)', style: 'dashed' },
@@ -1263,9 +1263,9 @@ window.closeProChart = function() {
     const overlay = document.getElementById('super-chart-overlay');
     if (overlay) { overlay.classList.remove('active'); document.body.classList.remove('overlay-active'); }
     if (window.chartWs) { window.chartWs.close(); window.chartWs = null; }
-    if (window.tvChart) { 
+    if (window.WA_Chart) { 
         try { klinecharts.dispose(document.getElementById('sc-chart-container')); } catch(e) {}
-        window.tvChart = null; 
+        window.WA_Chart = null; 
     }
     window.currentChartToken = null; 
 };
@@ -2216,12 +2216,12 @@ window.closeProChart = function() {
     // 🚀 PHÉP MÀU 60 FPS: Luôn neo Countdown ngay dưới nhãn giá cuối cùng
     function syncPosition60FPS() {
         const cd = document.getElementById('wa-overlay-countdown');
-        if (cd && window.tvChart) {
+        if (cd && window.WA_Chart) {
             try {
-                const dataList = window.tvChart.getDataList();
+                const dataList = window.WA_Chart.getDataList();
                 if (dataList && dataList.length > 0) {
                     const lastPrice = dataList[dataList.length - 1].close;
-                    const pixel = window.tvChart.convertToPixel({ value: lastPrice }, { paneId: 'candle_pane' });
+                    const pixel = window.WA_Chart.convertToPixel({ value: lastPrice }, { paneId: 'candle_pane' });
                     const y = typeof pixel === 'number' ? pixel : (pixel ? pixel.y : null);
                     
                     if (y !== null && !isNaN(y)) {
