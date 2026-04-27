@@ -123,11 +123,12 @@
                 brickSize = config.renkoBoxSize || 10;
             }
 
-            if (brickSize <= 0) brickSize = data[0].close * 0.001; // Chống lỗi chia 0
+            if (brickSize <= 0) brickSize = data[0].close * 0.001;
 
-            // 2. Tính Threshold (Ngưỡng tiếp diễn)
-            let trendThreshold = (config.renkoTrendThreshold != null && config.renkoTrendThreshold > 0)
-                ? Math.min(config.renkoTrendThreshold, brickSize) 
+            // 2. Tính Threshold (Ngưỡng tiếp diễn) - Đã ép kiểu an toàn
+            let rt = parseFloat(config.renkoTrendThreshold);
+            let trendThreshold = (!isNaN(rt) && rt > 0)
+                ? Math.min(rt, brickSize) 
                 : brickSize; 
 
             let openOffset = brickSize - trendThreshold;
@@ -207,7 +208,7 @@
                 } while (brickAdded); 
             }
 
-            // 5. CẤT VÀO BỘ NHỚ ĐỂ NẾN MA DÙNG LẠI (TRỊ LỖI GIẬT NẾN REALTIME)
+            // 5. CẤT VÀO BỘ NHỚ ĐỂ NẾN MA DÙNG LẠI
             this._renkoState = {
                 brickSize: brickSize,
                 trendThreshold: trendThreshold,
@@ -273,15 +274,25 @@
                 if (price <= state.lastBrickClose - state.trendThreshold || price >= state.lastBrickClose + state.trendThreshold) shouldBake = true;
             }
 
-            // Khi chạm ngưỡng: Lập tức đá lệnh buộc hệ thống nấu lại toàn bộ dữ liệu thành viên gạch vĩnh viễn!
             if (shouldBake) {
+                // 🚀 BÍ QUYẾT TỐI THƯỢNG CHỐNG "GIẬT NẾN": Bơm thẳng giá trị vượt ngưỡng vào Lịch sử Gốc
+                // Ép hệ thống tạo ra một nến "giả" để hàm Nấu Data bắt buộc phải đúc ra viên gạch mới!
+                this.rawHistory.push({
+                    timestamp: curr.timestamp + this.rawHistory.length, // Đảm bảo key duy nhất
+                    open: price,
+                    high: price,
+                    low: price,
+                    close: price,
+                    volume: curr.volume || 0
+                });
+
                 if (window._renkoBakeTimeout) clearTimeout(window._renkoBakeTimeout);
                 window._renkoBakeTimeout = setTimeout(() => {
-                    if (window.WaveChartEngine && window.WaveDataEngine && window.WA_Chart) {
-                        let reprocessed = window.WaveDataEngine.processHistory(window.WaveDataEngine.rawHistory, true);
+                    if (window.WaveChartEngine && window.WA_Chart) {
+                        let reprocessed = this.processHistory(this.rawHistory, true);
                         window.WA_Chart.applyNewData(reprocessed);
                     }
-                }, 5); // Đóng siêu tốc 5ms
+                }, 5); 
             }
 
             return ghost;
@@ -290,7 +301,17 @@
 
     // Lắng nghe sự kiện cập nhật cấu hình biểu đồ
     window.addEventListener('wa_chart_config_updated', (e) => {
-        // ... (Giữ nguyên logic cũ của bạn bên dưới cùng)
+        const config = e.detail;
+        if (global.WaveDataEngine && config.chartType !== global.WaveDataEngine.lastChartType) {
+            global.WaveDataEngine.lastChartType = config.chartType;
+            
+            if (window.WA_Chart && global.WaveDataEngine.rawHistory.length > 0) {
+                window._waTargetCandle = null;
+                window._waCurrentCandle = null;
+                let reCookedData = global.WaveDataEngine.processHistory(global.WaveDataEngine.rawHistory, true);
+                window.WA_Chart.applyNewData(reCookedData);
+            }
+        }
     });
 
 })(window);
