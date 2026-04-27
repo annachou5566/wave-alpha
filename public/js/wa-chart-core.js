@@ -133,7 +133,7 @@
                 else if (config.chartType === 11) { _chartInstance.createIndicator('WA_BASELINE', true, {id: 'candle_pane'}); hideCandle = true; }
 
                 const isHollow = (config.chartType === 2);
-                const forceHideWick = (config.chartType === 14); // 🚀 Tàng hình râu nến cho Renko
+                const forceHideWick = false; // 🚀 TRẢ LẠI RÂU NẾN CHO RENKO NINJATRADER
 
                 const fUp = hideCandle ? 'transparent' : config.upColor;
                 const fDown = hideCandle ? 'transparent' : config.downColor;

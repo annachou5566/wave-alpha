@@ -54,10 +54,7 @@
         },
 
         // ==========================================
-        // 🧱 THUẬT TOÁN RENKO NÂNG CAO (ATR / TRAD / LTP)
-        // ==========================================
-        // ==========================================
-        // 🧱 THUẬT TOÁN RENKO (CHUẨN NINJATRADER)
+        // 🧱 THUẬT TOÁN RENKO (CHUẨN NINJATRADER CÓ WICK)
         // ==========================================
         _toRenko: function(data, config) {
             let renkoData = [];
@@ -75,55 +72,53 @@
                 brickSize = config.renkoBoxSize || 10;
             }
             
-            // Bảo vệ chống lỗi 1 Brick (Ép min 0.1% nếu giá trị tính ra quá nhỏ)
             if (brickSize <= 0) brickSize = data[0].close * 0.001; 
 
-            // LOGIC NINJATRADER: Cố định điểm neo Open - Close chéo góc
             let lastBrickClose = data[0].close;
             let lastBrickOpen = lastBrickClose - brickSize; 
-            let lastDir = 1; // 1 = UP, -1 = DOWN
+            let lastDir = 1; 
 
-            // Viên gạch đầu tiên
+            // 🚀 BỘ NHỚ THEO DÕI RÂU NẾN (WICKS) TRONG QUÁ TRÌNH TẠO GẠCH
+            let runningHigh = data[0].high;
+            let runningLow = data[0].low;
+
             renkoData.push({ 
                 ...data[0], 
                 open: lastBrickOpen, close: lastBrickClose, 
-                high: lastBrickClose, low: lastBrickOpen 
+                high: Math.max(lastBrickOpen, lastBrickClose, runningHigh), 
+                low: Math.min(lastBrickOpen, lastBrickClose, runningLow) 
             });
 
             for (let i = 1; i < data.length; i++) {
                 let curr = data[i];
                 let price = (config.renkoSource === 'ohlc') ? (curr.high + curr.low + curr.close) / 3 : curr.close;
                 
+                // Liên tục cập nhật đỉnh/đáy thực tế của thị trường
+                runningHigh = Math.max(runningHigh, curr.high);
+                runningLow = Math.min(runningLow, curr.low);
+
                 let brickAdded = false;
                 do {
                     brickAdded = false;
                     if (lastDir === 1) { 
-                        // ĐANG XU HƯỚNG TĂNG
                         if (price >= lastBrickClose + brickSize) {
-                            // Đi tiếp (Cần 1x Size)
                             lastBrickOpen = lastBrickClose;
                             lastBrickClose += brickSize;
                             lastDir = 1;
                             brickAdded = true;
                         } else if (price <= lastBrickOpen - brickSize) {
-                            // Đảo chiều GIẢM (Cần 2x Size)
                             lastBrickClose = lastBrickOpen - brickSize;
-                            // lastBrickOpen giữ nguyên làm đỉnh của gạch đỏ
                             lastDir = -1;
                             brickAdded = true;
                         }
                     } else { 
-                        // ĐANG XU HƯỚNG GIẢM
                         if (price <= lastBrickClose - brickSize) {
-                            // Đi tiếp (Cần 1x Size)
                             lastBrickOpen = lastBrickClose;
                             lastBrickClose -= brickSize;
                             lastDir = -1;
                             brickAdded = true;
                         } else if (price >= lastBrickOpen + brickSize) {
-                            // Đảo chiều TĂNG (Cần 2x Size)
                             lastBrickClose = lastBrickOpen + brickSize;
-                            // lastBrickOpen giữ nguyên làm đáy của gạch xanh
                             lastDir = 1;
                             brickAdded = true;
                         }
@@ -132,17 +127,61 @@
                     if (brickAdded) {
                         renkoData.push({
                             ...curr, 
-                            // Tịnh tiến thời gian siêu nhỏ để các gạch không đè lên nhau trên trục X
                             timestamp: curr.timestamp + renkoData.length * 100, 
                             open: lastBrickOpen, close: lastBrickClose,
-                            high: Math.max(lastBrickOpen, lastBrickClose), low: Math.min(lastBrickOpen, lastBrickClose),
+                            // 🚀 Ghi nhận wick thực tế vào viên gạch
+                            high: Math.max(lastBrickOpen, lastBrickClose, runningHigh), 
+                            low: Math.min(lastBrickOpen, lastBrickClose, runningLow),
                             volume: curr.volume 
                         });
+                        
+                        // Reset lại bộ nhớ râu nến cho viên gạch mới tiếp theo
+                        runningHigh = Math.max(lastBrickOpen, lastBrickClose);
+                        runningLow = Math.min(lastBrickOpen, lastBrickClose);
                     }
-                } while(brickAdded); // Vòng lặp do-while đảm bảo cây nến xả mạnh sinh ra nhiều gạch cùng lúc
+                } while(brickAdded); 
             }
             return renkoData.length > 1 ? renkoData : data; 
         },
+
+        // Tính ATR an toàn
+        _calculateATR: function(data, length) {
+            if (data.length < length) return data[0].close * 0.005;
+            let sumTR = 0;
+            for (let i = 1; i <= length; i++) {
+                let curr = data[data.length - i];
+                let prev = data[data.length - i - 1];
+                let tr = Math.max(curr.high - curr.low, Math.abs(curr.high - prev.close), Math.abs(curr.low - prev.close));
+                sumTR += tr;
+            }
+            return sumTR / length;
+        },
+
+        // Tạo nến Ghost (Realtime Tick) kiểu NinjaTrader có Râu
+        _updateRenkoTick: function(curr, chartData, config) {
+            let lastBrick = chartData[chartData.length - 1];
+            let lastDir = lastBrick.close > lastBrick.open ? 1 : -1;
+            let price = curr.close;
+
+            let ghost = { ...curr };
+            
+            // Neo giá mở cửa theo NinjaTrader logic
+            if (lastDir === 1) {
+                ghost.open = price < lastBrick.open ? lastBrick.open : lastBrick.close;
+            } else {
+                ghost.open = price > lastBrick.open ? lastBrick.open : lastBrick.close;
+            }
+            
+            ghost.close = price;
+            
+            // 🚀 Bắt Realtime Wick: Râu sẽ kéo dài ra khi giá giật lên/xuống
+            ghost.high = Math.max(ghost.open, ghost.close, curr.high);
+            ghost.low = Math.min(ghost.open, ghost.close, curr.low);
+
+            return ghost;
+        }
+       
+        
 
         // Tính ATR an toàn
         _calculateATR: function(data, length) {
