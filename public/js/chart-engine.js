@@ -461,7 +461,7 @@ window.WaveChartEngine = {
         // 1. ÁP DỤNG CẤU HÌNH NẾN & MÀU SẮC
         window.WA_Chart.setMainSeries(this.config);
 
-        // 2. ÁP DỤNG KIỂU DÁNG CHO LÕI KLINECHART (Lưới, Giá, Trục Y)
+        // 2. ÁP DỤNG KIỂU DÁNG CHO LÕI KLINECHART (Lưới, Giá, Trục Y, Tâm Ngắm)
         if (typeof window.WA_Chart.setStyles === 'function') {
             window.WA_Chart.setStyles({
                 grid: {
@@ -470,7 +470,7 @@ window.WaveChartEngine = {
                     vertical: { show: this.config.gridVertical, size: 1, color: this.config.gridColor, style: 'dashed', dashValue: [2, 2] }
                 },
                 yAxis: {
-                    type: this.config.yAxisMode === 'log' ? 'log' : 'normal',
+                    type: this.config.yAxisMode || 'normal'
                 },
                 candle: {
                     priceMark: {
@@ -481,14 +481,14 @@ window.WaveChartEngine = {
                     }
                 },
                 crosshair: {
-                    show: this.config.crosshairMode !== 'none',
+                    show: this.config.crosshairMode !== 'none' && this.config.crosshairMode !== 'hidden'
                 }
             });
         }
 
         // 3. ÁP DỤNG KHOẢNG CÁCH LỀ & MÚI GIỜ
         if (typeof window.WA_Chart.setOffsetRightDistance === 'function') {
-            window.WA_Chart.setOffsetRightDistance(this.config.rightMargin || 10);
+            window.WA_Chart.setOffsetRightDistance(this.config.rightMargin !== undefined ? this.config.rightMargin : 10);
         }
         if (typeof window.WA_Chart.setTimezone === 'function') {
             window.WA_Chart.setTimezone(this.config.timezone || 'Asia/Ho_Chi_Minh');
@@ -499,7 +499,7 @@ window.WaveChartEngine = {
         if (container) {
             container.style.background = this.config.bgType === 'solid'
                 ? this.config.bgColor
-                : `linear-gradient(to bottom, ${this.config.bgColor} 0%, ${this.config.bgColor2} 100%)`;
+                : `linear-gradient(to bottom, ${this.config.bgColor} 0%, ${this.config.bgColor2 || '#000000'} 100%)`;
         }
 
         // 5. ĐỒNG BỘ CÔNG TẮC GIAO DIỆN HTML NÂNG CAO
@@ -521,7 +521,9 @@ window.WaveChartEngine = {
         }
 
         // 6. PHÁT TÍN HIỆU ĐỂ CÁC COMPONENT KHÁC CÙNG CẬP NHẬT
+        // Phát cả 2 sự kiện chữ Hoa và chữ Thường để đảm bảo file chart-ui.js luôn bắt được lệnh
         window.dispatchEvent(new CustomEvent('WA_CHART_CONFIG_UPDATED', { detail: this.config }));
+        window.dispatchEvent(new CustomEvent('wa_chart_config_updated', { detail: this.config }));
     },
 
     // 🚀 CACHE & PARSER MÀU SẮC CHUYÊN NGHIỆP (ĐÃ FIX LỖI ĐEN MÀU RGBA)
