@@ -456,44 +456,72 @@ window.WaveChartEngine = {
     },
 
     applyNow: function () {
-        // [REFACTOR] Ủy quyền toàn bộ logic tạo UI/Nến cho Tường lửa
-        if (window.WA_Chart) {
-            window.WA_Chart.setMainSeries(this.config);
+        if (!window.WA_Chart) return;
 
-            // 🚀 BỔ SUNG: Truyền lệnh Tắt/Mở Lưới cho KLineChart
-            if (typeof window.WA_Chart.setStyles === 'function') {
-                window.WA_Chart.setStyles({
-                    grid: {
+        // 1. ÁP DỤNG CẤU HÌNH NẾN & MÀU SẮC
+        window.WA_Chart.setMainSeries(this.config);
+
+        // 2. ÁP DỤNG KIỂU DÁNG CHO LÕI KLINECHART (Lưới, Giá, Trục Y)
+        if (typeof window.WA_Chart.setStyles === 'function') {
+            window.WA_Chart.setStyles({
+                grid: {
+                    show: true,
+                    horizontal: { show: this.config.gridHorizontal, size: 1, color: this.config.gridColor, style: 'dashed', dashValue: [2, 2] },
+                    vertical: { show: this.config.gridVertical, size: 1, color: this.config.gridColor, style: 'dashed', dashValue: [2, 2] }
+                },
+                yAxis: {
+                    type: this.config.yAxisMode === 'log' ? 'log' : 'normal',
+                },
+                candle: {
+                    priceMark: {
                         show: true,
-                        horizontal: {
-                            show: this.config.gridHorizontal,
-                            size: 1,
-                            color: this.config.gridColor,
-                            style: 'dashed',
-                            dashValue: [2, 2]
-                        },
-                        vertical: {
-                            show: this.config.gridVertical,
-                            size: 1,
-                            color: this.config.gridColor,
-                            style: 'dashed',
-                            dashValue: [2, 2]
-                        }
+                        high: { show: this.config.showHighLowTags !== false },
+                        low: { show: this.config.showHighLowTags !== false },
+                        last: { show: this.config.showLastPriceLine !== false }
                     }
-                });
-            }
-
-            // Xử lý Background (DOM manipulation nên giữ ở ngoài biểu đồ)
-            const container = document.getElementById('sc-chart-container');
-            if (container) {
-                container.style.background = this.config.bgType === 'solid'
-                    ? this.config.bgColor
-                    : `linear-gradient(to bottom, ${this.config.bgColor} 0%, ${this.config.bgColor2} 100%)`;
-            }
-
-            // Đổi tên event thành chữ HOA cho chuẩn Event-Driven (Rule 8)
-            window.dispatchEvent(new CustomEvent('WA_CHART_CONFIG_UPDATED', { detail: this.config }));
+                },
+                crosshair: {
+                    show: this.config.crosshairMode !== 'none',
+                }
+            });
         }
+
+        // 3. ÁP DỤNG KHOẢNG CÁCH LỀ & MÚI GIỜ
+        if (typeof window.WA_Chart.setOffsetRightDistance === 'function') {
+            window.WA_Chart.setOffsetRightDistance(this.config.rightMargin || 10);
+        }
+        if (typeof window.WA_Chart.setTimezone === 'function') {
+            window.WA_Chart.setTimezone(this.config.timezone || 'Asia/Ho_Chi_Minh');
+        }
+
+        // 4. ÁP DỤNG NỀN BIỂU ĐỒ (BACKGROUND DOM)
+        const container = document.getElementById('sc-chart-container');
+        if (container) {
+            container.style.background = this.config.bgType === 'solid'
+                ? this.config.bgColor
+                : `linear-gradient(to bottom, ${this.config.bgColor} 0%, ${this.config.bgColor2} 100%)`;
+        }
+
+        // 5. ĐỒNG BỘ CÔNG TẮC GIAO DIỆN HTML NÂNG CAO
+        // Bật tắt thanh Legend OHLC góc trái
+        const ohlcEl = document.getElementById('cc-legend') || document.querySelector('.sc-legend');
+        if (ohlcEl) ohlcEl.style.display = this.config.showOHLC === false ? 'none' : 'flex';
+
+        // Bật tắt Chữ chìm (Watermark) & Độ mờ
+        const watermarkEl = document.getElementById('sc-watermark') || document.querySelector('.sc-watermark');
+        if (watermarkEl) {
+            watermarkEl.style.display = this.config.showWatermark === false ? 'none' : 'flex';
+            watermarkEl.style.opacity = this.config.watermarkOpacity || 0.05;
+        }
+
+        // Bật tắt Đồng hồ đếm ngược (Countdown)
+        const countdownEl = document.getElementById('sc-countdown') || document.querySelector('.sc-countdown-timer');
+        if (countdownEl) {
+            countdownEl.style.display = this.config.showCountdown === false ? 'none' : 'block';
+        }
+
+        // 6. PHÁT TÍN HIỆU ĐỂ CÁC COMPONENT KHÁC CÙNG CẬP NHẬT
+        window.dispatchEvent(new CustomEvent('WA_CHART_CONFIG_UPDATED', { detail: this.config }));
     },
 
     // 🚀 CACHE & PARSER MÀU SẮC CHUYÊN NGHIỆP (ĐÃ FIX LỖI ĐEN MÀU RGBA)
