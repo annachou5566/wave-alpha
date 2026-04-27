@@ -15,8 +15,7 @@
 
                 _chartInstance = window.klinecharts.init(containerId);
 
-                // 🛡️ BẮT CẦU TƯƠNG THÍCH NGƯỢC (Lừa các file cũ không bị crash)
-                window.tvChart = this;
+                
 
                 // 🛡️ CẤU HÌNH LEGEND TÁCH BIỆT: Tắt nến (Dùng HTML) - Bật Indicator (Đẩy margin xuống 26px)
                 // 🛡️ CẤU HÌNH LEGEND TÁCH BIỆT: Nến tàng hình giữ chỗ - Indicator hiện chuẩn khít rịt
