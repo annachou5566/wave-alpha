@@ -1495,9 +1495,9 @@ window.closeProChart = function() {
                             // 🚀 ÉP ĐỒNG BỘ: Nếu chọn Renko mà chưa ở 1m -> Ép tải data 1m ngầm
                             if (item.id === 14 && window.currentChartInterval !== '1m') {
                                 window.changeChartInterval('1m', null, true); // force = true
-                            } 
-                            // 🚀 Nếu đã ở 1m sẵn hoặc là Heikin Ashi -> Nấu lại data ngay lập tức
-                            else if (item.id === 14 || item.id === 12) {
+                            } else {
+                                // 🚀 SỬA LỖI: LUÔN KHÔI PHỤC DATA GỐC KHI ĐỔI CHART
+                                // Để khi tắt Renko, nó trả lại Nến Nhật bình thường!
                                 if (window.WaveDataEngine && window.WA_Chart) {
                                     let reprocessedData = window.WaveDataEngine.processHistory(window.WaveDataEngine.rawHistory, true);
                                     window.WA_Chart.applyNewData(reprocessedData);
@@ -2059,11 +2059,20 @@ window.closeProChart = function() {
 
             // 🚀 KÍCH HOẠT ĐỒNG BỘ: KHI ĐỔI CHART TYPE HOẶC THÔNG SỐ RENKO
             if (key === 'chartType') {
-                // Bất kể bật hay tắt Renko, ép hệ thống gọi lại API với khung thời gian chuẩn
                 let dataInterval = window.getOptimalDataInterval(window.currentChartInterval);
-                window.dispatchEvent(new CustomEvent('WA_TIMEFRAME_CHANGED', {
-                    detail: { token: window.currentChartToken, interval: dataInterval, oldInterval: window.currentChartInterval }
-                }));
+                
+                if (parseInt(value) === 14 && window.currentChartInterval !== '1m') {
+                    // Ép API tải lại nếu là Renko mà chưa đúng khung giờ
+                    window.dispatchEvent(new CustomEvent('WA_TIMEFRAME_CHANGED', {
+                        detail: { token: window.currentChartToken, interval: dataInterval, oldInterval: window.currentChartInterval }
+                    }));
+                } else {
+                    // 🚀 SỬA LỖI: Ép giải phóng bộ nhớ Renko để vẽ lại Nến Nhật ngay lập tức
+                    if (window.WaveDataEngine && window.WA_Chart) {
+                        let reprocessedData = window.WaveDataEngine.processHistory(window.WaveDataEngine.rawHistory, true);
+                        window.WA_Chart.applyNewData(reprocessedData);
+                    }
+                }
             } else if (key.startsWith('renko') || parseInt(window.WaveChartEngine.getConfig().chartType) === 12) {
                 // Chỉ đổi kích thước gạch (Size, ATR) -> Chỉ cần nấu lại data cũ, không tốn API
                 if (window.WaveDataEngine && window.WA_Chart) {
