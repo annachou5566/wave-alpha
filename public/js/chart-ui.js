@@ -3,8 +3,6 @@
 // 🚀 FILE: chart-ui.js - GIAO DIỆN & TRADINGVIEW
 // ==========================================
 
-
-window.WA_Chart = null;
 window.tvLineSeries = null; 
 // ═══ CACHE DOM — tránh querySelector mỗi giây ═══
 const _UI = {
@@ -966,7 +964,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
         );
     }
     
-    if (window.WA_Chart) { try { klinecharts.dispose(container); } catch(e) {} window.WA_Chart = null; }
+    if (window.WA_Chart) { window.WA_Chart.destroy(); }
     window.scActivePriceLines = [];
     
     // XÓA SẠCH CONTAINER (KHÔNG DÙNG WRAPPER ĐỂ TRÁNH VỠ LAYOUT)
@@ -1065,7 +1063,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                 if (typeof window.removeIndicatorFromChart === 'function') {
                     window.removeIndicatorFromChart(indName);
                 } 
-                // Fallback nếu người dùng bấm X xóa chỉ báo VOL mặc định
+                // Fallback chuẩn qua Tường Lửa
                 try { window.WA_Chart.removeIndicator(paneId, indName); } catch(e){}
             }
         });
@@ -1264,8 +1262,7 @@ window.closeProChart = function() {
     if (overlay) { overlay.classList.remove('active'); document.body.classList.remove('overlay-active'); }
     if (window.chartWs) { window.chartWs.close(); window.chartWs = null; }
     if (window.WA_Chart) { 
-        try { klinecharts.dispose(document.getElementById('sc-chart-container')); } catch(e) {}
-        window.WA_Chart = null; 
+        window.WA_Chart.destroy();
     }
     window.currentChartToken = null; 
 };
