@@ -1351,9 +1351,9 @@ window.evaluateQuantVerdict = function() {
     let finalMftScore = hasFutures ? (spotScore * 0.4) + (futuresScore * 0.6) : (spotScore * 1.0);
     let mftMsg = '⚖️ ĐI NGANG TRUNG HẠN'; let mftColor = '#848e9c'; let mftBg = 'rgba(255, 255, 255, 0.05)';
     if (finalMftScore >= 0.6) { mftMsg = hasFutures ? '🔥 SHORT SQUEEZE (STRONG BUY)' : '🔥 LỰC MUA CỰC MẠNH'; mftColor = '#00F0FF'; mftBg = 'rgba(0, 240, 255, 0.1)'; } 
-    else if (finalMftScore >= 0.25) { mftMsg = '📈 ĐỘNG LƯỢNG TĂNG (BUY)'; mftColor = '#0ECB81'; mftBg = 'rgba(14, 203, 129, 0.1)'; } 
+    else if (finalMftScore >= 0.25) { mftMsg = 'ĐỘNG LƯỢNG TĂNG'; mftColor = '#0ECB81'; mftBg = 'rgba(14, 203, 129, 0.1)'; } 
     else if (finalMftScore <= -0.6) { mftMsg = hasFutures ? '🩸 LONG CASCADE (STRONG SELL)' : '🩸 LỰC XẢ CỰC MẠNH'; mftColor = '#FF007F'; mftBg = 'rgba(255, 0, 127, 0.1)'; } 
-    else if (finalMftScore <= -0.25) { mftMsg = '📉 ÁP LỰC GIẢM (SELL)'; mftColor = '#F6465D'; mftBg = 'rgba(246, 70, 93, 0.1)'; }
+    else if (finalMftScore <= -0.25) { mftMsg = 'ÁP LỰC GIẢM'; mftColor = '#F6465D'; mftBg = 'rgba(246, 70, 93, 0.1)'; }
     let mftObj = { html: mftMsg, css: `font-size: 10px; padding: 2px 4px; border-radius: 2px; color: ${mftColor}; background: ${mftBg}; white-space: nowrap;` };
 
     let smBadge = document.getElementById('sm-verdict-badge'); let smTag = smBadge ? smBadge.innerText.toUpperCase() : '';
@@ -1362,8 +1362,8 @@ window.evaluateQuantVerdict = function() {
     let tokenomicsScore = 0; if (unlockPct < 30) tokenomicsScore = -1.0; else if (unlockPct >= 50) tokenomicsScore = 0.5; else if (unlockPct >= 80) tokenomicsScore = 1.0;
     let finalLftScore = (smScore * 0.75) + (tokenomicsScore * 0.25);
     let lftMsg = '⚖️ TRUNG LẬP VĨ MÔ'; let lftColor = '#848e9c'; let lftBg = 'rgba(255, 255, 255, 0.05)';
-    if (finalLftScore >= 0.5) { lftMsg = '💎 TÍCH LŨY VĨ MÔ (MACRO BULL)'; lftColor = '#0ECB81'; lftBg = 'rgba(14, 203, 129, 0.1)'; } 
-    else if (finalLftScore <= -0.5) { lftMsg = '⚠️ RỦI RO PHÂN PHỐI (MACRO BEAR)'; lftColor = '#FF007F'; lftBg = 'rgba(255, 0, 127, 0.1)'; }
+    if (finalLftScore >= 0.5) { lftMsg = '💎 TÍCH LŨY VĨ MÔ'; lftColor = '#0ECB81'; lftBg = 'rgba(14, 203, 129, 0.1)'; } 
+    else if (finalLftScore <= -0.5) { lftMsg = '⚠️ RỦI RO PHÂN PHỐI'; lftColor = '#FF007F'; lftBg = 'rgba(255, 0, 127, 0.1)'; }
     let lftObj = { html: lftMsg, css: `font-size: 10px; padding: 2px 4px; border-radius: 2px; color: ${lftColor}; background: ${lftBg}; white-space: nowrap;` };
 
     scheduleVerdictRender(hftObj, mftObj, lftObj, q.flags);

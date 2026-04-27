@@ -2214,32 +2214,149 @@ window.fetchCommandCenterFutures = async function(symbol) {
 // --- HÀM MỞ CHART ĐÃ ĐƯỢC CHÈN LỆNH KÍCH HOẠT ---
 const oldOpenProChart = window.openProChart;
 window.openProChart = function(t, isTimeSwitch = false) {
-    if (typeof oldOpenProChart === 'function') oldOpenProChart(t, isTimeSwitch);
-    if (!isTimeSwitch) {
-        // Dọn dẹp tiến trình cập nhật của Token cũ (nếu có)
-        if (window.proChartApiInterval) clearInterval(window.proChartApiInterval);
+    const overlay = document.getElementById('super-chart-overlay');
+    if (!overlay) return;
 
-        setTimeout(() => {
-            injectSmartMoneyTab();
-            injectFuturesTab();
-            
-            // Lần 1: Gọi ngay lập tức khi vừa mở Chart
-            window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
-            window.fetchFuturesSentiment(t.symbol);
-            window.fetchCommandCenterFutures(t.symbol); 
+    if (window._fetchAbortCtrl) window._fetchAbortCtrl.abort();
+    window._fetchAbortCtrl = new AbortController();
+    const _abortSignal = window._fetchAbortCtrl.signal;
 
-            // Lần 2 trở đi: Lặp lại tự động mỗi 3 phút (180,000 ms)
-            window.proChartApiInterval = setInterval(() => {
-                // Kiểm tra an toàn: Nếu chart đã bị ẩn thì không gọi API nữa
-                const overlay = document.getElementById('super-chart-overlay');
-                if (!overlay || !overlay.classList.contains('active')) return;
-
-                window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
-                window.fetchFuturesSentiment(t.symbol);
-                window.fetchCommandCenterFutures(t.symbol);
-            }, 180000);
-
-        }, 100);
+    if (!isTimeSwitch && window.currentChartToken && window.currentChartToken.symbol !== t.symbol) {
+        if (window.__wa_onSymbolChange) window.__wa_onSymbolChange(t.symbol);
     }
+
+    window.currentChartToken = t; 
+    overlay.classList.add('active');
+    document.body.classList.add('overlay-active');
+
+    if (!isTimeSwitch) {
+        document.getElementById('sc-coin-symbol').innerText = (t.symbol || 'UNKNOWN') + '/USDT';
+        let nameEl = document.getElementById('sc-coin-name'); if (nameEl) nameEl.innerText = t.name || t.symbol; 
+        document.getElementById('sc-coin-logo').src = t.icon || 'assets/tokens/default.png';
+        document.getElementById('sc-live-price').innerText = '$' + window.formatPrice(t.price);
+        
+        let limitEl = document.getElementById('sc-algo-limit');
+        if (limitEl) { limitEl.innerHTML = `ALGO LIMIT: ⏳ TÍNH TOÁN...`; limitEl.style.color = '#F0B90B'; limitEl.style.background = 'rgba(240,185,11,0.1)'; limitEl.style.borderColor = 'rgba(240,185,11,0.3)'; }
+        
+        let chg = parseFloat(t.change_24h) || 0; let chgEl = document.getElementById('sc-change-24h');
+        if (chgEl) { chgEl.innerText = `(${(chg >= 0 ? '+' : '')}${chg.toFixed(2)}%)`; chgEl.style.color = chg >= 0 ? '#00F0FF' : '#FF007F'; }
+
+        document.getElementById('sc-top-mc').innerText = '$' + window.formatCompactNum(t.market_cap);
+        document.getElementById('sc-top-liq').innerText = '$' + window.formatCompactNum(t.liquidity);
+        document.getElementById('sc-top-vol').innerText = '$' + window.formatCompactNum(t.volume?.daily_total || 0);
+        
+        let el24hVol = document.getElementById('sc-top-vol-24h');
+        if (el24hVol) el24hVol.innerText = '$' + window.formatCompactNum(t.volume?.rolling_24h || 0);
+        document.getElementById('sc-top-hold').innerText = window.formatInt(t.holders);
+        document.getElementById('sc-top-tx').innerText = window.formatInt(t.tx_count);
+    }
+
+    const container = document.getElementById('sc-chart-container');
+
+    if (isTimeSwitch && window.WA_Chart) {
+        let isTick = window.currentChartInterval === 'tick';
+        
+        if (window.WaveChartEngine) {
+            if (isTick) window.WaveChartEngine.update({ chartType: 9 }, true);
+            else window.WaveChartEngine.applyNow();
+        }
+
+        window._waTargetCandle = null;
+        window._waCurrentCandle = null;
+        window._waRafRunning = false; 
+
+        window.fetchBinanceHistory(t, window.currentChartInterval, isTick).then(histData => {
+            if (histData && histData.length > 0) {
+                let finalData = window.WaveDataEngine ? window.WaveDataEngine.processHistory(histData) : histData;
+                window.WA_Chart.applyNewData(finalData);
+            }
+            if (typeof window.__wa_onChartReady === 'function') window.__wa_onChartReady();
+            if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, true);
+        });
+        return;
+    }
+
+    if (window.__wa_onBeforeChartInit) {
+        window.__wa_onBeforeChartInit((window.currentChartToken && window.currentChartToken.symbol) || '', window.oldChartInterval || window.currentChartInterval || '1d');
+    }
+    
+    window.WA_Chart.destroy();
+    window.scActivePriceLines = [];
+    container.innerHTML = ''; 
+
+    if (!isTimeSwitch) {
+        let tradesBox = document.getElementById('sc-live-trades');
+        if (tradesBox) tradesBox.innerHTML = '<div style="text-align:center; margin-top:20px; color:#5e6673; font-style:italic;">Connecting to Dex...</div>';
+        window.scCurrentCluster = null; 
+        window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
+        // ... Xóa text UI rườm rà (giữ nguyên luồng UI của bạn)
+    }
+
+    setTimeout(() => {
+        let priceVal = parseFloat(t.price) || 1;
+        let prec = 4;
+        if (priceVal < 1) prec = 6; if (priceVal < 0.1) prec = 8; if (priceVal < 0.0001) prec = 10;
+
+        let overlayElem = document.getElementById('super-chart-overlay');
+        if(overlayElem) { overlayElem.classList.remove('theme-cyber', 'theme-trad'); overlayElem.classList.add('theme-' + window.currentTheme); }
+
+        if (window.WaveIndicatorAPI) window.WaveIndicatorAPI.register();
+
+        // 🛡️ NẠP TƯỜNG LỬA CHÍNH THỨC
+        container.style.position = 'relative'; 
+        window.WA_Chart.init('sc-chart-container');
+        
+        if (window.WaveChartEngine) {
+            window.WaveChartEngine.init(); // Engine sẽ tự đổ Style & vẽ Nến vào Tường Lửa
+        }
+
+        window.WA_Chart.setPriceVolumePrecision(prec, 2);
+        window.WA_Chart.createIndicator('VOL', false, { height: 80 });
+
+        const customUI = document.createElement('div');
+        customUI.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;';
+        customUI.innerHTML = `<div style="position: absolute; bottom: 25px; left: 15px; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px;">WAVE ALPHA</div>`;
+        container.appendChild(customUI);
+
+        // 🛡️ CHUYỂN SỰ KIỆN CLICK INDICATOR VÀO TƯỜNG LỬA
+        window.WA_Chart.subscribeAction('onTooltipIconClick', function(data) {
+            if (!data.indicatorName) return;
+            if (data.iconId === 'close') {
+                if (typeof window.removeIndicatorFromChart === 'function') window.removeIndicatorFromChart(data.indicatorName);
+                window.WA_Chart.removeIndicator(data.paneId, data.indicatorName);
+            }
+        });
+
+        // 🛡️ CHUYỂN SỰ KIỆN CROSSHAIR CHO HTML LEGEND VÀO TƯỜNG LỬA
+        window.WA_Chart.subscribeAction('onCrosshairChange', function(param) {
+            if (!param || param.dataIndex === undefined || param.dataIndex < 0) return;
+            const dataList = window.WA_Chart.getDataList();
+            const ohlc = dataList[param.dataIndex];
+            if (!ohlc) return;
+
+            const fmt = (v) => v >= 1 ? v.toFixed(2) : v.toFixed(6);
+            const fmtVol = (v) => v >= 1e9 ? (v/1e9).toFixed(2)+'B' : v >= 1e6 ? (v/1e6).toFixed(2)+'M' : v >= 1e3 ? (v/1e3).toFixed(2)+'K' : v.toFixed(0);
+            const setEl = (id, val, color) => { const el = document.getElementById(id); if (el) { el.textContent = val; if (color) el.style.color = color; } };
+
+            const barColor = ohlc.close >= ohlc.open ? '#0ECB81' : '#F6465D';
+            setEl('tp-o', fmt(ohlc.open), '#848e9c'); setEl('tp-h', fmt(ohlc.high), '#0ECB81');
+            setEl('tp-l', fmt(ohlc.low), '#F6465D'); setEl('tp-c', fmt(ohlc.close), barColor);
+            setEl('tp-v', fmtVol(ohlc.volume || 0), '#848e9c');
+        });
+
+        if (typeof window.fetchBinanceHistory === 'function') {
+            window.fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
+                if (_abortSignal.aborted) return; 
+                if (histData && histData.length > 0) {
+                    window._waTargetCandle = null; window._waCurrentCandle = null;
+                    let finalData = window.WaveDataEngine ? window.WaveDataEngine.processHistory(histData) : histData;
+                    window.WA_Chart.applyNewData(finalData);
+                }
+                if (window.WaveIndicatorAPI && typeof window.WaveIndicatorAPI.initUI === 'function') window.WaveIndicatorAPI.initUI();
+                if (typeof window.__wa_onChartReady === 'function') window.__wa_onChartReady();
+                if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, isTimeSwitch);
+            });
+        }
+    }, 100); 
 };
 
