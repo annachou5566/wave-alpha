@@ -972,7 +972,23 @@ kc.registerIndicator({
   ],
   figures: [],
 
-  calc: function(dataList) { return dataList.map(() => ({})); },
+  // 🚀 FIX LỖI MEMORY LEAK (CHỐNG TRÀN RAM 60FPS)
+  calc: function(dataList, indicator) { 
+      let results = indicator.result || [];
+
+      // 1. Nếu số lượng nến không đổi (chỉ đang nhảy giá Realtime) -> Trả về mảng cũ luôn!
+      // Cắt giảm 100% vòng lặp, triệt tiêu hoàn toàn rác bộ nhớ (Garbage)
+      if (results.length === dataList.length) {
+          return results;
+      }
+
+      // 2. Nếu có nến mới được sinh ra -> Tái sử dụng mảng cũ, chỉ thêm phần tử mới
+      let newArray = new Array(dataList.length);
+      for (let i = 0; i < dataList.length; i++) {
+          newArray[i] = results[i] || {};
+      }
+      return newArray;
+  },
 
   draw: function({ ctx, bounding, yAxis, indicator }) {
     if (!window.scLocalOrderBook) return false;
