@@ -3962,95 +3962,136 @@ function getDrawingKey() {
   return 'wa_drawings_' + sym;
 }
 
+// 🚀 BỘ CÔNG CỤ XỬ LÝ THỜI GIAN TƯƠNG LAI (NGOẠI SUY KHI VẼ VƯỢT KHUNG)
+function _wa_ensureTimestamp(p) {
+  if (p.timestamp) return p.timestamp; // Nếu đã có thì dùng luôn
+  
+  // Nếu bị mất timestamp do vẽ lố ra ngoài, ta tự nội suy từ dataIndex
+  if (p.dataIndex !== undefined && window.WA_Chart) {
+      let dl = window.WA_Chart.getDataList();
+      if (dl && dl.length > 1) {
+          let lastIdx = dl.length - 1;
+          let interval = dl[lastIdx].timestamp - dl[lastIdx - 1].timestamp; // Tính khoảng thời gian 1 nến
+          
+          if (p.dataIndex > lastIdx) {
+              return dl[lastIdx].timestamp + (p.dataIndex - lastIdx) * interval; // Tính ra Tương lai
+          } else if (p.dataIndex < 0) {
+              return dl[0].timestamp + p.dataIndex * interval; // Tính về Quá khứ
+          } else if (dl[p.dataIndex]) {
+              return dl[p.dataIndex].timestamp; // Hiện tại
+          }
+      }
+  }
+  return new Date().getTime(); // Fallback an toàn
+}
+
 function saveAllOverlays() {
-  try {
-    if (!window.WA_Chart) return;
-    let dataToSave = [];
-    let validIds = [];
-    
-    // Quét qua danh sách ID, chủ động móc dữ liệu "tươi" nhất trực tiếp từ Biểu đồ
-    global.__wa_overlay_map.forEach(function(oldData, id) {
-        try {
-            let liveOv = window.WA_Chart.getOverlayById(id);
-            if (liveOv) {
-                validIds.push(id);
-                // Bắt buộc xóa dataIndex để chống lỗi khi nạp lại
-                let cleanPoints = (liveOv.points || []).map(function(p) { return { timestamp: p.timestamp, value: p.value }; });
-                let snapshot = { 
-                    name: liveOv.name, id: liveOv.id, points: cleanPoints, 
-                    styles: liveOv.styles, lock: !!liveOv.lock, extendData: liveOv.extendData 
-                };
-                dataToSave.push(snapshot);
-                global.__wa_overlay_map.set(id, snapshot); // Cập nhật luôn vào Map
-            }
-        } catch(err) {}
-    });
-    
-    // Dọn dẹp rác (Xóa khỏi bộ nhớ những hình đã bị user xóa trên màn hình)
-    for (let id of global.__wa_overlay_map.keys()) {
-        if (!validIds.includes(id)) global.__wa_overlay_map.delete(id);
-    }
-    
-    localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
-  } catch(e) {}
+try {
+  if (!window.WA_Chart) return;
+  let dataToSave = [];
+  let validIds = [];
+  
+  global.__wa_overlay_map.forEach(function(oldData, id) {
+      try {
+          let liveOv = window.WA_Chart.getOverlayById(id);
+          if (liveOv) {
+              validIds.push(id);
+              // 🚀 Dùng hàm nội suy để bảo vệ timestamp tuyệt đối không bao giờ null
+              let cleanPoints = (liveOv.points || []).map(function(p) { 
+                  return { timestamp: _wa_ensureTimestamp(p), value: p.value }; 
+              });
+              let snapshot = { 
+                  name: liveOv.name, id: liveOv.id, points: cleanPoints, 
+                  styles: liveOv.styles, lock: !!liveOv.lock, extendData: liveOv.extendData 
+              };
+              dataToSave.push(snapshot);
+              global.__wa_overlay_map.set(id, snapshot);
+          }
+      } catch(err) {}
+  });
+  
+  for (let id of global.__wa_overlay_map.keys()) {
+      if (!validIds.includes(id)) global.__wa_overlay_map.delete(id);
+  }
+  
+  localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
+} catch(e) {}
 }
 
 // ✅ FIX 1: Hàm Debounce tự viết để chống giật lag khi ghi ổ cứng
 function _wa_debounce(func, wait) {
-    let timeout;
-    return function() {
-        const context = this, args = arguments;
-        clearTimeout(timeout);
-        timeout = setTimeout(function() { func.apply(context, args); }, wait);
-    };
+  let timeout;
+  return function() {
+      const context = this, args = arguments;
+      clearTimeout(timeout);
+      timeout = setTimeout(function() { func.apply(context, args); }, wait);
+  };
 }
 
-// Tạo một phiên bản "lưu chậm 400ms"
 var _saveAllOverlaysDebounced = _wa_debounce(saveAllOverlays, 400);
-
-// Gán bản "lưu chậm" vào hệ thống vẽ (Để user vẽ thoải mái không bị giật)
 global.__wa_saveAllOverlays = _saveAllOverlaysDebounced;
-
-// Gán bản "LƯU NGAY LẬP TỨC" (Sync) vào một biến riêng để dùng khi khẩn cấp
 global.__wa_saveAllOverlays_SYNC = saveAllOverlays;
 
 function _wa_trackOverlay(o) {
-  if (!o || !o.id) return;
-  // BẮT BUỘC xóa dataIndex khi lưu để KLineChart không ngáo
-  var cleanPoints = (o.points || []).map(function(p) { return { timestamp: p.timestamp, value: p.value }; });
-  global.__wa_overlay_map.set(o.id, { name: o.name, id: o.id, points: cleanPoints, styles: o.styles, lock: !!o.lock, extendData: o.extendData });
+if (!o || !o.id) return;
+// 🚀 Dùng hàm nội suy để bảo vệ timestamp
+var cleanPoints = (o.points || []).map(function(p) { 
+    return { timestamp: _wa_ensureTimestamp(p), value: p.value }; 
+});
+global.__wa_overlay_map.set(o.id, { name: o.name, id: o.id, points: cleanPoints, styles: o.styles, lock: !!o.lock, extendData: o.extendData });
 }
 
 function _wa_untrackOverlay(id) {
-  if (id) global.__wa_overlay_map.delete(id);
+if (id) global.__wa_overlay_map.delete(id);
 }
 
-// 🌟 THUẬT TOÁN BINARY SEARCH SIÊU TỐC TÌM CÂY NẾN GẦN NHẤT
+// 🌟 THUẬT TOÁN BINARY SEARCH SIÊU TỐC TÌM CÂY NẾN (HỖ TRỢ TƯƠNG LAI)
 function _wa_findNearestDataIndex(dataList, targetTs) {
-    if (!dataList || dataList.length === 0) return 0;
-    let minDiff = Infinity;
-    let bestIndex = 0;
-    let left = 0;
-    let right = dataList.length - 1;
-    
-    while (left <= right) {
-        let mid = Math.floor((left + right) / 2);
-        let ts = dataList[mid].timestamp;
-        
-        if (ts === targetTs) return mid; // Trúng phóc
-        
-        let diff = Math.abs(ts - targetTs);
-        if (diff < minDiff) {
-            minDiff = diff;
-            bestIndex = mid; // Lưu lại cây nến gần nhất
-        }
-        if (ts < targetTs) {
-            left = mid + 1;
-        } else {
-            right = mid - 1;
-        }
-    }
-    return bestIndex;
+  if (!dataList || dataList.length === 0) return 0;
+  if (!targetTs) return 0;
+
+  let lastIdx = dataList.length - 1;
+  let lastTs = dataList[lastIdx].timestamp;
+
+  // 🚀 BƯỚC NHẢY TƯƠNG LAI: Nếu nét vẽ nằm ngoài rìa phải màn hình
+  if (targetTs > lastTs) {
+      let interval = 60000; // Mặc định 1 phút
+      if (dataList.length > 1) interval = lastTs - dataList[lastIdx - 1].timestamp;
+      return lastIdx + Math.round((targetTs - lastTs) / interval); // Tính ra số nến ảo
+  }
+
+  // 🚀 BƯỚC NHẢY QUÁ KHỨ: Nếu nét vẽ nằm ngoài rìa trái màn hình
+  let firstTs = dataList[0].timestamp;
+  if (targetTs < firstTs) {
+      let interval = 60000;
+      if (dataList.length > 1) interval = dataList[1].timestamp - firstTs;
+      return 0 - Math.round((firstTs - targetTs) / interval);
+  }
+
+  // MÀN QUÉT BINARY SEARCH BÌNH THƯỜNG DÀNH CHO CÁC NẾN HIỆN TẠI
+  let minDiff = Infinity;
+  let bestIndex = 0;
+  let left = 0;
+  let right = lastIdx;
+  
+  while (left <= right) {
+      let mid = Math.floor((left + right) / 2);
+      let ts = dataList[mid].timestamp;
+      
+      if (ts === targetTs) return mid; 
+      
+      let diff = Math.abs(ts - targetTs);
+      if (diff < minDiff) {
+          minDiff = diff;
+          bestIndex = mid;
+      }
+      if (ts < targetTs) {
+          left = mid + 1;
+      } else {
+          right = mid - 1;
+      }
+  }
+  return bestIndex;
 }
 
 let _waRestoreTimer = null;
