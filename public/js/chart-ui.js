@@ -915,6 +915,11 @@ window.openProChart = function(t, isTimeSwitch = false) {
     const overlay = document.getElementById('super-chart-overlay');
     if (!overlay) return;
 
+    // 🛡️ PHÁO HIỆU ƯU TIÊN CAO: Báo cho Drawing Engine lưu nét vẽ TRƯỚC KHI bị đè mất
+    if (!isTimeSwitch) {
+        window.dispatchEvent(new CustomEvent('WA_BEFORE_TOKEN_SWITCH'));
+    }
+
     // ✅ FIX 3: Hủy API fetch cũ nếu còn đang chạy — tránh race condition (chồng chéo dữ liệu)
     if (window._fetchAbortCtrl) {
         window._fetchAbortCtrl.abort();

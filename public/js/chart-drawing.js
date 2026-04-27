@@ -4174,8 +4174,15 @@ global.__wa_restoreOverlays = restoreOverlays;
 
 
 // ============================================================
-// 7.4 LẮNG NGHE SỰ KIỆN TỪ EVENT HUB (CẮT ĐỨT TIGHT-COUPLING)
+// 7.4 LẮNG NGHE SỰ KIỆN TỪ EVENT HUB
 // ============================================================
+
+// 🛡️ HÀNH ĐỘNG 1: LƯU (Khi nhận lệnh chuẩn bị đổi Token/Timeframe)
+window.addEventListener('WA_BEFORE_TOKEN_SWITCH', function() {
+  if (typeof global.__wa_saveAllOverlays_SYNC === 'function') {
+      global.__wa_saveAllOverlays_SYNC(); // Lưu nốt các nét vẽ của Coin cũ khi biểu đồ còn tồn tại
+  }
+});
 
 window.addEventListener('WA_TIMEFRAME_CHANGED', function(e) {
   if (typeof global.__wa_saveAllOverlays_SYNC === 'function') {
@@ -4184,26 +4191,25 @@ window.addEventListener('WA_TIMEFRAME_CHANGED', function(e) {
   if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
 });
 
+// 🛡️ HÀNH ĐỘNG 2: TẢI (Khi Token mới đã sẵn sàng)
 window.addEventListener('WA_TOKEN_SWITCHED', function(e) {
-  // 1. Lưu lập tức toàn bộ hình vẽ của Token CŨ
-  if (typeof global.__wa_saveAllOverlays_SYNC === 'function') {
-      global.__wa_saveAllOverlays_SYNC();
-  }
-  
-  // 2. Cập nhật tên token MỚI từ Data Event Hub truyền qua
+  // 1. Cập nhật tên token MỚI
   window.__wa_currentSymbol = String(e.detail.token.symbol).toUpperCase().replace(/[^A-Z0-9]/g, '');
   
-  // 3. Dọn sạch rác và lịch sử Undo/Redo
+  // 2. Dọn sạch rác trong bộ nhớ đệm
   if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
   undoStack = []; 
   redoStack = [];
+  
+  // 3. Xóa các Overlay cũ còn sót lại trên Chart mới (nếu có)
   if (window.WA_Chart) {
       try { window.WA_Chart.removeOverlay(); } catch(err) {}
   }
   
-  // 4. Load hình vẽ của Token MỚI
+  // 4. Hồi sinh các nét vẽ từ LocalStorage của Token mới
   if (typeof global.__wa_restoreOverlays === 'function') {
-      global.__wa_restoreOverlays();
+      // Đợi 1 nhịp nhỏ để Chart Init xong hoàn toàn
+      setTimeout(() => global.__wa_restoreOverlays(), 50);
   }
 });
 
