@@ -4141,11 +4141,20 @@ function restoreOverlays() {
           o.styles.text.color = '#00F0FF'; // Ép sáng lên thành màu xanh Neon
       }
 
-      // 🌟 BÍ QUYẾT ĐẦU NGÀNH: Ép KLineChart phải nghe lời bằng cách tự tính dataIndex mới!
+      // 🌟 FIX CLAMPING: Không trói buộc dataIndex nếu điểm đó nằm ở Tương lai hoặc Quá khứ xa
       var mappedPoints = (o.points || []).map(function(p) {
-          let newIdx = _wa_findNearestDataIndex(dataList, p.timestamp);
-          return { timestamp: p.timestamp, dataIndex: newIdx, value: p.value };
-      });
+        let lastTs = dataList[dataList.length - 1].timestamp;
+        let firstTs = dataList[0].timestamp;
+        
+        if (p.timestamp > lastTs || p.timestamp < firstTs) {
+            // 🚀 Giao phó hoàn toàn cho timestamp, để KLineChart tự phóng tọa độ ảo vào khoảng trống
+            return { timestamp: p.timestamp, value: p.value };
+        }
+        
+        // Nếu nằm trong phạm vi nến thực tế thì mới neo chặt dataIndex
+        let newIdx = _wa_findNearestDataIndex(dataList, p.timestamp);
+        return { timestamp: p.timestamp, dataIndex: newIdx, value: p.value };
+    });
         
       let cfg = {
         id: o.id,
