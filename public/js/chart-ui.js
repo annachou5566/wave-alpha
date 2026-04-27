@@ -1105,8 +1105,16 @@ window.openProChart = function(t, isTimeSwitch = false) {
         let _resizeRafId = null;
         const isMobile = () => window.innerWidth <= 991;
         
-        window._chartResizeObserver = new ResizeObserver(function() {
-            if (!window.WA_Chart) return;
+        let _lastChartW = 0, _lastChartH = 0; // Lưu lại kích thước cũ
+        window._chartResizeObserver = new ResizeObserver(function(entries) {
+            if (!window.WA_Chart || !entries || entries.length === 0) return;
+            
+            // 🚀 KHÓA INFINITE LOOP: Chỉ vẽ lại nếu chiều rộng/cao thực sự thay đổi lớn hơn 1px
+            const rect = entries[0].contentRect;
+            if (Math.abs(rect.width - _lastChartW) < 1 && Math.abs(rect.height - _lastChartH) < 1) return;
+            _lastChartW = rect.width; 
+            _lastChartH = rect.height;
+
             if (_resizeRafId) cancelAnimationFrame(_resizeRafId);
             
             // Giới hạn call stack vẽ lại chart ở tốc độ 60fps của thiết bị
@@ -1164,8 +1172,24 @@ window.openProChart = function(t, isTimeSwitch = false) {
         // 🛡️ HỆ THỐNG LEGEND HTML (HOẠT ĐỘNG 2 CHẾ ĐỘ: CROSSHAIR & REALTIME)
         window._isCrosshairActive = false;
         
+        window._lastLegendUpdateMs = 0;
+        window._lastLegendSig = null;
+
         window.updateLegendUI = function(ohlc, dataIndex = -1) {
             if (!ohlc || typeof ohlc.open === 'undefined') return;
+            
+            // 🚀 BỘ TIẾT LƯU 1: Nếu là Realtime tự nhảy (chuột đang nghỉ), ép giảm xuống 10 FPS
+            const now = Date.now();
+            if (dataIndex === -1) {
+                if (now - window._lastLegendUpdateMs < 100) return;
+                window._lastLegendUpdateMs = now;
+            }
+
+            // 🚀 BỘ TIẾT LƯU 2: Tạo chữ ký, nếu giá và volume không đổi thì TUYỆT ĐỐI KHÔNG VẼ LẠI
+            const sig = `${dataIndex}_${ohlc.close}_${ohlc.volume}`;
+            if (window._lastLegendSig === sig) return;
+            window._lastLegendSig = sig;
+
             const fmt = (v) => v >= 1 ? v.toFixed(2) : v.toFixed(6);
             const fmtVol = (v) => v >= 1e9 ? (v/1e9).toFixed(2)+'B' : v >= 1e6 ? (v/1e6).toFixed(2)+'M' : v >= 1e3 ? (v/1e3).toFixed(2)+'K' : (v || 0).toFixed(0);
             const setEl = (id, val, color) => { const el = document.getElementById(id); if (el) { el.textContent = val; if (color) el.style.color = color; } };
