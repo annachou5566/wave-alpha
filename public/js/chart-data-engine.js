@@ -240,7 +240,7 @@
             }
 
             return ghost;
-        }
+        },
 
         // ==========================================
         // 🧪 THUẬT TOÁN HEIKIN ASHI CHUẨN XÁC
