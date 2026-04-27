@@ -56,8 +56,8 @@ const _WA_COLOR_CACHE = {};
 window.WaveChartEngine = {
     chartInstance: null, config: { ...DEFAULT_CHART_CONFIG }, _debounceTimer: null,
 
-    init: function (chart) {
-        this.chartInstance = chart;
+    init: function () {
+        // [REFACTOR] Không lưu trữ chartInstance nữa, ngắt liên kết chặt
         this._registerCustomIndicators();
         this.loadConfig();
         this.applyNow();
@@ -456,94 +456,21 @@ window.WaveChartEngine = {
     },
 
     applyNow: function () {
-        if (!this.chartInstance) return;
-        const c = this.config;
-        let kcChartType = 'candle_solid', isLine = false, hideCandle = false;
-
-        // ✅ BẢN FIX: Nhắm chính xác mục tiêu. 
-        // Thay vì xóa theo pane ('candle_pane') khiến các chỉ báo EMA/MA bị văng theo,
-        // ta sẽ xóa chính xác bằng tên Indicator thông qua vòng lặp.
-        CUSTOM_CHART_IDS.forEach(id => { 
-            try { 
-                // Xóa theo đúng name của indicator để không chạm vào các chỉ báo khác
-                this.chartInstance.removeIndicator('candle_pane', id); 
-            } catch (e) {} 
-        });
-
-        // Loại native
-        if      (c.chartType === 2) kcChartType = 'candle_stroke';
-        else if (c.chartType === 3) kcChartType = 'ohlc';
-        else if (c.chartType === 6 || c.chartType === 9) { kcChartType = 'area'; isLine = (c.chartType === 6); }
-
-        // Loại custom
-        if      (c.chartType === 4)  { this.chartInstance.createIndicator('WA_COL_CHART',   true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 5)  { this.chartInstance.createIndicator('WA_HL_CHART',    true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 7)  { this.chartInstance.createIndicator('WA_LINE_MARKER', true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 8)  { this.chartInstance.createIndicator('WA_STEP_LINE',   true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 10) { this.chartInstance.createIndicator('WA_HLC_AREA',    true, {id: 'candle_pane'}); hideCandle = true; }
-        else if (c.chartType === 11) { this.chartInstance.createIndicator('WA_BASELINE',    true, {id: 'candle_pane'}); hideCandle = true; }
-
-        const isHollow       = (c.chartType === 2);
-        const finalUpColor   = hideCandle ? 'transparent' : c.upColor;
-        const finalDownColor = hideCandle ? 'transparent' : c.downColor;
-        // ✅ FIX #2: noChangeColor dùng màu xám cho nến doji, không hardcode transparent
-        const finalNoChange  = hideCandle ? 'transparent' : '#787b86';
-        const finalUpBorder   = hideCandle ? 'transparent' : (c.showBorder ? (c.borderIndependent ? c.borderUpColor   : c.upColor)   : (isHollow ? c.upColor   : 'transparent'));
-        const finalDownBorder = hideCandle ? 'transparent' : (c.showBorder ? (c.borderIndependent ? c.borderDownColor : c.downColor) : (isHollow ? c.downColor : 'transparent'));
-        const finalUpWick     = hideCandle ? 'transparent' : (c.showWick ? (c.wickIndependent ? c.wickUpColor   : c.upColor)   : 'transparent');
-        const finalDownWick   = hideCandle ? 'transparent' : (c.showWick ? (c.wickIndependent ? c.wickDownColor : c.downColor) : 'transparent');
-
-        const styles = {
-            grid: {
-                horizontal: { show: c.gridHorizontal, color: c.gridColor, style: 'dashed' },
-                vertical:   { show: c.gridVertical,   color: c.gridColor, style: 'dashed' }
-            },
-            indicator: {
-                lastValueMark: { show: true },
-                zLevel: 2 // 🚀 BẢN FIX: Ép tất cả các chỉ báo (EMA, MACD...) luôn nổi lên lớp trên cùng
-            },
-            candle: {
-                zLevel: 1, // 🚀 BẢN FIX: Hạ lớp nến / biểu đồ Line xuống lớp dưới
-                type:    kcChartType,
-                tooltip: { showRule: c.showOHLC ? 'always' : 'none' },
-                bar: {
-                    upColor:        finalUpColor,   
-                    downColor:      finalDownColor,
-                    noChangeColor:  finalNoChange,
-                    upBorderColor:  finalUpBorder,  
-                    downBorderColor: finalDownBorder,
-                    upWickColor:    finalUpWick,    
-                    downWickColor:   finalDownWick
-                },
-                area: {
-                    lineSize:        2,
-                    lineColor:       hideCandle ? 'transparent' : c.upColor,
-                    backgroundColor: (isLine || hideCandle)
-                        ? 'transparent'
-                        : [{offset: 0, color: this._dimColor(c.upColor, 0.25)}, {offset: 1, color: 'transparent'}]
-                },
-                priceMark: { show: c.showLastPriceLine, high: { show: false }, low: { show: false } }
-            },
-            crosshair: { show: c.crosshairMode !== 'hidden' },
+        // [REFACTOR] Ủy quyền toàn bộ logic tạo UI/Nến cho Tường lửa
+        if (window.WA_Chart) {
+            window.WA_Chart.setMainSeries(this.config);
             
-            // ✅ BẢN FIX: Truyền lệnh đổi Thang đo giá (Normal / Percentage / Log) vào Trục Y
-            yAxis: {
-                type: c.yAxisMode || 'normal'
+            // Xử lý Background (DOM manipulation nên giữ ở ngoài biểu đồ)
+            const container = document.getElementById('sc-chart-container');
+            if (container) {
+                container.style.background = this.config.bgType === 'solid'
+                    ? this.config.bgColor
+                    : `linear-gradient(to bottom, ${this.config.bgColor} 0%, ${this.config.bgColor2} 100%)`;
             }
-        };
 
-        try {
-            this.chartInstance.setStyles(styles);
-            this.chartInstance.setOffsetRightDistance(c.rightMargin);
-            this.chartInstance.setPaneOptions({ id: 'candle_pane', axisOptions: { type: c.yAxisMode } });
-        } catch (e) {}
-
-        const container = document.getElementById('sc-chart-container');
-        if (container) container.style.background = c.bgType === 'solid'
-            ? c.bgColor
-            : `linear-gradient(to bottom, ${c.bgColor} 0%, ${c.bgColor2} 100%)`;
-
-        window.dispatchEvent(new CustomEvent('wa_chart_config_updated', { detail: c }));
+            // Đổi tên event thành chữ HOA cho chuẩn Event-Driven (Rule 8)
+            window.dispatchEvent(new CustomEvent('WA_CHART_CONFIG_UPDATED', { detail: this.config }));
+        }
     },
 
     // 🚀 CACHE & PARSER MÀU SẮC CHUYÊN NGHIỆP (ĐÃ FIX LỖI ĐEN MÀU RGBA)
@@ -596,23 +523,23 @@ window._waRafRunning = false;
 // 🚀 TRẠM ĐÁNH CHẶN REALTIME (HOOK) CHO DATA ENGINE
 // ==========================================
 window.safeUpdateChartData = function(candleObj) {
-    if (!window.tvChart) return;
+    // Không cần check window.tvChart nữa. Tường lửa tự handle.
     let finalCandle = candleObj;
     if (window.WaveDataEngine) {
-        let dataList = window.tvChart.getDataList();
+        let dataList = window.WA_Chart ? window.WA_Chart.getDataList() : [];
         finalCandle = window.WaveDataEngine.processTick(candleObj, dataList);
     }
-    window.tvChart.updateData(finalCandle);
+    if (window.WA_Chart) window.WA_Chart.updateData(finalCandle, false);
 };
 
 window.startWaterfallEngine = function() {
-    if (window._waRafRunning || !window.tvChart) return;
+    if (window._waRafRunning) return;
     window._waRafRunning = true;
     let lastDraw = 0;
 
     function renderLoop(time) {
         // 💡 VÁ LỖI: Trả lại trạng thái false để lần sau mở Chart động cơ còn biết đường chạy lại
-        if (!window.tvChart || !window._waTargetCandle) {
+        if (!window._waTargetCandle) {
             window._waRafRunning = false; 
             return; 
         }
@@ -876,8 +803,8 @@ try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'
         window.scTickHistory = window.scTickHistory.filter(x => now - x.t <= 300000);
         if (window.scTickHistory.length > 3000) window.scTickHistory = window.scTickHistory.slice(-3000);
 
-        // Xóa bỏ tàn tích activeSeries của TradingView, thay bằng window.tvChart của KLineChart
-        if (window.tvChart && window.quantStats.flags && window.scTickHistory.length > 0) {
+        // Xóa bỏ tàn tích activeSeries của TradingView, thay bằng window.WA_Chart
+        if (window.WA_Chart && window.quantStats.flags && window.scTickHistory.length > 0) {
             let flags = window.quantStats.flags;
             let timeSec = Math.floor(Date.now() / 1000);
             let lastMarker = window.scChartMarkers[window.scChartMarkers.length - 1];
@@ -1027,12 +954,12 @@ try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'
                     window.lastChartRender = nowT;
                     let timeSec = Math.floor(nowT / 1000);
                     
-                    if (window.tvChart && typeof window.tvChart.updateData === 'function') {
-                        window.tvChart.updateData({
+                    if (window.WA_Chart) {
+                        window.WA_Chart.updateData({
                             timestamp: timeSec * 1000,
                             open: currentClose, high: currentClose, low: currentClose, close: currentClose,
                             volume: currentVol
-                        });
+                        }, false);
                     }
                 }
                 return; 
@@ -1050,12 +977,12 @@ try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'
 
                 // Cập nhật nến cho khung 1m trở lên
                 // Cập nhật nến cho khung 1m trở lên bằng WATERFALL
-                if (window.tvChart && typeof window.tvChart.updateData === 'function' && window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s') {
+                if (window.WA_Chart && window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s') {
                     
                     let rawTk = parseInt(k.t || k.ot);
                     let correctTk = rawTk < 100000000000 ? rawTk * 1000 : rawTk;
 
-                    let dataList = window.tvChart.getDataList();
+                    let dataList = window.WA_Chart.getDataList();
                     let lastCandle = (dataList && dataList.length > 0) ? dataList[dataList.length - 1] : null;
 
                     if (lastCandle && lastCandle.timestamp === correctTk && k.x !== true) {
@@ -1117,7 +1044,7 @@ try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'
             } else if (window.currentChartInterval === '1s' && window.liveCandle1s) {
                 window._waTargetCandle = { timestamp: timeSec * 1000, open: window.liveCandle1s.open, high: window.liveCandle1s.high, low: window.liveCandle1s.low, close: window.liveCandle1s.close, volume: window.liveCandle1s.vol };
             } else {
-                let dataList = window.tvChart ? window.tvChart.getDataList() : [];
+                let dataList = window.WA_Chart ? window.WA_Chart.getDataList() : [];
                 if (dataList && dataList.length > 0) {
                     let lastCandle = dataList[dataList.length - 1];
                     if (!window._waTargetCandle || window._waTargetCandle.timestamp !== lastCandle.timestamp) {
@@ -1441,4 +1368,3 @@ window.evaluateQuantVerdict = function() {
 
     scheduleVerdictRender(hftObj, mftObj, lftObj, q.flags);
 };
-
