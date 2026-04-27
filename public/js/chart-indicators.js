@@ -2615,15 +2615,15 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
         return dataList.map(() => ({}));
       },
       draw: function({ ctx, bounding, xAxis, yAxis, indicator }) {
-        if (!window.bookmapHistory || !window.bookmapHistory.length || !window.WA_Chart) return false;
+        if (!window.bookmapHistory || !window.bookmapHistory.length || !window.tvChart) return false;
 
         const minValUSD = indicator.calcParams[0] || 5000; 
         
         // Lấy độ rộng thân nến an toàn
         let barSpace = 5;
         try {
-            if (typeof window.WA_Chart.getBarSpace === 'function') {
-                let bs = window.WA_Chart.getBarSpace();
+            if (typeof window.tvChart.getBarSpace === 'function') {
+                let bs = window.tvChart.getBarSpace();
                 barSpace = (typeof bs === 'number') ? bs : (bs?.bar || 5);
             }
         } catch(e) {}
@@ -2634,7 +2634,7 @@ console.log('%c[WAVE_COB v9.0]%c Loaded ✅ (Engine Optimized)', 'color:#26A69A;
 
           window.bookmapHistory.forEach(snap => {
             // ✅ FIX 1: Thêm { paneId: 'candle_pane' } để KLineCharts biết vẽ ở đâu
-            let basePoint = window.WA_Chart.convertToPixel({ timestamp: snap.t }, { paneId: 'candle_pane' });
+            let basePoint = window.tvChart.convertToPixel({ timestamp: snap.t }, { paneId: 'candle_pane' });
             if (!basePoint) return;
             let x = basePoint.x;
 
@@ -3610,7 +3610,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         item.querySelector('.toggle-vis').onclick = (e) => {
           e.stopPropagation();
           ind.visible = !isVisible;
-          if (window.WA_Chart) window.WA_Chart.overrideIndicator({ name: ind.name, visible: ind.visible }, ind.paneId);
+          if (window.tvChart) window.tvChart.overrideIndicator({ name: ind.name, visible: ind.visible }, ind.paneId);
           renderIndicatorList(document.getElementById('wa-ind-search').value);
         };
         item.querySelector('.open-set').onclick = (e) => {
@@ -3924,8 +3924,8 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 chartDom.style.position = 'relative';
             }
 
-            if (window.WA_Chart) {
-                window.WA_Chart.setStyles({
+            if (window.tvChart) {
+                window.tvChart.setStyles({
                     indicator: { tooltip: { text: { marginLeft: 8 } } }
                 });
             }
@@ -3971,8 +3971,8 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                 
                 document.getElementById('wa-legend-icon').style.transform = isLegendVisible ? 'rotate(0deg)' : 'rotate(180deg)';
                 
-                if (window.WA_Chart) {
-                    window.WA_Chart.setStyles({
+                if (window.tvChart) {
+                    window.tvChart.setStyles({
                         indicator: { tooltip: { showRule: isLegendVisible ? 'always' : 'none' } }
                     });
                 }
@@ -3982,10 +3982,10 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
 
             let lastState = null; 
             setInterval(() => {
-                if (!window.WA_Chart || !document.getElementById('wa-legend-toggle')) return;
+                if (!window.tvChart || !document.getElementById('wa-legend-toggle')) return;
                 let count = 0;
                 try {
-                    const inds = window.WA_Chart.getIndicatorByPaneId('candle_pane');
+                    const inds = window.tvChart.getIndicatorByPaneId('candle_pane');
                     if (inds) {
                         if (inds instanceof Map) count = inds.size;
                         else count = Object.keys(inds).length;
@@ -4042,7 +4042,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
    * @param {Object} [options]  — optional overrides: { params, paneId }
    */
   global.addIndicatorToChart = function (indName, options) {
-    if (!window.WA_Chart) return;
+    if (!global.tvChart) return;
     
     // [FIX 1] Mình đã xóa lệnh tắt modal ở đây để người dùng chọn nhiều chỉ báo không bị tắt bảng
 
@@ -4052,7 +4052,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     const params  = (options && options.params) || (meta ? meta.defaultParams.slice() : []);
 
     try {
-        window.WA_Chart.createIndicator({
+        global.tvChart.createIndicator({
             name: indName,
             // 🚀 FIX: Kết hợp logic đổi icon Mắt VÀ giấu các tham số thừa thãi
             createTooltipDataSource: function({ indicator, defaultStyles }) {
@@ -4098,12 +4098,12 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
    * @param {string} indName
    */
   global.removeIndicatorFromChart = function (indName) {
-    if (!window.WA_Chart) return;
+    if (!global.tvChart) return;
     const entry = global.scActiveIndicators.find(function (x) { return x.name === indName; });
     if (!entry) return;
 
     try {
-      window.WA_Chart.removeIndicator(entry.paneId, indName);
+      global.tvChart.removeIndicator(entry.paneId, indName);
     } catch (e) {
       console.warn('[Wave Alpha] removeIndicator error', e);
     }
@@ -4273,7 +4273,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
           return val;
       });
       indState.params = newParams;
-      try { window.WA_Chart.overrideIndicator({ name: currentActiveIndName, calcParams: newParams }, indState.paneId); } catch (e) {}
+      try { global.tvChart.overrideIndicator({ name: currentActiveIndName, calcParams: newParams }, indState.paneId); } catch (e) {}
   };
 
     function renderSidebar() {
@@ -4302,7 +4302,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
             item.querySelector('.toggle-vis').onclick = (e) => {
                 e.stopPropagation();
                 ind.visible = !isVisible;
-                if (window.WA_Chart) window.WA_Chart.overrideIndicator({ name: ind.name, visible: ind.visible }, ind.paneId);
+                if (window.tvChart) window.tvChart.overrideIndicator({ name: ind.name, visible: ind.visible }, ind.paneId);
                 renderSidebar();
             };
 
@@ -4376,7 +4376,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
                               if (newColor === 'transparent') swatch.classList.add('wa-is-transparent');
                               else swatch.classList.remove('wa-is-transparent');
                               indState.params[idx] = newColor;
-                              try { window.WA_Chart.overrideIndicator({ name: indName, calcParams: indState.params }, indState.paneId); } catch (err) {}
+                              try { global.tvChart.overrideIndicator({ name: indName, calcParams: indState.params }, indState.paneId); } catch (err) {}
                           });
                       }
                   };
@@ -4502,8 +4502,8 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
    * Clear all user overlay drawings
    */
   global.clearUserDrawings = function () {
-    if (window.WA_Chart && typeof window.WA_Chart.removeAllOverlay === 'function') {
-      window.WA_Chart.removeAllOverlay();
+    if (global.tvChart && typeof global.tvChart.removeAllOverlay === 'function') {
+      global.tvChart.removeAllOverlay();
     }
   };
 
@@ -4566,11 +4566,11 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     },
 
     toggleVisible: function(name) {
-        if (!window.WA_Chart) return;
+        if (!window.tvChart) return;
         const ind = global.scActiveIndicators.find(i => i.name === name);
         if (ind) {
             ind.visible = ind.visible === false ? true : false;
-            window.WA_Chart.overrideIndicator({ name: ind.name, visible: ind.visible }, ind.paneId);
+            window.tvChart.overrideIndicator({ name: ind.name, visible: ind.visible }, ind.paneId);
             if(typeof global.saveIndicatorState === 'function') global.saveIndicatorState();
             global.WaveIndicatorAPI.renderLegend();
         }
