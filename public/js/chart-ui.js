@@ -1173,24 +1173,44 @@ if (isTimeSwitch && window.tvChart) {
         }
 
         // 3. SỰ KIỆN RÊ CHUỘT
-        window.tvChart.subscribeAction('onCrosshairChange', function(param) {
-            if (!param || param.dataIndex === undefined || param.dataIndex < 0) return;
-            const dataList = window.tvChart.getDataList();
-            const ohlc = dataList[param.dataIndex];
-            if (!ohlc) return;
-
+        // 🛡️ HỆ THỐNG LEGEND HTML (HOẠT ĐỘNG 2 CHẾ ĐỘ: CROSSHAIR & REALTIME)
+        window._isCrosshairActive = false;
+        
+        window.updateLegendUI = function(ohlc, dataIndex = -1) {
+            if (!ohlc || typeof ohlc.open === 'undefined') return;
             const fmt = (v) => v >= 1 ? v.toFixed(2) : v.toFixed(6);
-            const fmtVol = (v) => v >= 1e9 ? (v/1e9).toFixed(2)+'B' : v >= 1e6 ? (v/1e6).toFixed(2)+'M' : v >= 1e3 ? (v/1e3).toFixed(2)+'K' : v.toFixed(0);
+            const fmtVol = (v) => v >= 1e9 ? (v/1e9).toFixed(2)+'B' : v >= 1e6 ? (v/1e6).toFixed(2)+'M' : v >= 1e3 ? (v/1e3).toFixed(2)+'K' : (v || 0).toFixed(0);
             const setEl = (id, val, color) => { const el = document.getElementById(id); if (el) { el.textContent = val; if (color) el.style.color = color; } };
 
             const barColor = ohlc.close >= ohlc.open ? '#0ECB81' : '#F6465D';
             setEl('tp-o', fmt(ohlc.open), '#848e9c'); setEl('tp-h', fmt(ohlc.high), '#0ECB81');
             setEl('tp-l', fmt(ohlc.low), '#F6465D'); setEl('tp-c', fmt(ohlc.close), barColor);
             setEl('tp-v', fmtVol(ohlc.volume || 0), '#848e9c');
+            
+            // Tính % thay đổi của nến hiện tại
+            let pct = ohlc.open > 0 ? ((ohlc.close - ohlc.open) / ohlc.open) * 100 : 0;
+            let sign = pct >= 0 ? '+' : '';
+            let symStr = (window.currentChartToken ? window.currentChartToken.symbol : 'UNKNOWN').toUpperCase();
+            let tfStr = (window.currentChartInterval || '').toUpperCase();
+            setEl('tp-symbol', `${symStr} ${tfStr} (${sign}${pct.toFixed(2)}%)`, barColor);
 
-            // Báo cho file indicator biết index hiện tại
-            if (window.WaveIndicatorAPI && typeof window.WaveIndicatorAPI.updateLegendValues === 'function') {
-                window.WaveIndicatorAPI.updateLegendValues(param.dataIndex);
+            // Báo cho file indicator biết index hiện tại (Giữ nguyên logic của bạn)
+            if (dataIndex >= 0 && window.WaveIndicatorAPI && typeof window.WaveIndicatorAPI.updateLegendValues === 'function') {
+                window.WaveIndicatorAPI.updateLegendValues(dataIndex);
+            }
+        };
+
+        window.WA_Chart.subscribeAction('onCrosshairChange', function(param) {
+            const dataList = window.WA_Chart.getDataList();
+            if (!dataList || dataList.length === 0) return;
+
+            if (param && param.dataIndex !== undefined && param.dataIndex >= 0) {
+                window._isCrosshairActive = true;
+                window.updateLegendUI(dataList[param.dataIndex], param.dataIndex);
+            } else {
+                window._isCrosshairActive = false;
+                let lastIndex = dataList.length - 1;
+                window.updateLegendUI(dataList[lastIndex], lastIndex); // Chuột rời khỏi chart -> Cập nhật nến mới nhất
             }
         });
 

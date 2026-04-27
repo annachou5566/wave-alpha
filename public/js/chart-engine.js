@@ -528,7 +528,12 @@ window.safeUpdateChartData = function(candleObj) {
         let dataList = window.WA_Chart ? window.WA_Chart.getDataList() : [];
         finalCandle = window.WaveDataEngine.processTick(candleObj, dataList);
     }
-    if (window.WA_Chart) window.WA_Chart.updateData(finalCandle); // 🛡️ Xóa tham số false chết người
+    if (window.WA_Chart) window.WA_Chart.updateData(finalCandle); 
+    
+    // 🛡️ Bắn dữ liệu Realtime lên Legend HTML nếu chuột không soi vào nến cũ
+    if (!window._isCrosshairActive && typeof window.updateLegendUI === 'function') {
+        window.updateLegendUI(finalCandle);
+    }
 };
 
 window.startWaterfallEngine = function() {
