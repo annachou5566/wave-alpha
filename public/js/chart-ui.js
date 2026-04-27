@@ -1577,6 +1577,10 @@ window.closeProChart = function() {
         input:checked + .wa-slider:before { transform: translateX(16px); background-color: #26a69a; }
         .wa-csm-divider { font-size: 11px; font-weight: 800; color: #527c82; text-transform: uppercase; margin-top: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; }
         
+        /* 🚀 FIX LỖI TÀNG HÌNH: Khôi phục kích thước cho các ô chọn màu */
+        .wa-ism-swatch { width: 28px; height: 28px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; transition: 0.2s; background: transparent; flex-shrink: 0; }
+        .wa-ism-swatch:hover { border-color: #00F0FF; box-shadow: 0 0 5px rgba(0,240,255,0.3); }
+
         /* CSS Custom Confirm Modal */
         #wa-custom-confirm-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: transparent; z-index: 99999999; align-items: center; justify-content: center; }
         .wa-confirm-box { background: linear-gradient(180deg, #1c2127 0%, #161a1e 100%); border: 1px solid #2b3139; border-radius: 16px; width: 340px; padding: 24px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05); animation: waScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1); font-family: 'Be Vietnam Pro', 'Inter', sans-serif; }
