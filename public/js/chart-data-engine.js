@@ -60,21 +60,26 @@
             let renkoData = [];
             if (!data || data.length === 0) return renkoData;
 
-            // 1. Xác định kích thước Brick dựa trên phương pháp
+            // 1. Tự động dự phòng nếu config cũ bị lỗi hoặc chưa lưu
+            let method = config.renkoMethod || 'percentage';
             let brickSize = 1;
-            if (config.renkoMethod === 'atr') {
+
+            if (method === 'atr') {
                 brickSize = this._calculateATR(data, config.renkoAtrLength || 14);
-            } else if (config.renkoMethod === 'percentage') {
-                brickSize = data[data.length - 1].close * ((config.renkoPercentage || 1) / 100);
+            } else if (method === 'percentage') {
+                let pct = config.renkoPercentage || 0.5; // Mặc định 0.5%
+                brickSize = data[0].close * (pct / 100);
             } else {
                 brickSize = config.renkoBoxSize || 10;
             }
-            if (brickSize <= 0) brickSize = 1;
+            
+            // 🚀 BẢO VỆ CHỐNG LỖI 1 BRICK: Nếu brickSize tính ra bị 0 hoặc âm, ép lấy 0.5% giá mở cửa
+            if (brickSize <= 0) brickSize = data[0].close * 0.005; 
 
             let lastBrickClose = data[0].close;
             let lastBrickOpen = data[0].open;
 
-            // Viên gạch đầu tiên
+            // Gạch đầu tiên (Ép bằng râu để ra hình vuông)
             renkoData.push({ 
                 ...data[0], 
                 open: lastBrickOpen, close: lastBrickClose, 
@@ -94,7 +99,8 @@
                         let bOpen = lastBrickClose;
                         let bClose = lastBrickClose + (brickSize * dir);
                         renkoData.push({
-                            timestamp: curr.timestamp + b, 
+                            ...curr, // Kế thừa thông tin của nến gốc
+                            timestamp: curr.timestamp + b, // Tịnh tiến ms để phân biệt các gạch
                             open: bOpen, close: bClose,
                             high: Math.max(bOpen, bClose), low: Math.min(bOpen, bClose),
                             volume: curr.volume / brickCount
@@ -103,7 +109,8 @@
                     }
                 }
             }
-            return renkoData;
+            // Nếu thuật toán vẫn chạy ra 1 gạch, trả về chart cũ để không bị trắng xóa màn hình
+            return renkoData.length > 1 ? renkoData : data; 
         },
 
         // Helper tính ATR cho Renko

@@ -1817,7 +1817,8 @@ window.closeProChart = function() {
                 { val: '1', text: 'Nến Nhật' }, { val: '2', text: 'Nến Rỗng' }, { val: '3', text: 'Thanh (Bars)' },
                 { val: '4', text: 'Cột (Columns)' }, { val: '5', text: 'Đỉnh-Đáy (H-L)' }, { val: '6', text: 'Đường (Line)' },
                 { val: '7', text: 'Đường + Điểm' }, { val: '8', text: 'Bậc Thang' }, { val: '9', text: 'Vùng (Area)' },
-                { val: '10', text: 'Vùng HLC (Pro)' }, { val: '11', text: 'Đường Cơ Sở (Pro)' }
+                { val: '10', text: 'Vùng HLC (Pro)' }, { val: '11', text: 'Đường Cơ Sở (Pro)' },
+                { val: '12', text: 'Heikin Ashi (Pro)' }, { val: '14', text: 'Renko (Pro)' }
             ]
         },
         {
