@@ -1490,7 +1490,8 @@ window.closeProChart = function() {
                     div.onclick = (e) => {
                         e.stopPropagation();
                         if (window.WaveChartEngine) {
-                            window.WaveChartEngine.update({ chartType: item.id }, true);
+                            // 🚀 SỬA LỖI KẸT GIAO DIỆN: Bỏ tham số 'true' để Engine áp dụng đổi kiểu (Line, Nến) lập tức
+                            window.WaveChartEngine.update({ chartType: item.id });
                             
                             // 🚀 ÉP ĐỒNG BỘ: Nếu chọn Renko mà chưa ở 1m -> Ép tải data 1m ngầm
                             if (item.id === 14 && window.currentChartInterval !== '1m') {
@@ -1784,6 +1785,12 @@ window.closeProChart = function() {
         <div class="wa-csm-label">Kích thước gạch</div>
         <div class="wa-csm-control"><input type="number" class="wa-csm-input-num" data-bind="renkoBoxSize" data-type="number"></div>
     </div>
+    
+    <div class="wa-csm-row" id="row-renko-perc" style="display:none;">
+        <div class="wa-csm-label">Phần trăm LTP (%)</div>
+        <div class="wa-csm-control"><input type="number" step="0.1" class="wa-csm-input-num" data-bind="renkoPercentage" data-type="number" placeholder="1.0"></div>
+    </div>
+    
     <div class="wa-csm-divider">Thông số NinZaRenko</div>
     <div class="wa-csm-row">
         <div class="wa-csm-label" title="Ngưỡng đảo chiều. Để trống/0 sẽ chạy như Renko thường">Trend Threshold</div>
@@ -1791,6 +1798,7 @@ window.closeProChart = function() {
             <input type="number" step="0.0001" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;" data-bind="renkoTrendThreshold" data-type="number" placeholder="Auto">
         </div>
     </div>
+</div>
                             <div class="wa-csm-divider">Trục Y</div>
                             <div class="wa-csm-row">
                                 <div class="wa-csm-label">Thang đo giá</div>
@@ -2034,11 +2042,12 @@ window.closeProChart = function() {
             borderSwatches.style.pointerEvents = config.borderIndependent ? 'auto' : 'none';
         }
         // Logic ẩn hiện thông số Renko theo phương pháp đã chọn
+        // Logic ẩn hiện thông số Renko theo phương pháp đã chọn (CÓ BẢO VỆ CHỐNG CRASH)
         if (isRenko) {
             const method = config.renkoMethod || 'atr';
-            document.getElementById('row-renko-atr').style.display = (method === 'atr') ? 'flex' : 'none';
-            document.getElementById('row-renko-trad').style.display = (method === 'traditional') ? 'flex' : 'none';
-            document.getElementById('row-renko-perc').style.display = (method === 'percentage') ? 'flex' : 'none';
+            let elAtr = document.getElementById('row-renko-atr'); if(elAtr) elAtr.style.display = (method === 'atr') ? 'flex' : 'none';
+            let elTrad = document.getElementById('row-renko-trad'); if(elTrad) elTrad.style.display = (method === 'traditional') ? 'flex' : 'none';
+            let elPerc = document.getElementById('row-renko-perc'); if(elPerc) elPerc.style.display = (method === 'percentage') ? 'flex' : 'none';
         }
     }
 
