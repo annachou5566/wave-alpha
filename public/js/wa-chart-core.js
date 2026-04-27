@@ -52,7 +52,10 @@
         // 🛡️ CÁC CỔNG GIAO TIẾP ĐÃ ĐƯỢC KIỂM SOÁT (SAFE API)
         // ========================================================
         applyNewData: function(data) { try { if(_chartInstance) _chartInstance.applyNewData(data); } catch(e){} },
-        updateData: function(data) { try { if(_chartInstance) _chartInstance.updateData(data); } catch(e){} },
+        
+        // Đã xóa tham số append=false gây lỗi zoom 1 nến
+        updateData: function(data) { try { if(_chartInstance) _chartInstance.updateData(data); } catch(e){} }, 
+        
         getDataList: function() { try { return _chartInstance ? _chartInstance.getDataList() : []; } catch(e){ return []; } },
         setStyles: function(styles) { try { if(_chartInstance) _chartInstance.setStyles(styles); } catch(e){} },
         subscribeAction: function(type, cb) { try { if(_chartInstance) _chartInstance.subscribeAction(type, cb); } catch(e){} },
@@ -65,6 +68,13 @@
         resize: function() { try { if(_chartInstance) _chartInstance.resize(); } catch(e){} },
         setPriceVolumePrecision: function(p, v) { try { if(_chartInstance) _chartInstance.setPriceVolumePrecision(p, v); } catch(e){} },
         convertToPixel: function(val, finder) { try { return _chartInstance ? _chartInstance.convertToPixel(val, finder) : null; } catch(e){ return null; } },
+
+        // 🚀 BỔ SUNG 5 API CÒN THIẾU ĐỂ HỆ THỐNG VẼ DRAWING HOẠT ĐỘNG
+        cancelDrawing: function() { try { if(_chartInstance) _chartInstance.cancelDrawing(); } catch(e){} },
+        overrideOverlay: function(override) { try { if(_chartInstance) _chartInstance.overrideOverlay(override); } catch(e){} },
+        getOverlayById: function(id) { try { return _chartInstance ? _chartInstance.getOverlayById(id) : null; } catch(e){ return null; } },
+        convertFromPixel: function(coordinate, finder) { try { return _chartInstance ? _chartInstance.convertFromPixel(coordinate, finder) : null; } catch(e){ return null; } },
+        getChartStore: function() { try { return _chartInstance ? _chartInstance.getChartStore() : null; } catch(e){ return null; } },
 
         // ========================================================
         // 🛡️ LÕI KIỂM SOÁT GIAO DIỆN NẾN
