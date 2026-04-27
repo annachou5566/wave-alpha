@@ -4141,18 +4141,18 @@ function restoreOverlays() {
           o.styles.text.color = '#00F0FF'; // Ép sáng lên thành màu xanh Neon
       }
 
-      // 🌟 FIX CLAMPING: Không trói buộc dataIndex nếu điểm đó nằm ở Tương lai hoặc Quá khứ xa
+      // 🌟 TUYỆT CHIÊU CUỐI: "Bịt mắt" KLineChart để ép nó vẽ ra ngoài khoảng trống
       var mappedPoints = (o.points || []).map(function(p) {
         let lastTs = dataList[dataList.length - 1].timestamp;
         let firstTs = dataList[0].timestamp;
+        let newIdx = _wa_findNearestDataIndex(dataList, p.timestamp);
         
+        // 🚀 NẾU NẰM NGOÀI CHART: Xóa bỏ hoàn toàn timestamp. Chỉ nạp dataIndex ảo để nó vẽ lơ lửng.
         if (p.timestamp > lastTs || p.timestamp < firstTs) {
-            // 🚀 Giao phó hoàn toàn cho timestamp, để KLineChart tự phóng tọa độ ảo vào khoảng trống
-            return { timestamp: p.timestamp, value: p.value };
+            return { dataIndex: newIdx, value: p.value };
         }
         
-        // Nếu nằm trong phạm vi nến thực tế thì mới neo chặt dataIndex
-        let newIdx = _wa_findNearestDataIndex(dataList, p.timestamp);
+        // Nếu nằm TRONG chart: Nạp đầy đủ để nó bám chặt vào nến
         return { timestamp: p.timestamp, dataIndex: newIdx, value: p.value };
     });
         
