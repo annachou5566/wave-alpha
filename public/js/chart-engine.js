@@ -523,13 +523,12 @@ window._waRafRunning = false;
 // 🚀 TRẠM ĐÁNH CHẶN REALTIME (HOOK) CHO DATA ENGINE
 // ==========================================
 window.safeUpdateChartData = function(candleObj) {
-    // Không cần check window.tvChart nữa. Tường lửa tự handle.
     let finalCandle = candleObj;
     if (window.WaveDataEngine) {
         let dataList = window.WA_Chart ? window.WA_Chart.getDataList() : [];
         finalCandle = window.WaveDataEngine.processTick(candleObj, dataList);
     }
-    if (window.WA_Chart) window.WA_Chart.updateData(finalCandle, false);
+    if (window.WA_Chart) window.WA_Chart.updateData(finalCandle); // 🛡️ Xóa tham số false chết người
 };
 
 window.startWaterfallEngine = function() {
@@ -959,7 +958,7 @@ try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'
                             timestamp: timeSec * 1000,
                             open: currentClose, high: currentClose, low: currentClose, close: currentClose,
                             volume: currentVol
-                        }, false);
+                        }); // 🛡️ Xóa tham số false
                     }
                 }
                 return; 

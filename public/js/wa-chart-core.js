@@ -52,7 +52,7 @@
         // 🛡️ CÁC CỔNG GIAO TIẾP ĐÃ ĐƯỢC KIỂM SOÁT (SAFE API)
         // ========================================================
         applyNewData: function(data) { try { if(_chartInstance) _chartInstance.applyNewData(data); } catch(e){} },
-        updateData: function(data, append = false) { try { if(_chartInstance) { if(append) _chartInstance.updateData(data); else _chartInstance.applyNewData(data); } } catch(e){} },
+        updateData: function(data) { try { if(_chartInstance) _chartInstance.updateData(data); } catch(e){} },
         getDataList: function() { try { return _chartInstance ? _chartInstance.getDataList() : []; } catch(e){ return []; } },
         setStyles: function(styles) { try { if(_chartInstance) _chartInstance.setStyles(styles); } catch(e){} },
         subscribeAction: function(type, cb) { try { if(_chartInstance) _chartInstance.subscribeAction(type, cb); } catch(e){} },
