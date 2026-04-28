@@ -31,7 +31,12 @@ const DEFAULT_CHART_CONFIG = {
     showBorder: true, borderIndependent: false, borderUpColor: '#0ECB81', borderDownColor: '#F6465D',
     abnormalVolColoring: false, yAxisMode: 'normal',
     showOHLC: true, showCountdown: true, showLastPriceLine: true, showHighLowTags: true, showWatermark: true, watermarkOpacity: 0.05,
-    bgType: 'gradient', bgColor: '#000000', bgColor2: '#131722',
+    bgType: 'gradient', 
+    bgColor: '#131722', // Màu xám đen sáng hơn ở trên
+    bgColor2: '#000000', // Đen sâu ở dưới
+    gridVertical: false, 
+    gridHorizontal: false, 
+    gridColor: 'rgba(255,255,255,0.06)',
     gridVertical: false, gridHorizontal: false, gridColor: 'rgba(255,255,255,0.06)',
     sessionBreaks: false, crosshairMode: 'normal', rightMargin: 10, timezone: 'Asia/Ho_Chi_Minh',
 
