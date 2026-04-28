@@ -186,7 +186,7 @@
             if (state.lastDir === 1) {
                 ghost.open = (price >= state.lastBrickClose) ? state.lastBrickClose - state.openOffset : state.lastBrickClose + state.openOffset;  
             } else {
-                ghost.open = (price <= state.lastBrickClose) ? state.lastBrickClose + state.openOffset : state.lastBrickClose - state.lastBrickClose - state.openOffset;  
+                ghost.open = (price <= state.lastBrickClose) ? state.lastBrickClose + state.openOffset : state.lastBrickClose - state.openOffset;  
             }
             ghost.close = price;
 
