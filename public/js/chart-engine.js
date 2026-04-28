@@ -461,6 +461,9 @@ window.WaveChartEngine = {
                     }
 
                     ctx.save();
+                    // 🚀 RỬA CỌ VẼ: Ép nét vẽ thành nét liền, chống rò rỉ nét đứt từ biểu đồ khác
+                    ctx.setLineDash([]); 
+
                     const maxBarWidth = Math.max(1, (barSpace.gapBar || barSpace.bar || 6) * 0.95);
                     const minBarWidth = 1; 
 
@@ -490,19 +493,28 @@ window.WaveChartEngine = {
                         const fWick = isUp ? (c.showWick ? (c.wickIndependent ? c.wickUpColor : c.upColor) : fBody) 
                                            : (c.showWick ? (c.wickIndependent ? c.wickDownColor : c.downColor) : fBody);
 
+                        // 🚀 TINH CHỈNH TỌA ĐỘ (Pixel Snapping): Chống mờ viền (Anti-aliasing)
+                        const roundedX = Math.round(x);
+                        const roundedBodyX = Math.round(x - halfWidth);
+                        const roundedWidth = Math.max(1, Math.round(candleWidth));
+
                         if (c.showWick) {
                             ctx.fillStyle = fWick;
-                            ctx.fillRect(x - 0.5, highY, 1, bodyTop - highY); 
-                            ctx.fillRect(x - 0.5, bodyBottom, 1, lowY - bodyBottom); 
+                            // Râu nến dịch -0.5 để nét 1px luôn nằm đúng giữa pixel, cực sắc nét
+                            ctx.fillRect(roundedX - 0.5, highY, 1, bodyTop - highY); 
+                            ctx.fillRect(roundedX - 0.5, bodyBottom, 1, lowY - bodyBottom); 
                         }
 
                         ctx.fillStyle = fBody;
-                        ctx.fillRect(x - halfWidth, bodyTop, candleWidth, bodyHeight);
+                        ctx.fillRect(roundedBodyX, bodyTop, roundedWidth, bodyHeight);
 
-                        if (c.showBorder) {
+                        // 🚀 CHỈ vẽ viền khi nến đủ mập (rộng > 2px). 
+                        // Nếu nến mỏng tang 1-2px mà vẽ viền nó sẽ biến thành "con lãi"
+                        if (c.showBorder && roundedWidth > 2) {
                             ctx.strokeStyle = fBorder;
                             ctx.lineWidth = 1;
-                            ctx.strokeRect(x - halfWidth, bodyTop, candleWidth, bodyHeight);
+                            // Viền dịch -0.5 để nét 1px ôm sát thân nến, không bị lem màu
+                            ctx.strokeRect(roundedBodyX - 0.5, bodyTop - 0.5, roundedWidth + 1, bodyHeight + 1);
                         }
                     }
                     ctx.restore();
