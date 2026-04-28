@@ -15,14 +15,17 @@
 
                 _chartInstance = window.klinecharts.init(containerId);
 
-                // 🛡️ BẮT CẦU TƯƠNG THÍCH NGƯỢC (Lừa các file cũ không bị crash)
-                //window.tvChart = this;
-
-                // 🛡️ CẤU HÌNH LEGEND TÁCH BIỆT: Tắt nến (Dùng HTML) - Bật Indicator (Đẩy margin xuống 26px)
                 // 🛡️ CẤU HÌNH LEGEND TÁCH BIỆT: Nến tàng hình giữ chỗ - Indicator hiện chuẩn khít rịt
                 _chartInstance.setStyles({
+                    // 🚀 CHẶN NHÁY MÀU: Ép nền đen và tắt lưới ngay từ mili-giây đầu tiên
+                    layout: { backgroundColor: '#000000' },
+                    grid: {
+                        show: false,
+                        horizontal: { show: false },
+                        vertical: { show: false }
+                    },
                     crosshair: { show: true },
-                    indicator: { 
+                    indicator: {
                         tooltip: { 
                             showRule: 'always',
                             showType: 'standard',
@@ -157,8 +160,8 @@ setTimezone: function(tz) { try { if(_chartInstance) _chartInstance.setTimezone(
                 const fUpW = hideCandle ? 'transparent' : (isRenko ? rBd : (config.showWick ? (config.wickIndependent ? config.wickUpColor : config.upColor) : 'transparent'));
                 const fDnW = hideCandle ? 'transparent' : (isRenko ? rBd : (config.showWick ? (config.wickIndependent ? config.wickDownColor : config.downColor) : 'transparent'));
 
-                // Thay màu xanh lục (upColor) bằng màu đen mờ (rgba 0,0,0,0.4) để đồng bộ tone tối
-    const areaColorObj = 'rgba(0, 0, 0, 0.4)';
+                // 🚀 DỌN RÁC CODE: Bỏ màu nền xanh lục (upColor) dư thừa, thay bằng đen mờ chuyên nghiệp
+                const areaColorObj = 'rgba(255, 255, 255, 0.03)';
 
                 const areaBgColor = (isLine || hideCandle) 
                     ? 'transparent' 
