@@ -2275,10 +2275,12 @@ window.closeProChart = function() {
     if (btnReset) {
         btnReset.onmouseenter = () => { btnReset.style.background = 'rgba(246, 70, 93, 0.15)'; btnReset.style.borderColor = 'rgba(246, 70, 93, 0.6)'; };
         btnReset.onmouseleave = () => { btnReset.style.background = 'rgba(246, 70, 93, 0.05)'; btnReset.style.borderColor = 'rgba(246, 70, 93, 0.3)'; };
+        // ✅ THÊM ĐOẠN NÀY VÀO
         btnReset.onclick = () => {
             window.showCustomConfirm("Bạn có chắc chắn muốn khôi phục toàn bộ cài đặt biểu đồ về mặc định? Hành động này không thể hoàn tác.", () => {
                 localStorage.removeItem('wave_alpha_chart_config');
                 if (window.WaveChartEngine) {
+                    // 1. ĐÃ BỔ SUNG ĐẦY ĐỦ THÔNG SỐ RENKO VÀO BỘ NHỚ MẶC ĐỊNH
                     const defaultCfg = {
                         chartType: 1, upColor: '#0ECB81', downColor: '#F6465D',
                         showWick: true, wickIndependent: false, wickUpColor: '#0ECB81', wickDownColor: '#F6465D',
@@ -2295,14 +2297,19 @@ window.closeProChart = function() {
                         baselineUpColor: '#0ECB81', baselineDownColor: '#F6465D',
                         baselineUpFill: '#0ECB81', baselineDownFill: '#F6465D',
                         baselineFillOpacity: 0.2, baselineValue: 50, baselinePriceSource: 'close',
+                        
+                        // 🚀 DỮ LIỆU ĐỒNG BỘ UI RENKO BỊ THIẾU
+                        renkoMethod: 'atr', renkoBoxSize: 10, renkoAtrLength: 14, 
+                        renkoPercentage: 1.0, renkoStyle: 'ninza', renkoTrendPct: 50, renkoSource: 'close',
                         renkoBrickPct: 0.5, renkoTrendThreshold: 0,
-                        renkoUpColor: '#FFFFFF', renkoDownColor: '#B250FF', renkoBorderColor: '#787B86' // 🚀 THÊM DÒNG NÀY VÀO CUỐI
+                        renkoUpColor: '#FFFFFF', renkoDownColor: '#B250FF', renkoBorderColor: '#787B86'
                     };
                     
+                    // 2. GHI ĐÈ BỘ NHỚ LÕI
                     window.WaveChartEngine.config = { ...defaultCfg };
                     window.WaveChartEngine.applyNow();
                     
-                    // Render lại Dropdown
+                    // 3. ĐỒNG BỘ LẠI DROPDOWN MENU
                     ddConfigs.forEach(dd => {
                         const wrapper = document.getElementById(dd.wrapId);
                         wrapper.innerHTML = '';
@@ -2312,8 +2319,10 @@ window.closeProChart = function() {
                         });
                     });
 
+                    // 4. HÀM ĐỒNG BỘ NGƯỢC (TỰ ĐỘNG XÓA SỐ 0.0001 THÀNH SỐ 10 MẶC ĐỊNH)
                     modal.querySelectorAll('[data-bind]').forEach(el => {
                         const key = el.dataset.bind;
+                        // Vì đã bổ sung data ở bước 1, nó sẽ lấy số mặc định để điền vào UI
                         const dataObj = typeof defaultCfg !== 'undefined' && defaultCfg[key] !== undefined ? defaultCfg : config;
                         if (dataObj[key] !== undefined) { 
                             if (el.type === 'checkbox') el.checked = dataObj[key]; 
@@ -2321,10 +2330,18 @@ window.closeProChart = function() {
                             if (el.type === 'range') el.dispatchEvent(new Event('input'));
                         }
                     });
+
+                    // 5. ĐỒNG BỘ LẠI BẢNG MÀU
                     modal.querySelectorAll('.wa-ism-swatch').forEach(swatch => {
                         const key = swatch.dataset.colorBind; 
                         if (defaultCfg[key]) swatch.style.background = defaultCfg[key];
                     });
+
+                    // 6. ĐỒNG BỘ LẠI 2 THẺ STYLE CARD (CLASSIC/NINZA)
+                    if (typeof window.setRenkoStyle === 'function') {
+                        window.setRenkoStyle(defaultCfg.renkoStyle);
+                    }
+
                     updateDynamicUI(defaultCfg);
                 }
             });
