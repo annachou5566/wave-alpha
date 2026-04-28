@@ -1794,6 +1794,9 @@ window.closeProChart = function() {
             <li style="margin-bottom: 4px;"><b>Phần trăm (%):</b> Tính theo % giá Token hiện tại.</li>
             <li><b>Tĩnh ($):</b> Nhập số cứng (VD: 10$ vẽ 1 gạch).</li>
         </ul>
+        <div style="background: rgba(246, 70, 93, 0.05); border-left: 2px solid #F6465D; padding: 8px 10px; font-size: 10px; color: #848e9c; line-height: 1.4;">
+            <b style="color:#F6465D;">Lưu ý Bản chất Dữ liệu:</b> Do giới hạn nền tảng Web, Lịch sử Renko là mô phỏng (Synthetic) từ nến 1 phút. Chỉ có nến Realtime hiện tại mới là chuỗi Tick giá thực tế (True Tick).
+        </div>
     </div>
 
     <div class="wa-csm-row">

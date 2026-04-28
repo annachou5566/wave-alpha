@@ -273,8 +273,21 @@
                 if (window._renkoBakeTimeout) clearTimeout(window._renkoBakeTimeout);
                 window._renkoBakeTimeout = setTimeout(() => {
                     if (window.WaveChartEngine && window.WA_Chart) {
+                        
+                        // 🚀 1. LƯU TỌA ĐỘ TRƯỚC KHI RENDER
+                        let ts = window.WA_Chart.chart ? window.WA_Chart.chart.timeScale() : null;
+                        let logicalRange = ts ? ts.getVisibleLogicalRange() : null;
+                        // Kiểm tra xem user có đang vuốt về quá khứ không (scrollPosition < 0 nghĩa là đang rời xa mép phải)
+                        let isScrolledBack = ts && ts.scrollPosition() < -2; 
+
+                        // 🚀 2. NẤU VÀ ÁP DỤNG DATA (Lúc này chart sẽ bị reset về sát phải)
                         let reprocessed = this.processHistory(this.rawHistory, true);
                         window.WA_Chart.applyNewData(reprocessed);
+
+                        // 🚀 3. ÉP TRẢ LẠI TỌA ĐỘ CŨ NẾU USER ĐANG XEM QUÁ KHỨ
+                        if (isScrolledBack && ts && logicalRange) {
+                            ts.setVisibleLogicalRange(logicalRange);
+                        }
                     }
                 }, 5); 
             }
