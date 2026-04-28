@@ -31,8 +31,8 @@ const DEFAULT_CHART_CONFIG = {
     showBorder: true, borderIndependent: false, borderUpColor: '#0ECB81', borderDownColor: '#F6465D',
     abnormalVolColoring: false, yAxisMode: 'normal',
     showOHLC: true, showCountdown: true, showLastPriceLine: true, showHighLowTags: true, showWatermark: true, watermarkOpacity: 0.05,
-    bgType: 'solid', bgColor: '#131722', bgColor2: '#000000',
-    gridVertical: true, gridHorizontal: true, gridColor: 'rgba(255,255,255,0.06)',
+    bgType: 'gradient', bgColor: '#000000', bgColor2: '#131722',
+    gridVertical: false, gridHorizontal: false, gridColor: 'rgba(255,255,255,0.06)',
     sessionBreaks: false, crosshairMode: 'normal', rightMargin: 10, timezone: 'Asia/Ho_Chi_Minh',
 
     // 🧱 RENKO FULL SETTINGS (Mặc định chuẩn ATR 14)

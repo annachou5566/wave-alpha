@@ -157,9 +157,8 @@ setTimezone: function(tz) { try { if(_chartInstance) _chartInstance.setTimezone(
                 const fUpW = hideCandle ? 'transparent' : (isRenko ? rBd : (config.showWick ? (config.wickIndependent ? config.wickUpColor : config.upColor) : 'transparent'));
                 const fDnW = hideCandle ? 'transparent' : (isRenko ? rBd : (config.showWick ? (config.wickIndependent ? config.wickDownColor : config.downColor) : 'transparent'));
 
-                const areaColorObj = (window.WaveChartEngine && window.WaveChartEngine._dimColor) 
-                                     ? window.WaveChartEngine._dimColor(config.upColor, 0.25) 
-                                     : config.upColor.replace(')', ', 0.25)').replace('rgb', 'rgba');
+                // Thay màu xanh lục (upColor) bằng màu đen mờ (rgba 0,0,0,0.4) để đồng bộ tone tối
+    const areaColorObj = 'rgba(0, 0, 0, 0.4)';
 
                 const areaBgColor = (isLine || hideCandle) 
                     ? 'transparent' 
