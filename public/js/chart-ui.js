@@ -1490,7 +1490,6 @@ window.closeProChart = function() {
                     div.innerHTML = `
                         <span class="wa-ct-icon">${item.icon}</span>
                         <span class="wa-ct-text">${item.name}</span>
-                        ${isPro ? '<span class="wa-ct-pro">PRO</span>' : ''}
                     `;
 
                     div.onclick = (e) => {
