@@ -136,17 +136,25 @@ setTimezone: function(tz) { try { if(_chartInstance) _chartInstance.setTimezone(
                 else if (config.chartType === 11) { _chartInstance.createIndicator('WA_BASELINE', true, {id: 'candle_pane'}); hideCandle = true; }
 
                 const isHollow = (config.chartType === 2);
-                const forceHideWick = false; // 🚀 TRẢ LẠI RÂU NẾN CHO RENKO NINJATRADER
+                const isRenko = (config.chartType === 14);
 
-                const fUp = hideCandle ? 'transparent' : config.upColor;
-                const fDown = hideCandle ? 'transparent' : config.downColor;
+                // 🎨 ĐỊNH NGHĨA BỘ MÀU RENKO "SANG TRỌNG"
+                const RENKO_UP = '#FFFFFF';       // Brick tăng: Trắng
+                const RENKO_DN = '#3D1F59';       // Brick giảm: Tím đậm (Luxury Purple)
+                const RENKO_GRAY = '#787B86';     // Wick & Viền: Xám chuẩn
+
+                // Logic chọn màu: Nếu là Renko thì lấy bộ màu riêng, nếu không lấy theo config chung
+                const fUp = hideCandle ? 'transparent' : (isRenko ? RENKO_UP : config.upColor);
+                const fDown = hideCandle ? 'transparent' : (isRenko ? RENKO_DN : config.downColor);
                 const fNo = hideCandle ? 'transparent' : '#787b86';
-                const fUpBd = hideCandle ? 'transparent' : (config.showBorder ? (config.borderIndependent ? config.borderUpColor : config.upColor) : (isHollow ? config.upColor : 'transparent'));
-                const fDnBd = hideCandle ? 'transparent' : (config.showBorder ? (config.borderIndependent ? config.borderDownColor : config.downColor) : (isHollow ? config.downColor : 'transparent'));
+
+                // Viền (Border)
+                const fUpBd = hideCandle ? 'transparent' : (isRenko ? RENKO_GRAY : (config.showBorder ? (config.borderIndependent ? config.borderUpColor : config.upColor) : (isHollow ? config.upColor : 'transparent')));
+                const fDnBd = hideCandle ? 'transparent' : (isRenko ? RENKO_GRAY : (config.showBorder ? (config.borderIndependent ? config.borderDownColor : config.downColor) : (isHollow ? config.downColor : 'transparent')));
                 
-                // Ép transparent râu nến nếu là Renko
-                const fUpW = (hideCandle || forceHideWick) ? 'transparent' : (config.showWick ? (config.wickIndependent ? config.wickUpColor : config.upColor) : 'transparent');
-                const fDnW = (hideCandle || forceHideWick) ? 'transparent' : (config.showWick ? (config.wickIndependent ? config.wickDownColor : config.downColor) : 'transparent');
+                // Râu nến (Wick)
+                const fUpW = hideCandle ? 'transparent' : (isRenko ? RENKO_GRAY : (config.showWick ? (config.wickIndependent ? config.wickUpColor : config.upColor) : 'transparent'));
+                const fDnW = hideCandle ? 'transparent' : (isRenko ? RENKO_GRAY : (config.showWick ? (config.wickIndependent ? config.wickDownColor : config.downColor) : 'transparent'));
 
                 const areaColorObj = (window.WaveChartEngine && window.WaveChartEngine._dimColor) 
                                      ? window.WaveChartEngine._dimColor(config.upColor, 0.25) 
