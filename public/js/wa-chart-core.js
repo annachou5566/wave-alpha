@@ -160,12 +160,16 @@ setTimezone: function(tz) { try { if(_chartInstance) _chartInstance.setTimezone(
                 const fUpW = hideCandle ? 'transparent' : (isRenko ? rBd : (config.showWick ? (config.wickIndependent ? config.wickUpColor : config.upColor) : 'transparent'));
                 const fDnW = hideCandle ? 'transparent' : (isRenko ? rBd : (config.showWick ? (config.wickIndependent ? config.wickDownColor : config.downColor) : 'transparent'));
 
-                // 🚀 DỌN RÁC CODE: Bỏ màu nền xanh lục (upColor) dư thừa, thay bằng đen mờ chuyên nghiệp
-                const areaColorObj = 'rgba(255, 255, 255, 0.03)';
+                // 🚀 FIX: Đồng bộ màu Gradient vùng Area theo đúng màu của đường Line (upColor)
+let areaTopColor = 'rgba(0, 240, 255, 0.25)'; // Fallback dự phòng
+if (window.WaveChartEngine && typeof window.WaveChartEngine._dimColor === 'function') {
+    // 0.25 là độ đậm của vùng mờ (sếp có thể chỉnh 0.2 -> 0.4 tùy độ sang trọng muốn có)
+    areaTopColor = window.WaveChartEngine._dimColor(config.upColor, 0.25); 
+}
 
-                const areaBgColor = (isLine || hideCandle) 
-                    ? 'transparent' 
-                    : [{offset: 0, color: areaColorObj}, {offset: 1, color: 'transparent'}];
+const areaBgColor = (isLine || hideCandle) 
+    ? 'transparent' 
+    : [{offset: 0, color: areaTopColor}, {offset: 1, color: 'transparent'}];
 
                 _chartInstance.setStyles({
                     candle: {
