@@ -264,7 +264,7 @@
             }
 
             if (shouldBake) {
-                // 1. Ghi nhận tick mới vào lịch sử gốc để đúc gạch vĩnh viễn
+                // 1. Ghi nhận tick mới vào lịch sử gốc
                 this.rawHistory.push({
                     timestamp: curr.timestamp + this.rawHistory.length, 
                     open: price, high: price, low: price, close: price, volume: curr.volume || 0
@@ -273,26 +273,31 @@
                 if (window._renkoBakeTimeout) clearTimeout(window._renkoBakeTimeout);
                 window._renkoBakeTimeout = setTimeout(() => {
                     if (window.WaveChartEngine && window.WA_Chart) {
-                        const chart = window.WA_Chart.chart;
-                        const ts = chart ? chart.timeScale() : null;
+                        const chart = window.WA_Chart;
                         
-                        // 🚀 CHỤP ẢNH TRẠNG THÁI TRƯỚC KHI UPDATE
-                        const logicalRange = ts ? ts.getVisibleLogicalRange() : null;
-                        const scrollPos = ts ? ts.scrollPosition() : 0;
+                        // 🚀 1. API KLINECHART: ĐO KHOẢNG CÁCH LỀ PHẢI
+                        let rightOffset = 0;
+                        if (typeof chart.getOffsetRightDistance === 'function') {
+                            rightOffset = chart.getOffsetRightDistance();
+                        }
                         
-                        // 🚀 FIX LỖI: scrollPos > 2 nghĩa là user ĐANG kéo lùi về quá khứ
-                        const isUserLookingBack = scrollPos > 2;
+                        // Nếu cách lề phải > 30 pixel nghĩa là bác đang kéo về quá khứ soi chart
+                        const isLookingBack = rightOffset > 30; 
 
-                        // 2. Nấu lại gạch và áp dụng lên chart
+                        // 2. Nấu data và nạp vào (KLineChart sẽ tự reset lề phải về 0)
                         let reprocessed = this.processHistory(this.rawHistory, true);
-                        window.WA_Chart.applyNewData(reprocessed);
+                        chart.applyNewData(reprocessed);
 
-                        // 🚀 3. XỬ LÝ KHÓA MÀN HÌNH
-                        if (isUserLookingBack && logicalRange) {
-                            // Nếu bác đang soi quá khứ -> Ép chart đứng im tại tọa độ đó
-                            ts.setVisibleLogicalRange(logicalRange);
-                        } 
-                        // Nếu không (đang ở lề phải) -> Chart sẽ tự động cuộn mượt theo gạch mới
+                        // 🚀 3. KHÓA TỌA ĐỘ CHUẨN KLINECHART
+                        if (isLookingBack && typeof chart.setOffsetRightDistance === 'function') {
+                            // Ép chart lùi lại đúng khoảng cách bác đang xem
+                            chart.setOffsetRightDistance(rightOffset);
+                            
+                            // Chốt chặn kép: Bồi thêm 1 lệnh sau 15ms để đè bẹp hiệu ứng cuộn mượt của KLineChart
+                            setTimeout(() => {
+                                chart.setOffsetRightDistance(rightOffset);
+                            }, 15);
+                        }
                     }
                 }, 5); 
             }
