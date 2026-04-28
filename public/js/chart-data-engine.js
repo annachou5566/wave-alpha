@@ -86,12 +86,17 @@
             if (!data || data.length === 0) return renkoData;
 
             // 1. Tính toán Kích thước Gạch (Smart Brick Size)
-            // 1. Tính toán Kích thước Gạch (Smart Brick Size)
             let method = config.renkoMethod || 'atr';
             let brickSize = 1;
-            if (method === 'atr') brickSize = this._calculateATR(data, config.renkoAtrLength || 14);
-            else if (method === 'percentage') brickSize = data[0].close * ((config.renkoPercentage || 1.0) / 100);
-            else brickSize = config.renkoBoxSize || 10;
+            
+            // 🛡️ LỚP BẢO VỆ ÉP KIỂU TUYỆT ĐỐI FLOAT/INT (Chống lỗi cộng chuỗi gây sụp Web)
+            if (method === 'atr') {
+                brickSize = this._calculateATR(data, parseInt(config.renkoAtrLength) || 14);
+            } else if (method === 'percentage') {
+                brickSize = data[0].close * ((parseFloat(config.renkoPercentage) || 1.0) / 100);
+            } else {
+                brickSize = parseFloat(config.renkoBoxSize) || 10; 
+            }
 
             // 🛡️ LỚP BẢO VỆ 1 (PHIÊN BẢN SMART SCALE - BAO CẢ MEMECOIN)
             // Quét tìm giá cao nhất và thấp nhất trong toàn bộ lịch sử data
@@ -144,8 +149,18 @@
                 runningLow  = Math.min(runningLow, curr.low);
 
                 let brickAdded;
+                let loopGuard = 0; // 🛡️ BỘ ĐẾM CHỐNG KẸT CPU
+
                 do {
                     brickAdded = false;
+                    loopGuard++;
+                    
+                    // CHỐT CHẶN AN TOÀN: Nếu nấu 1 nến mà tốn hơn 1000 viên gạch thì ép thoát
+                    if (loopGuard > 1000) {
+                        console.error("[Renko Panic] Phát hiện nến dị thường hoặc brickSize quá nhỏ! Ép thoát để cứu Web.");
+                        break; 
+                    }
+
                     if (lastDir === 1) { // ĐANG TĂNG
                         if (price >= lastBrickClose + trendThreshold) { // Tiếp diễn Tăng
                             lastBrickOpen  = lastBrickClose - (isClassic ? 0 : openOffset);
@@ -329,13 +344,19 @@
     // Lắng nghe thay đổi Cài đặt để kích hoạt vẽ lại
     window.addEventListener('wa_chart_config_updated', (e) => {
         const config = e.detail;
-        if (global.WaveDataEngine && config.chartType !== global.WaveDataEngine.lastChartType) {
-            global.WaveDataEngine.lastChartType = config.chartType;
-            if (window.WA_Chart && global.WaveDataEngine.rawHistory.length > 0) {
-                window._waTargetCandle = null;
-                window._waCurrentCandle = null;
-                let reCookedData = global.WaveDataEngine.processHistory(global.WaveDataEngine.rawHistory, true);
-                window.WA_Chart.applyNewData(reCookedData);
+        if (global.WaveDataEngine) {
+            // SỬA LỖI 1: Bắt buộc vẽ lại nếu đổi chartType HOẶC đang ở Renko (14) mà bị đổi config
+            const isChartTypeChanged = config.chartType !== global.WaveDataEngine.lastChartType;
+            const isRenkoForcedUpdate = (parseInt(config.chartType) === 14); 
+
+            if (isChartTypeChanged || isRenkoForcedUpdate) {
+                global.WaveDataEngine.lastChartType = config.chartType;
+                if (window.WA_Chart && global.WaveDataEngine.rawHistory.length > 0) {
+                    window._waTargetCandle = null;
+                    window._waCurrentCandle = null;
+                    let reCookedData = global.WaveDataEngine.processHistory(global.WaveDataEngine.rawHistory, true);
+                    window.WA_Chart.applyNewData(reCookedData);
+                }
             }
         }
     });
