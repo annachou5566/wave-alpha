@@ -56,7 +56,7 @@ const DEFAULT_CHART_CONFIG = {
 };
 
 const LS_CONFIG_KEY = 'wave_alpha_chart_config';
-const CUSTOM_CHART_IDS = ['WA_COL_CHART', 'WA_HL_CHART', 'WA_STEP_LINE', 'WA_LINE_MARKER', 'WA_HLC_AREA', 'WA_BASELINE'];
+const CUSTOM_CHART_IDS = ['WA_COL_CHART', 'WA_HL_CHART', 'WA_STEP_LINE', 'WA_LINE_MARKER', 'WA_HLC_AREA', 'WA_BASELINE', 'WA_VOL_CANDLE'];
 const _WA_COLOR_CACHE = {};
 
 window.WaveChartEngine = {
@@ -438,6 +438,73 @@ window.WaveChartEngine = {
                     ctx.lineTo(bounding.width, baseY);
                     ctx.stroke();
 
+                    ctx.restore();
+                    return true;
+                }
+            });
+
+// ─────────────────────────────────────────────────────────────
+            // 7. NẾN KHỐI LƯỢNG (CANDLE VOLUME) - ID 13
+            // ─────────────────────────────────────────────────────────────
+            registerWaveChart({
+                name: 'WA_VOL_CANDLE', shortName: 'NẾN KHỐI LƯỢNG', series: 'price', calc: (d) => d,
+                draw: ({ ctx, indicator, visibleRange, barSpace, xAxis, yAxis }) => {
+                    const c = window.WaveChartEngine.config;
+                    const { from, to } = visibleRange;
+                    const dataList = indicator.result;
+                    if (!dataList || dataList.length === 0) return true;
+
+                    // 1. Quét tìm Volume lớn nhất trong khung hình
+                    let maxVol = 0;
+                    for (let i = from; i < to; i++) {
+                        if (dataList[i] && dataList[i].volume > maxVol) maxVol = dataList[i].volume;
+                    }
+
+                    ctx.save();
+                    const maxBarWidth = Math.max(1, (barSpace.gapBar || barSpace.bar || 6) * 0.95);
+                    const minBarWidth = 1; 
+
+                    for (let i = from; i < to; i++) {
+                        const kd = dataList[i];
+                        if (!kd || kd.close === undefined || kd.volume === undefined) continue;
+
+                        const x = xAxis.convertToPixel(i);
+                        const openY = yAxis.convertToPixel(kd.open);
+                        const closeY = yAxis.convertToPixel(kd.close);
+                        const highY = yAxis.convertToPixel(kd.high);
+                        const lowY = yAxis.convertToPixel(kd.low);
+
+                        // 2. Tính bề ngang theo Volume
+                        let volRatio = maxVol > 0 ? (kd.volume / maxVol) : 0.1;
+                        let candleWidth = Math.max(minBarWidth, maxBarWidth * volRatio);
+                        let halfWidth = candleWidth / 2;
+
+                        const isUp = kd.close >= kd.open;
+                        const bodyTop = Math.min(openY, closeY);
+                        const bodyBottom = Math.max(openY, closeY);
+                        const bodyHeight = Math.max(1, bodyBottom - bodyTop);
+
+                        const fBody = isUp ? c.upColor : c.downColor;
+                        const fBorder = isUp ? (c.showBorder ? (c.borderIndependent ? c.borderUpColor : c.upColor) : fBody) 
+                                             : (c.showBorder ? (c.borderIndependent ? c.borderDownColor : c.downColor) : fBody);
+                        const fWick = isUp ? (c.showWick ? (c.wickIndependent ? c.wickUpColor : c.upColor) : fBody) 
+                                           : (c.showWick ? (c.wickIndependent ? c.wickDownColor : c.downColor) : fBody);
+
+                        if (c.showWick) {
+                            ctx.fillStyle = fWick;
+                            ctx.fillRect(x - 0.5, highY, 1, bodyTop - highY); 
+                            ctx.fillRect(x - 0.5, bodyBottom, 1, lowY - bodyBottom); 
+                        }
+
+                        ctx.fillStyle = fBody;
+                        ctx.fillRect(x - halfWidth, bodyTop, candleWidth, bodyHeight);
+
+                        if (c.showBorder) {
+                            ctx.strokeStyle = fBorder;
+                            ctx.lineWidth = 1;
+                            ctx.strokeRect(x - halfWidth, bodyTop, candleWidth, bodyHeight);
+                        }
+                    }
                     ctx.restore();
                     return true;
                 }
