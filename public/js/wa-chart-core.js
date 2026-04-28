@@ -17,8 +17,8 @@
 
                 // 🛡️ CẤU HÌNH LEGEND TÁCH BIỆT: Nến tàng hình giữ chỗ - Indicator hiện chuẩn khít rịt
                 _chartInstance.setStyles({
-                    // 🚀 CHẶN NHÁY MÀU: Ép nền đen và tắt lưới ngay từ mili-giây đầu tiên
-                    layout: { backgroundColor: '#000000' },
+                    // 🚀 FIX LỖI NHÁY MÀU: Ép trong suốt để lộ nền gradient của DOM bên dưới
+layout: { backgroundColor: 'transparent' },
                     grid: {
                         show: false,
                         horizontal: { show: false },

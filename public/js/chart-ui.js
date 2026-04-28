@@ -1147,7 +1147,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
         const ws = JSON.parse(localStorage.getItem('wa_chart_settings') || '{}');
         
         const chartContainer = document.getElementById('sc-chart-container');
-        if (chartContainer) chartContainer.style.background = ws.colBg || '#0f1a1c';
+        
 
         if (ws.colUp || ws.showGrid === false || ws.colBg || !ws.colUp) {
             const ub = ws.colUp || '#2af592';
