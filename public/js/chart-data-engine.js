@@ -264,7 +264,7 @@
             }
 
             if (shouldBake) {
-                // Ép hệ thống ghi nhận tick gây đảo chiều/tiếp diễn vĩnh viễn
+                // 1. Ghi nhận tick mới vào lịch sử gốc để đúc gạch vĩnh viễn
                 this.rawHistory.push({
                     timestamp: curr.timestamp + this.rawHistory.length, 
                     open: price, high: price, low: price, close: price, volume: curr.volume || 0
@@ -273,21 +273,26 @@
                 if (window._renkoBakeTimeout) clearTimeout(window._renkoBakeTimeout);
                 window._renkoBakeTimeout = setTimeout(() => {
                     if (window.WaveChartEngine && window.WA_Chart) {
+                        const chart = window.WA_Chart.chart;
+                        const ts = chart ? chart.timeScale() : null;
                         
-                        // 🚀 1. LƯU TỌA ĐỘ TRƯỚC KHI RENDER
-                        let ts = window.WA_Chart.chart ? window.WA_Chart.chart.timeScale() : null;
-                        let logicalRange = ts ? ts.getVisibleLogicalRange() : null;
-                        // Kiểm tra xem user có đang vuốt về quá khứ không (scrollPosition < 0 nghĩa là đang rời xa mép phải)
-                        let isScrolledBack = ts && ts.scrollPosition() < -2; 
+                        // 🚀 CHỤP ẢNH TRẠNG THÁI TRƯỚC KHI UPDATE
+                        const logicalRange = ts ? ts.getVisibleLogicalRange() : null;
+                        const scrollPos = ts ? ts.scrollPosition() : 0;
+                        
+                        // 🚀 FIX LỖI: scrollPos > 2 nghĩa là user ĐANG kéo lùi về quá khứ
+                        const isUserLookingBack = scrollPos > 2;
 
-                        // 🚀 2. NẤU VÀ ÁP DỤNG DATA (Lúc này chart sẽ bị reset về sát phải)
+                        // 2. Nấu lại gạch và áp dụng lên chart
                         let reprocessed = this.processHistory(this.rawHistory, true);
                         window.WA_Chart.applyNewData(reprocessed);
 
-                        // 🚀 3. ÉP TRẢ LẠI TỌA ĐỘ CŨ NẾU USER ĐANG XEM QUÁ KHỨ
-                        if (isScrolledBack && ts && logicalRange) {
+                        // 🚀 3. XỬ LÝ KHÓA MÀN HÌNH
+                        if (isUserLookingBack && logicalRange) {
+                            // Nếu bác đang soi quá khứ -> Ép chart đứng im tại tọa độ đó
                             ts.setVisibleLogicalRange(logicalRange);
-                        }
+                        } 
+                        // Nếu không (đang ở lề phải) -> Chart sẽ tự động cuộn mượt theo gạch mới
                     }
                 }, 5); 
             }
