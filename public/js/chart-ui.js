@@ -2069,13 +2069,34 @@ window.closeProChart = function() {
             borderSwatches.style.opacity = config.borderIndependent ? '1' : '0.5';
             borderSwatches.style.pointerEvents = config.borderIndependent ? 'auto' : 'none';
         }
-        // Logic ẩn hiện thông số Renko theo phương pháp đã chọn
         // Logic ẩn hiện thông số Renko theo phương pháp đã chọn (CÓ BẢO VỆ CHỐNG CRASH)
         if (isRenko) {
             const method = config.renkoMethod || 'atr';
             let elAtr = document.getElementById('row-renko-atr'); if(elAtr) elAtr.style.display = (method === 'atr') ? 'flex' : 'none';
             let elTrad = document.getElementById('row-renko-trad'); if(elTrad) elTrad.style.display = (method === 'traditional') ? 'flex' : 'none';
             let elPerc = document.getElementById('row-renko-perc'); if(elPerc) elPerc.style.display = (method === 'percentage') ? 'flex' : 'none';
+
+            // 🚀 ĐỒNG BỘ MÀU 2 THẺ CARD KHI MỞ CÀI ĐẶT
+            let rStyle = config.renkoStyle || 'ninza';
+            let cardClassic = document.getElementById('rsc-classic');
+            let cardNinza = document.getElementById('rsc-ninza');
+            let ninzaSettings = document.getElementById('ninza-only-settings');
+            let helpText = document.getElementById('renko-help-text');
+
+            if (cardClassic && cardNinza) {
+                if (rStyle === 'classic') {
+                    cardClassic.style.borderColor = '#00F0FF'; cardClassic.style.background = 'rgba(0, 240, 255, 0.05)';
+                    cardNinza.style.borderColor = 'rgba(255,255,255,0.1)'; cardNinza.style.background = 'rgba(255,255,255,0.03)';
+                    if(ninzaSettings) ninzaSettings.style.display = 'none';
+                    if(helpText) helpText.innerText = "Classic Renko: Nến chỉ được tạo khi giá đi hết 1 thân nến. Lọc nhiễu tối đa.";
+                } else {
+                    cardNinza.style.borderColor = '#00F0FF'; cardNinza.style.background = 'rgba(0, 240, 255, 0.05)';
+                    cardClassic.style.borderColor = 'rgba(255,255,255,0.1)'; cardClassic.style.background = 'rgba(255,255,255,0.03)';
+                    if(ninzaSettings) ninzaSettings.style.display = 'flex'; // Dùng flex để giữ layout
+                    if(ninzaSettings) ninzaSettings.style.flexDirection = 'column';
+                    if(helpText) helpText.innerText = "NinZaRenko Pro: Nến xếp chồng lên nhau giúp phản ứng cực nhạy với đảo chiều.";
+                }
+            }
         }
     }
 
