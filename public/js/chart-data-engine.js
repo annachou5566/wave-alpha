@@ -86,12 +86,34 @@
             if (!data || data.length === 0) return renkoData;
 
             // 1. Tính toán Kích thước Gạch (Smart Brick Size)
+            // 1. Tính toán Kích thước Gạch (Smart Brick Size)
             let method = config.renkoMethod || 'atr';
             let brickSize = 1;
             if (method === 'atr') brickSize = this._calculateATR(data, config.renkoAtrLength || 14);
             else if (method === 'percentage') brickSize = data[0].close * ((config.renkoPercentage || 1.0) / 100);
             else brickSize = config.renkoBoxSize || 10;
-            if (brickSize <= 0) brickSize = data[0].close * 0.001;
+
+            // 🛡️ LỚP BẢO VỆ 1 (PHIÊN BẢN SMART SCALE - BAO CẢ MEMECOIN)
+            // Quét tìm giá cao nhất và thấp nhất trong toàn bộ lịch sử data
+            let maxHigh = data[0].high, minLow = data[0].low;
+            for (let i = 1; i < data.length; i++) {
+                if (data[i].high > maxHigh) maxHigh = data[i].high;
+                if (data[i].low < minLow) minLow = data[i].low;
+            }
+            
+            let priceRange = maxHigh - minLow;
+            
+            // Ép ngưỡng an toàn: Giới hạn tối đa khoảng 5000 gạch cho toàn bộ biểu đồ.
+            // Dù coin giá 100,000$ hay 0.00000001$, thuật toán vẫn tính ra tỷ lệ chuẩn.
+            let minSafeSize = priceRange > 0 ? (priceRange / 5000) : (data[0].close * 0.0001);
+            
+            // Xử lý triệt để số 0 hoặc số âm (nếu có lỗi data)
+            if (brickSize <= 0) brickSize = minSafeSize;
+
+            if (brickSize < minSafeSize) {
+                brickSize = minSafeSize;
+                console.warn(`[Renko Engine] Brick size quá nhỏ so với biên độ giá. Đã Auto-Scale về: ${brickSize}`);
+            }
 
             const isClassic = (config.renkoStyle === 'classic'); 
             
