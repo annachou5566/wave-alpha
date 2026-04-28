@@ -154,8 +154,10 @@
                         renkoData.push({
                             ...curr, timestamp: curr.timestamp + renkoData.length * 100,
                             open: lastBrickOpen, close: lastBrickClose,
-                            high: Math.max(lastBrickOpen, lastBrickClose, runningHigh),
-                            low: Math.min(lastBrickOpen, lastBrickClose, runningLow),
+                            // 🚀 CẮT RÂU NẾU LÀ CLASSIC: Lấy đỉnh/đáy bằng đúng vỏ viên gạch. 
+                            // 🚀 NINZA: Vẫn giữ râu tracking (runningHigh/Low).
+                            high: isClassic ? Math.max(lastBrickOpen, lastBrickClose) : Math.max(lastBrickOpen, lastBrickClose, runningHigh),
+                            low: isClassic ? Math.min(lastBrickOpen, lastBrickClose) : Math.min(lastBrickOpen, lastBrickClose, runningLow),
                             volume: curr.volume
                         });
                         runningHigh = Math.max(lastBrickOpen, lastBrickClose);
@@ -207,8 +209,9 @@
             }
 
             ghost.close = price;
-            ghost.high = Math.max(ghost.open, ghost.close, curr.high);
-            ghost.low  = Math.min(ghost.open, ghost.close, curr.low);
+            // Ép cắt râu Realtime nếu đang là Classic Renko
+            ghost.high = state.isClassic ? Math.max(ghost.open, ghost.close) : Math.max(ghost.open, ghost.close, curr.high);
+            ghost.low  = state.isClassic ? Math.min(ghost.open, ghost.close) : Math.min(ghost.open, ghost.close, curr.low);
 
             let shouldBake = false;
             if (state.lastDir === 1) {

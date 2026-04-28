@@ -1786,16 +1786,20 @@ window.closeProChart = function() {
     <div style="background: rgba(0, 240, 255, 0.02); border: 1px solid rgba(0, 240, 255, 0.1); padding: 12px; border-radius: 6px; font-size: 11px; color: #EAECEF; line-height: 1.5;">
         <div style="display: flex; align-items: center; color: #00F0FF; font-weight: 500; margin-bottom: 6px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-            THÔNG SỐ ĐIỀU CHỈNH
+            HƯỚNG DẪN CÁCH TÍNH BRICK SIZE
         </div>
-        <div id="renko-help-text" style="color: #848e9c;">NinZaRenko giúp bạn bắt kịp xu hướng sớm hơn nhờ cơ chế xếp chồng nến.</div>
+        <div id="renko-help-text" style="color: #848e9c; margin-bottom: 6px;">NinZaRenko giúp bắt kịp xu hướng sớm hơn nhờ cơ chế xếp chồng nến và theo dõi râu nến (wicks).</div>
+        <ul style="margin: 0; padding-left: 16px; color: #b7bdc6;">
+            <li style="margin-bottom: 4px;"><b>ATR:</b> Tự đo độ giật giá để chọn size chuẩn nhất <span style="color: #0ECB81;">(Khuyên dùng)</span>.</li>
+            <li style="margin-bottom: 4px;"><b>Phần trăm (%):</b> Tính theo % giá Token hiện tại.</li>
+            <li><b>Tĩnh ($):</b> Nhập số cứng (VD: 10$ vẽ 1 gạch).</li>
+        </ul>
     </div>
 
     <div class="wa-csm-row">
         <div class="wa-csm-label">Nguồn giá</div>
         <div class="wa-csm-control"><div id="dd-wrapper-renkoSource"></div><input type="hidden" id="csm-renko-source" data-bind="renkoSource"></div>
     </div>
-
     <div class="wa-csm-row">
         <div class="wa-csm-label">Cách tính Brick Size</div>
         <div class="wa-csm-control"><div id="dd-wrapper-renkoMethod"></div><input type="hidden" id="csm-renko-method" data-bind="renkoMethod"></div>
@@ -1803,24 +1807,29 @@ window.closeProChart = function() {
     
     <div class="wa-csm-row" id="row-renko-atr">
         <div class="wa-csm-label">Độ dài ATR</div>
-        <div class="wa-csm-control"><input type="number" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px;" data-bind="renkoAtrLength" data-type="number"></div>
+        <div class="wa-csm-control"><input type="number" class="wa-csm-input-dark" data-bind="renkoAtrLength" data-type="number"></div>
     </div>
-    
     <div class="wa-csm-row" id="row-renko-trad" style="display:none;">
-        <div class="wa-csm-label">Kích thước gạch tĩnh ($)</div>
-        <div class="wa-csm-control"><input type="number" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px;" data-bind="renkoBoxSize" data-type="number"></div>
+        <div class="wa-csm-label">Kích thước tĩnh ($)</div>
+        <div class="wa-csm-control"><input type="number" class="wa-csm-input-dark" data-bind="renkoBoxSize" data-type="number"></div>
     </div>
-
     <div class="wa-csm-row" id="row-renko-perc" style="display:none;">
         <div class="wa-csm-label">Phần trăm giá (%)</div>
-        <div class="wa-csm-control"><input type="number" step="0.1" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px;" data-bind="renkoPercentage" data-type="number"></div>
+        <div class="wa-csm-control"><input type="number" step="0.1" class="wa-csm-input-dark" data-bind="renkoPercentage" data-type="number"></div>
     </div>
 
     <div id="ninza-only-settings">
         <div class="wa-csm-divider">Cấu hình Đảo chiều (Threshold)</div>
         <div class="wa-csm-row">
-            <div class="wa-csm-label">Tỷ lệ Threshold (%)</div>
-            <div class="wa-csm-control"><input type="number" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px;" data-bind="renkoTrendPct" data-type="number" placeholder="50"></div>
+            <div class="wa-csm-label" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                <div>Tỷ lệ Threshold (%)</div>
+                <div style="font-size: 10.5px; color: #848e9c; max-width: 250px; font-weight: normal; line-height: 1.4;">
+                    Độ nhạy tạo nến. Chuẩn NinZa là <b>50%</b> (xếp vảy cá). Threshold càng lớn, nến càng cần biên độ rộng để đổi màu.
+                </div>
+            </div>
+            <div class="wa-csm-control">
+                <input type="number" step="1" min="1" max="100" class="wa-csm-input-dark" data-bind="renkoTrendPct" data-type="number" placeholder="50">
+            </div>
         </div>
     </div>
 </div>
