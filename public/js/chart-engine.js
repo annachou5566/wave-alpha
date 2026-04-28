@@ -535,12 +535,12 @@ window.WaveChartEngine = {
 
 
 // ─────────────────────────────────────────────────────────────
-// 8. LINE BREAK (BIỂU ĐỒ 3 ĐƯỜNG NGẮT) - ID 15
+// 8. LINE BREAK (BIỂU ĐỒ 3 ĐƯỜNG NGẮT) - CHUẨN GỐC KÈM STEP-LINE
 // ─────────────────────────────────────────────────────────────
 registerWaveChart({
     name: 'WA_LINE_BREAK', shortName: 'LINE BREAK', series: 'price',
     
-    // 🧠 THUẬT TOÁN 3-LINE BREAK (Kéo giãn dính liền trên trục thời gian)
+    // 🧠 THUẬT TOÁN BẢN THỂ GỐC (Giữ nguyên kích thước chuẩn, lưu trạng thái liên tục)
     calc: (dataList) => {
         const results = [];
         let blocks = []; 
@@ -548,7 +548,7 @@ registerWaveChart({
         for(let i = 0; i < dataList.length; i++) {
             const kd = dataList[i];
             if(!kd || kd.close === undefined) { 
-                results.push(results.length > 0 ? results[results.length - 1] : null); 
+                results.push(results.length > 0 ? { ...results[results.length - 1], isNew: false, isProjected: false } : null); 
                 continue; 
             }
             const close = kd.close;
@@ -558,7 +558,7 @@ registerWaveChart({
                 let high = Math.max(kd.open, close);
                 let low = Math.min(kd.open, close);
                 if(high === low) { high = close + 0.0001; low = close - 0.0001; }
-                let initBlock = { id: i, high, low, dir, isProjected: false };
+                let initBlock = { high, low, dir, isProjected: false, isNew: true };
                 blocks.push(initBlock);
                 results.push(initBlock);
                 continue;
@@ -570,28 +570,24 @@ registerWaveChart({
 
             if (lastBlock.dir === 1) { 
                 if (close > lastBlock.high) {
-                    newBlock = { id: i, high: close, low: lastBlock.high, dir: 1, isProjected: false };
+                    newBlock = { high: close, low: lastBlock.high, dir: 1, isProjected: false, isNew: true };
                 } else {
                     let lookback = Math.min(LINE_COUNT, blocks.length);
                     let minLow = lastBlock.low;
-                    for(let b = 1; b <= lookback; b++) {
-                        minLow = Math.min(minLow, blocks[blocks.length - b].low);
-                    }
+                    for(let b = 1; b <= lookback; b++) { minLow = Math.min(minLow, blocks[blocks.length - b].low); }
                     if (close < minLow) {
-                        newBlock = { id: i, high: lastBlock.low, low: close, dir: -1, isProjected: false };
+                        newBlock = { high: lastBlock.low, low: close, dir: -1, isProjected: false, isNew: true };
                     }
                 }
             } else { 
                 if (close < lastBlock.low) {
-                    newBlock = { id: i, high: lastBlock.low, low: close, dir: -1, isProjected: false };
+                    newBlock = { high: lastBlock.low, low: close, dir: -1, isProjected: false, isNew: true };
                 } else {
                     let lookback = Math.min(LINE_COUNT, blocks.length);
                     let maxHigh = lastBlock.high;
-                    for(let b = 1; b <= lookback; b++) {
-                        maxHigh = Math.max(maxHigh, blocks[blocks.length - b].high);
-                    }
+                    for(let b = 1; b <= lookback; b++) { maxHigh = Math.max(maxHigh, blocks[blocks.length - b].high); }
                     if (close > maxHigh) {
-                        newBlock = { id: i, high: close, low: lastBlock.high, dir: 1, isProjected: false };
+                        newBlock = { high: close, low: lastBlock.high, dir: 1, isProjected: false, isNew: true };
                     }
                 }
             }
@@ -603,21 +599,21 @@ registerWaveChart({
                 if (i === dataList.length - 1) {
                     let projBlock = null;
                     if (lastBlock.dir === 1 && close < lastBlock.high && close > lastBlock.low) {
-                        projBlock = { id: i, high: lastBlock.high, low: close, dir: -1, isProjected: true }; 
+                        projBlock = { high: lastBlock.high, low: close, dir: -1, isProjected: true, isNew: true }; 
                     } else if (lastBlock.dir === -1 && close > lastBlock.low && close < lastBlock.high) {
-                        projBlock = { id: i, high: close, low: lastBlock.low, dir: 1, isProjected: true }; 
+                        projBlock = { high: close, low: lastBlock.low, dir: 1, isProjected: true, isNew: true }; 
                     }
-                    results.push(projBlock ? projBlock : lastBlock); 
+                    results.push(projBlock ? projBlock : { ...lastBlock, isNew: false, isProjected: false }); 
                 } else {
-                    // 🚀 SỬA LỖI ĐỨT QUÃNG: Kéo giãn khối hiện tại ra thay vì để trống (null)
-                    results.push(lastBlock);
+                    // Trạng thái Đi Ngang (Sideway)
+                    results.push({ ...lastBlock, isNew: false, isProjected: false });
                 }
             }
         }
         return results;
     },
 
-    // 🎨 RENDER GIAO DIỆN (Gộp các khối giống nhau thành một mảng màu liền mạch)
+    // 🎨 RENDER GIAO DIỆN (Nến chuẩn kết hợp dải Step-Line mờ)
     draw: ({ ctx, indicator, visibleRange, barSpace, xAxis, yAxis }) => {
         const c = window.WaveChartEngine.config;
         const { from, to } = visibleRange;
@@ -627,66 +623,76 @@ registerWaveChart({
         ctx.save();
         ctx.setLineDash([]);
 
-        // Tính khoảng cách nửa nến để các khối chạm khít vào nhau
-        const halfPitch = (barSpace.bar + (barSpace.gapBar || 0)) / 2;
+        const colWidth = Math.max(2, (barSpace.gapBar || barSpace.bar || 6) * 0.85);
+        const w = Math.max(1, Math.round(colWidth));
 
-        const drawFatBlock = (block, sI, eI) => {
-            if (!block) return;
+        // 🚀 BƯỚC 1: VẼ ĐƯỜNG CẦU THANG LIÊN KẾT (Chìm phía dưới khối)
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 2]); // Nét đứt siêu mảnh, sang trọng
+        let lastX = null, lastY = null, lastDir = null;
+
+        for (let i = Math.max(0, from - 1); i <= to; i++) {
+            const block = dataList[i];
+            if (!block) continue;
             
-            const startX = xAxis.convertToPixel(sI);
-            const endX = xAxis.convertToPixel(eI);
+            const x = xAxis.convertToPixel(i);
+            // Tâm điểm nối cầu thang là gốc xuất phát của xu hướng hiện tại
+            const y = block.dir === 1 ? yAxis.convertToPixel(block.low) : yAxis.convertToPixel(block.high);
+
+            if (lastX !== null) {
+                ctx.beginPath();
+                ctx.strokeStyle = lastDir === 1 ? c.upColor : c.downColor;
+                ctx.globalAlpha = 0.25; // Đổ mờ 25% cực kỳ tinh tế
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(x, lastY); // Kéo ngang vượt qua gap
+                ctx.lineTo(x, y);     // Giật dọc xuống nếu có đảo chiều
+                ctx.stroke();
+            }
+            lastX = x;
+            lastY = block.dir === 1 ? yAxis.convertToPixel(block.high) : yAxis.convertToPixel(block.low);
+            lastDir = block.dir;
+        }
+
+        ctx.globalAlpha = 1.0;
+        ctx.setLineDash([]); 
+
+        // 🚀 BƯỚC 2: VẼ CÁC KHỐI NẾN CHUẨN XÁC
+        for (let i = from; i < to; i++) {
+            const block = dataList[i];
+            // Chỉ vẽ nến khi thật sự có Breakout (isNew) hoặc là nến dự kiến (isProjected)
+            if (!block || (!block.isNew && !block.isProjected)) continue; 
             
+            const x = xAxis.convertToPixel(i);
             const highY = Math.round(yAxis.convertToPixel(block.high));
             const lowY = Math.round(yAxis.convertToPixel(block.low));
             
             const isUp = block.dir === 1;
             const bodyTop = Math.min(highY, lowY);
             const bodyHeight = Math.max(1, Math.abs(highY - lowY));
-            
-            // Ép tọa độ để vẽ nguyên một khối dài dính liền không kẽ hở
-            const leftX = Math.round(startX - halfPitch);
-            const rightX = Math.round(endX + halfPitch);
-            const w = Math.max(1, rightX - leftX);
+            const leftX = Math.round(x - w / 2); 
 
             const fBody = isUp ? c.upColor : c.downColor;
             const fBorder = isUp ? (c.showBorder ? (c.borderIndependent ? c.borderUpColor : c.upColor) : fBody) 
                                  : (c.showBorder ? (c.borderIndependent ? c.borderDownColor : c.downColor) : fBody);
 
             if (block.isProjected) {
+                // Đường dự kiến: Nét đứt rỗng lõi
                 ctx.fillStyle = 'transparent';
                 ctx.strokeStyle = fBody;
                 ctx.lineWidth = 1;
                 ctx.setLineDash([3, 3]); 
-                ctx.strokeRect(leftX, bodyTop, w, bodyHeight);
+                ctx.strokeRect(leftX - 0.5, bodyTop - 0.5, w + 1, bodyHeight + 1);
                 ctx.setLineDash([]); 
             } else {
+                // Khối thật: Đổ khối đặc
                 ctx.fillStyle = fBody;
                 ctx.fillRect(leftX, bodyTop, w, bodyHeight);
 
                 if (c.showBorder && w > 2) {
                     ctx.strokeStyle = fBorder;
                     ctx.lineWidth = 1;
-                    ctx.strokeRect(leftX, bodyTop, w, bodyHeight);
+                    ctx.strokeRect(leftX - 0.5, bodyTop - 0.5, w + 1, bodyHeight + 1);
                 }
-            }
-        };
-
-        let startI = from;
-        let currentBlock = dataList[from];
-
-        // Quét qua các nến trên màn hình và gom các khối có cùng ID để vẽ 1 lần
-        for (let i = from; i <= to; i++) {
-            const block = dataList[i];
-            
-            if (!currentBlock || !block || currentBlock.id !== block.id) {
-                if (currentBlock) drawFatBlock(currentBlock, startI, i - 1);
-                currentBlock = block;
-                startI = i;
-            }
-            
-            // Vẽ khối cuối cùng sát mép phải
-            if (i === to && currentBlock) {
-                drawFatBlock(currentBlock, startI, to);
             }
         }
 
