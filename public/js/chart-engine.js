@@ -515,6 +515,19 @@ window.WaveChartEngine = {
         if (watermarkEl) {
             watermarkEl.style.display = this.config.showWatermark === false ? 'none' : 'flex';
             watermarkEl.style.opacity = this.config.watermarkOpacity || 0.05;
+
+            // 🚀 BỔ SUNG: Đổi nội dung Watermark thông minh để tránh gây hiểu nhầm
+            let symbolText = window.currentChartToken ? window.currentChartToken.symbol.toUpperCase() : '';
+            
+            // chartType === 14 là biểu đồ Renko
+            if (this.config.chartType === 14) {
+                // Đổi khung giờ thành chữ "RENKO" (Ví dụ: BTCUSDT RENKO)
+                watermarkEl.innerText = symbolText ? `${symbolText} RENKO` : 'RENKO';
+            } else {
+                // Nếu là nến thường, trả lại Khung giờ chuẩn (Ví dụ: BTCUSDT 1M)
+                let intervalText = window.currentChartInterval === 'tick' ? 'TICK' : (window.currentChartInterval || '').toUpperCase();
+                watermarkEl.innerText = symbolText ? `${symbolText} ${intervalText}` : intervalText;
+            }
         }
 
         // Bật tắt Đồng hồ đếm ngược (Countdown)
