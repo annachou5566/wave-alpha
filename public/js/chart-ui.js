@@ -1159,11 +1159,11 @@ window.openProChart = function(t, isTimeSwitch = false) {
             const cType = (ub === 'transparent' || ub === 'rgba(0,0,0,0)') ? 'candle_up_stroke' : 'candle_solid';
 
             window.WA_Chart.setStyles({
-                    grid: {
-                        // SỬA LỖI Ở 2 DÒNG DƯỚI ĐÂY: Thêm chữ ws. vào trước showGrid
-                        horizontal: { show: ws.showGrid !== false, color: 'rgba(255,255,255,0.05)', style: 'dashed' },
-                        vertical:   { show: ws.showGrid !== false, color: 'rgba(255,255,255,0.05)', style: 'dashed' }
-                    },
+                grid: {
+                    // 🚀 FIX: Tắt lưới mặc định để không bị chớp trước khi chart-engine kịp chạy
+                    horizontal: { show: false, color: 'rgba(255,255,255,0.05)', style: 'dashed' },
+                    vertical:   { show: false, color: 'rgba(255,255,255,0.05)', style: 'dashed' }
+                },
                     candle: { 
                         type: window.currentChartInterval === 'tick' ? 'area' : cType,
                         bar: {
