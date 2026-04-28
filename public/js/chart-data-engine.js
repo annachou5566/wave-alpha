@@ -117,6 +117,12 @@
                         // 🛡️ TELEPORT: Ép neo gạch về giá hiện tại để tránh nến khổng lồ kéo sập UI
                         lastBrickClose = price;
                         lastBrickOpen = lastDir === 1 ? price - brickSize : price + brickSize;
+                        
+                        // 🚀 FIX LỖI NÁ CAO SU: Phải dịch chuyển luôn cả Râu Nến (Wick)
+                        // Nếu không, viên gạch tiếp theo sẽ có cái râu nối ngược lên tận đỉnh cũ (0.5)!
+                        runningHigh = lastBrickClose;
+                        runningLow  = lastBrickClose;
+                        
                         break; 
                     }
 
