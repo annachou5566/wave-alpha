@@ -540,23 +540,25 @@ window.WaveChartEngine = {
 registerWaveChart({
     name: 'WA_LINE_BREAK', shortName: 'LINE BREAK', series: 'price',
     
-    // 🧠 THUẬT TOÁN 3-LINE BREAK CHUẨN XÁC
+    // 🧠 THUẬT TOÁN 3-LINE BREAK (Kéo giãn dính liền trên trục thời gian)
     calc: (dataList) => {
         const results = [];
-        let blocks = []; // Chỉ lưu các "đường" (line) ĐÃ XÁC NHẬN
+        let blocks = []; 
 
         for(let i = 0; i < dataList.length; i++) {
             const kd = dataList[i];
-            if(!kd || kd.close === undefined) { results.push(null); continue; }
+            if(!kd || kd.close === undefined) { 
+                results.push(results.length > 0 ? results[results.length - 1] : null); 
+                continue; 
+            }
             const close = kd.close;
 
-            // Khởi tạo Line đầu tiên từ nến đầu
             if(blocks.length === 0) {
                 let dir = close >= kd.open ? 1 : -1;
                 let high = Math.max(kd.open, close);
                 let low = Math.min(kd.open, close);
                 if(high === low) { high = close + 0.0001; low = close - 0.0001; }
-                let initBlock = { high, low, dir, isProjected: false };
+                let initBlock = { id: i, high, low, dir, isProjected: false };
                 blocks.push(initBlock);
                 results.push(initBlock);
                 continue;
@@ -564,66 +566,58 @@ registerWaveChart({
 
             let lastBlock = blocks[blocks.length - 1];
             let newBlock = null;
-            const LINE_COUNT = 3; // Phá vỡ 3 đường trước đó
+            const LINE_COUNT = 3; 
 
-            if (lastBlock.dir === 1) { // 1. ĐANG XU HƯỚNG TĂNG
+            if (lastBlock.dir === 1) { 
                 if (close > lastBlock.high) {
-                    // Tiếp diễn Tăng: Bắt đầu từ đỉnh cũ kéo lên giá mới
-                    newBlock = { high: close, low: lastBlock.high, dir: 1, isProjected: false };
+                    newBlock = { id: i, high: close, low: lastBlock.high, dir: 1, isProjected: false };
                 } else {
-                    // Kiểm tra Đảo chiều Giảm
                     let lookback = Math.min(LINE_COUNT, blocks.length);
                     let minLow = lastBlock.low;
                     for(let b = 1; b <= lookback; b++) {
                         minLow = Math.min(minLow, blocks[blocks.length - b].low);
                     }
                     if (close < minLow) {
-                        // 🚀 SỬA LỖI ĐÂY: Đảo chiều thì bắt đầu từ ĐÁY CỦA LINE TRƯỚC kéo xuống
-                        newBlock = { high: lastBlock.low, low: close, dir: -1, isProjected: false };
+                        newBlock = { id: i, high: lastBlock.low, low: close, dir: -1, isProjected: false };
                     }
                 }
-            } else { // 2. ĐANG XU HƯỚNG GIẢM
+            } else { 
                 if (close < lastBlock.low) {
-                    // Tiếp diễn Giảm: Bắt đầu từ đáy cũ kéo xuống giá mới
-                    newBlock = { high: lastBlock.low, low: close, dir: -1, isProjected: false };
+                    newBlock = { id: i, high: lastBlock.low, low: close, dir: -1, isProjected: false };
                 } else {
-                    // Kiểm tra Đảo chiều Tăng
                     let lookback = Math.min(LINE_COUNT, blocks.length);
                     let maxHigh = lastBlock.high;
                     for(let b = 1; b <= lookback; b++) {
                         maxHigh = Math.max(maxHigh, blocks[blocks.length - b].high);
                     }
                     if (close > maxHigh) {
-                        // 🚀 SỬA LỖI ĐÂY: Đảo chiều thì bắt đầu từ ĐỈNH CỦA LINE TRƯỚC kéo lên
-                        newBlock = { high: close, low: lastBlock.high, dir: 1, isProjected: false };
+                        newBlock = { id: i, high: close, low: lastBlock.high, dir: 1, isProjected: false };
                     }
                 }
             }
 
             if (newBlock) {
                 blocks.push(newBlock);
-                results.push(newBlock); // Nến này tạo ra Line mới -> Vẽ Line
+                results.push(newBlock); 
             } else {
-                // 3. XỬ LÝ "ĐƯỜNG DỰ KIẾN" (Projected Lines) cho nến hiện tại
                 if (i === dataList.length - 1) {
                     let projBlock = null;
                     if (lastBlock.dir === 1 && close < lastBlock.high && close > lastBlock.low) {
-                        // Giá đang tụt trong thân nến tăng -> Dự kiến đảo chiều giảm
-                        projBlock = { high: lastBlock.high, low: close, dir: -1, isProjected: true }; 
+                        projBlock = { id: i, high: lastBlock.high, low: close, dir: -1, isProjected: true }; 
                     } else if (lastBlock.dir === -1 && close > lastBlock.low && close < lastBlock.high) {
-                        // Giá đang hồi trong thân nến giảm -> Dự kiến đảo chiều tăng
-                        projBlock = { high: close, low: lastBlock.low, dir: 1, isProjected: true }; 
+                        projBlock = { id: i, high: close, low: lastBlock.low, dir: 1, isProjected: true }; 
                     }
-                    results.push(projBlock); 
+                    results.push(projBlock ? projBlock : lastBlock); 
                 } else {
-                    results.push(null); // Nến lịch sử không tạo ra Line -> Bỏ trống
+                    // 🚀 SỬA LỖI ĐỨT QUÃNG: Kéo giãn khối hiện tại ra thay vì để trống (null)
+                    results.push(lastBlock);
                 }
             }
         }
         return results;
     },
 
-    // 🎨 RENDER GIAO DIỆN
+    // 🎨 RENDER GIAO DIỆN (Gộp các khối giống nhau thành một mảng màu liền mạch)
     draw: ({ ctx, indicator, visibleRange, barSpace, xAxis, yAxis }) => {
         const c = window.WaveChartEngine.config;
         const { from, to } = visibleRange;
@@ -633,14 +627,15 @@ registerWaveChart({
         ctx.save();
         ctx.setLineDash([]);
 
-        // Mở rộng thân Line cho mập mạp, nhìn rõ xu hướng
-        const colWidth = Math.max(2, (barSpace.gapBar || barSpace.bar || 6) * 0.95);
+        // Tính khoảng cách nửa nến để các khối chạm khít vào nhau
+        const halfPitch = (barSpace.bar + (barSpace.gapBar || 0)) / 2;
 
-        for (let i = from; i < to; i++) {
-            const block = dataList[i];
-            if (!block) continue; // Nến này không có break -> Bỏ qua
+        const drawFatBlock = (block, sI, eI) => {
+            if (!block) return;
             
-            const x = xAxis.convertToPixel(i);
+            const startX = xAxis.convertToPixel(sI);
+            const endX = xAxis.convertToPixel(eI);
+            
             const highY = Math.round(yAxis.convertToPixel(block.high));
             const lowY = Math.round(yAxis.convertToPixel(block.low));
             
@@ -648,33 +643,53 @@ registerWaveChart({
             const bodyTop = Math.min(highY, lowY);
             const bodyHeight = Math.max(1, Math.abs(highY - lowY));
             
-            const w = Math.max(1, Math.round(colWidth));
-            const leftX = Math.round(x - w / 2); // Căn giữa
+            // Ép tọa độ để vẽ nguyên một khối dài dính liền không kẽ hở
+            const leftX = Math.round(startX - halfPitch);
+            const rightX = Math.round(endX + halfPitch);
+            const w = Math.max(1, rightX - leftX);
 
             const fBody = isUp ? c.upColor : c.downColor;
             const fBorder = isUp ? (c.showBorder ? (c.borderIndependent ? c.borderUpColor : c.upColor) : fBody) 
                                  : (c.showBorder ? (c.borderIndependent ? c.borderDownColor : c.downColor) : fBody);
 
             if (block.isProjected) {
-                // VẼ ĐƯỜNG DỰ KIẾN: Viền nét đứt, lõi rỗng (Trong suốt)
                 ctx.fillStyle = 'transparent';
                 ctx.strokeStyle = fBody;
                 ctx.lineWidth = 1;
-                ctx.setLineDash([3, 3]); // Hiệu ứng nét đứt
-                ctx.strokeRect(leftX - 0.5, bodyTop - 0.5, w + 1, bodyHeight + 1);
-                ctx.setLineDash([]); // Reset cọ
+                ctx.setLineDash([3, 3]); 
+                ctx.strokeRect(leftX, bodyTop, w, bodyHeight);
+                ctx.setLineDash([]); 
             } else {
-                // VẼ ĐƯỜNG XÁC NHẬN: Nến đặc
                 ctx.fillStyle = fBody;
                 ctx.fillRect(leftX, bodyTop, w, bodyHeight);
 
                 if (c.showBorder && w > 2) {
                     ctx.strokeStyle = fBorder;
                     ctx.lineWidth = 1;
-                    ctx.strokeRect(leftX - 0.5, bodyTop - 0.5, w + 1, bodyHeight + 1);
+                    ctx.strokeRect(leftX, bodyTop, w, bodyHeight);
                 }
             }
+        };
+
+        let startI = from;
+        let currentBlock = dataList[from];
+
+        // Quét qua các nến trên màn hình và gom các khối có cùng ID để vẽ 1 lần
+        for (let i = from; i <= to; i++) {
+            const block = dataList[i];
+            
+            if (!currentBlock || !block || currentBlock.id !== block.id) {
+                if (currentBlock) drawFatBlock(currentBlock, startI, i - 1);
+                currentBlock = block;
+                startI = i;
+            }
+            
+            // Vẽ khối cuối cùng sát mép phải
+            if (i === to && currentBlock) {
+                drawFatBlock(currentBlock, startI, to);
+            }
         }
+
         ctx.restore();
         return true;
     }
