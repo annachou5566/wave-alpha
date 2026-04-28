@@ -1213,7 +1213,13 @@ window.openProChart = function(t, isTimeSwitch = false) {
             let pct = ohlc.open > 0 ? ((ohlc.close - ohlc.open) / ohlc.open) * 100 : 0;
             let sign = pct >= 0 ? '+' : '';
             let symStr = (window.currentChartToken ? window.currentChartToken.symbol : 'UNKNOWN').toUpperCase();
+            
+            // 🚀 ĐỔI KHUNG GIỜ THÀNH CHỮ RENKO Ở GÓC TRÁI
             let tfStr = (window.currentChartInterval || '').toUpperCase();
+            if (window.WaveChartEngine && parseInt(window.WaveChartEngine.getConfig().chartType) === 14) {
+                tfStr = 'RENKO';
+            }
+            
             setEl('tp-symbol', `${symStr} ${tfStr} (${sign}${pct.toFixed(2)}%)`, barColor);
 
             // Báo cho file indicator biết index hiện tại (Giữ nguyên logic của bạn)
@@ -2393,7 +2399,13 @@ window.closeProChart = function() {
             }
             if (wm) {
                 const sym = window.currentChartToken ? window.currentChartToken.symbol : 'WAVE ALPHA';
-                const tf = (window.currentChartInterval || '1D').toUpperCase();
+                let tf = (window.currentChartInterval || '1D').toUpperCase();
+                
+                // 🚀 TRỊ DỨT ĐIỂM CHỮ 1M: Ép chữ thành RENKO nếu đang bật Renko
+                if (parseInt(config.chartType) === 14) {
+                    tf = 'RENKO';
+                }
+                
                 wm.innerText = `${sym} • ${tf}`;
                 wm.style.color = `rgba(255,255,255, ${config.watermarkOpacity || 0.05})`;
             }
