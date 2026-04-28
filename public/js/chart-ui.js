@@ -1769,11 +1769,17 @@ window.closeProChart = function() {
 
 
 <div id="csm-ui-renko" style="display:none; flex-direction:column; gap:16px;">
-    <div style="background: rgba(0, 240, 255, 0.05); border: 1px dashed rgba(0, 240, 255, 0.2); padding: 12px; border-radius: 6px; font-size: 11px; color: #00F0FF; line-height: 1.6;">
-        <div style="margin-bottom: 4px; font-weight: bold;">📊 HƯỚNG DẪN NINZARENKO:</div>
-        • <b>Brick Size:</b> Kích thước thân nến (tính theo Đô-la, % hoặc ATR).<br>
-        • <b>Trend Threshold:</b> Độ nhạy đóng nến. Càng nhỏ nến càng nhạy và chồng lấp nhiều (vảy cá).<br>
-        • <b>Râu nến (Wick):</b> Luôn hiển thị để theo dõi sự từ chối giá (Rejection).
+    <div style="background: rgba(0, 240, 255, 0.03); border: 1px solid rgba(0, 240, 255, 0.15); padding: 12px; border-radius: 6px; font-size: 11px; color: #EAECEF; line-height: 1.6;">
+        <div style="margin-bottom: 8px; font-weight: 500; color: #00F0FF; display: flex; align-items: center;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            HƯỚNG DẪN CÁCH TÍNH BRICK SIZE
+        </div>
+        <div style="color: #848e9c; margin-bottom: 6px;">Brick Size là độ lớn của 1 viên gạch. Có 3 cách để thiết lập:</div>
+        <ul style="margin: 0; padding-left: 16px; color: #b7bdc6;">
+            <li style="margin-bottom: 4px;"><b>ATR (Tự động):</b> Hệ thống tự đo độ giật của giá để chọn size chuẩn nhất <span style="color: #0ECB81;">(Khuyên dùng)</span>.</li>
+            <li style="margin-bottom: 4px;"><b>Phần trăm (%):</b> Tính theo % giá Token hiện tại. Rất dễ dùng cho mọi loại coin.</li>
+            <li><b>Kích thước tĩnh ($):</b> Tự nhập số cứng (VD: Nhập 10 thì giá chạy 10$ vẽ 1 gạch).</li>
+        </ul>
     </div>
     
     <div class="wa-csm-row">
@@ -1794,7 +1800,7 @@ window.closeProChart = function() {
     </div>
     
     <div class="wa-csm-row" id="row-renko-trad" style="display:none;">
-        <div class="wa-csm-label">Kích thước gạch ($)</div>
+        <div class="wa-csm-label">Kích thước gạch tĩnh ($)</div>
         <div class="wa-csm-control">
             <input type="number" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px;" data-bind="renkoBoxSize" data-type="number">
         </div>
@@ -1810,7 +1816,12 @@ window.closeProChart = function() {
     <div class="wa-csm-divider">Cấu hình Đảo chiều (Threshold)</div>
     
     <div class="wa-csm-row">
-        <div class="wa-csm-label">Tỷ lệ Threshold (%)</div>
+        <div class="wa-csm-label" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+            <div>Tỷ lệ Threshold (%)</div>
+            <div style="font-size: 10.5px; color: #848e9c; max-width: 250px; font-weight: normal; line-height: 1.4;">
+                Độ nhạy tạo râu nến. Chuẩn NinZa là <b>50%</b>. Muốn gạch vuông vức không lồng vào nhau thì nhập <b>100%</b>.
+            </div>
+        </div>
         <div class="wa-csm-control">
             <input type="number" step="1" min="1" max="100" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px;" data-bind="renkoTrendPct" data-type="number" placeholder="50">
         </div>
