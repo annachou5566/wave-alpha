@@ -317,66 +317,52 @@
             return lbData;
         },
 
-        // 🚀 CẬP NHẬT REALTIME CHO LINE BREAK (Phiên bản Thông Minh, Không Spam Rác)
+        // 🚀 CẬP NHẬT REALTIME CHO LINE BREAK (Sửa dứt điểm lỗi giật Chart và lỗi nến xẹp)
         _updateLineBreakTick: function(curr, chartData, config) {
             if (parseInt(config.chartType) !== 15) return curr;
             const state = this._lineBreakState;
             if (!state || state.blocks.length === 0) return curr;
 
-            // 1. QUẢN LÝ LỊCH SỬ GỐC (Chỉ nướng nến khi Timeframe thực sự đóng cửa)
+            // 1. QUẢN LÝ LỊCH SỬ GỐC (Âm thầm gom dữ liệu, KHÔNG VẼ LẠI TOÀN BỘ CHART)
             let lastRaw = this.rawHistory[this.rawHistory.length - 1];
-            let isNewCandle = (!lastRaw || lastRaw.timestamp !== curr.timestamp);
-
-            if (isNewCandle) {
+            if (!lastRaw || lastRaw.timestamp !== curr.timestamp) {
                 this.rawHistory.push({ ...curr });
                 if (this.rawHistory.length > 1000) this.rawHistory.shift();
-                
-                // Nến gốc đóng cửa -> Ra lệnh nướng (Bake) lại dữ liệu
-                if (!this._isBaking) {
-                    this._isBaking = true;
-                    setTimeout(() => {
-                        if (window.WA_Chart) {
-                            let reprocessed = this.processHistory(this.rawHistory, true);
-                            window.WA_Chart.applyNewData(reprocessed);
-                        }
-                        this._isBaking = false;
-                    }, 50);
-                }
             } else {
-                // Cập nhật nến gốc realtime
                 lastRaw.close = curr.close;
                 lastRaw.high = Math.max(lastRaw.high, curr.high);
                 lastRaw.low = Math.min(lastRaw.low, curr.low);
                 lastRaw.volume = curr.volume;
             }
 
-            // 2. TÍNH TOÁN KHỐI DỰ KIẾN (Ghost Block) TRÊN MÀN HÌNH
+            // 2. TÍNH TOÁN KHỐI DỰ KIẾN (Ghost Block) - Không bị xẹp lép
             const close = curr.close;
             let lastBlock = state.blocks[state.blocks.length - 1];
             
-            // Ép timestamp cố định để Native Chart vẽ đè lên nến cuối, không đẻ thêm nến rác
+            // Cấp cho Ghost một cái mốc thời gian ảo nối tiếp
             let ghost = { ...curr, timestamp: state.lastTimestamp + 100 }; 
+            let shouldBake = false;
             let ghostOpen;
 
-            if (lastBlock.dir === 1) { // Đang Tăng
-                if (close > lastBlock.high) { ghostOpen = lastBlock.high; } 
+            if (lastBlock.dir === 1) { // Xu hướng Tăng
+                if (close > lastBlock.high) { ghostOpen = lastBlock.high; shouldBake = true; } 
                 else {
                     let minLow = lastBlock.low;
                     let lookback = Math.min(state.LINE_COUNT, state.blocks.length);
                     for(let b=1; b<=lookback; b++) minLow = Math.min(minLow, state.blocks[state.blocks.length-b].low);
                     
-                    if (close < minLow) { ghostOpen = lastBlock.low; }
-                    else { ghostOpen = close; } // Không phá vỡ -> Co lại thành nét gạch ngang (Ẩn đi)
+                    if (close < minLow) { ghostOpen = lastBlock.low; shouldBake = true; }
+                    else { ghostOpen = lastBlock.high; } // 🚀 FIX LỖI NẾN XẸP: Neo vào đỉnh cũ thay vì giá Close
                 }
-            } else { // Đang Giảm
-                if (close < lastBlock.low) { ghostOpen = lastBlock.low; } 
+            } else { // Xu hướng Giảm
+                if (close < lastBlock.low) { ghostOpen = lastBlock.low; shouldBake = true; } 
                 else {
                     let maxHigh = lastBlock.high;
                     let lookback = Math.min(state.LINE_COUNT, state.blocks.length);
                     for(let b=1; b<=lookback; b++) maxHigh = Math.max(maxHigh, state.blocks[state.blocks.length-b].high);
                     
-                    if (close > maxHigh) { ghostOpen = lastBlock.high; }
-                    else { ghostOpen = close; } // Không phá vỡ -> Co lại thành nét gạch ngang (Ẩn đi)
+                    if (close > maxHigh) { ghostOpen = lastBlock.high; shouldBake = true; }
+                    else { ghostOpen = lastBlock.low; } // 🚀 FIX LỖI NẾN XẸP: Neo vào đáy cũ thay vì giá Close
                 }
             }
 
@@ -385,6 +371,30 @@
             ghost.high = Math.max(ghost.open, ghost.close); 
             ghost.low = Math.min(ghost.open, ghost.close);
 
+            // 3. CHỈ ĐÚC NẾN MỚI (BAKE) KHI CÓ BREAKOUT
+            if (shouldBake && !this._isBaking) {
+                this._isBaking = true;
+                
+                if (window._lbBakeTimeout) clearTimeout(window._lbBakeTimeout);
+                window._lbBakeTimeout = setTimeout(() => {
+                    if (window.WA_Chart) {
+                        let reprocessed = this.processHistory(this.rawHistory, true);
+                        let currentList = window.WA_Chart.getDataList();
+                        
+                        // 🚀 MA THUẬT SỬA LỖI GIẬT CHART: Dùng updateData thay vì applyNewData
+                        if (currentList && currentList.length > 0) {
+                            let lastTime = currentList[currentList.length - 1].timestamp;
+                            let newBricks = reprocessed.filter(c => c.timestamp >= lastTime);
+                            for (let b of newBricks) window.WA_Chart.updateData(b);
+                        } else {
+                            window.WA_Chart.applyNewData(reprocessed);
+                        }
+                    }
+                    this._isBaking = false;
+                }, 10);
+            }
+
+            // Trả về nến ảo để Data Engine đẩy lên màn hình một cách êm ái
             return ghost;
         }
     }; // Kết thúc Object WaveDataEngine
