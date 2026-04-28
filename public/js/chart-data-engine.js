@@ -317,44 +317,74 @@
             return lbData;
         },
 
-        // 🚀 3. CẬP NHẬT REALTIME CHO LINE BREAK
+        // 🚀 CẬP NHẬT REALTIME CHO LINE BREAK (Phiên bản Thông Minh, Không Spam Rác)
         _updateLineBreakTick: function(curr, chartData, config) {
             if (parseInt(config.chartType) !== 15) return curr;
             const state = this._lineBreakState;
             if (!state || state.blocks.length === 0) return curr;
 
-            const close = curr.close;
-            let lastBlock = state.blocks[state.blocks.length - 1];
-            let ghost = { ...curr, timestamp: state.lastTimestamp + 100 }, shouldBake = false, ghostOpen;
+            // 1. QUẢN LÝ LỊCH SỬ GỐC (Chỉ nướng nến khi Timeframe thực sự đóng cửa)
+            let lastRaw = this.rawHistory[this.rawHistory.length - 1];
+            let isNewCandle = (!lastRaw || lastRaw.timestamp !== curr.timestamp);
 
-            if (lastBlock.dir === 1) {
-                if (close > lastBlock.high) { ghostOpen = lastBlock.high; shouldBake = true; } 
-                else {
-                    let minLow = lastBlock.low, lookback = Math.min(state.LINE_COUNT, state.blocks.length);
-                    for(let b=1; b<=lookback; b++) minLow = Math.min(minLow, state.blocks[state.blocks.length-b].low);
-                    ghostOpen = (close < minLow) ? (shouldBake = true, lastBlock.low) : lastBlock.high;
-                }
-            } else {
-                if (close < lastBlock.low) { ghostOpen = lastBlock.low; shouldBake = true; } 
-                else {
-                    let maxHigh = lastBlock.high, lookback = Math.min(state.LINE_COUNT, state.blocks.length);
-                    for(let b=1; b<=lookback; b++) maxHigh = Math.max(maxHigh, state.blocks[state.blocks.length-b].high);
-                    ghostOpen = (close > maxHigh) ? (shouldBake = true, lastBlock.high) : lastBlock.low;
-                }
-            }
-
-            ghost.open = ghostOpen; ghost.close = close;
-            ghost.high = Math.max(ghost.open, ghost.close); ghost.low = Math.min(ghost.open, ghost.close);
-
-            if (shouldBake && !this._isBaking) {
-                this._isBaking = true;
+            if (isNewCandle) {
                 this.rawHistory.push({ ...curr });
                 if (this.rawHistory.length > 1000) this.rawHistory.shift();
-                setTimeout(() => {
-                    if (window.WA_Chart) window.WA_Chart.applyNewData(this.processHistory(this.rawHistory, true));
-                    this._isBaking = false;
-                }, 10);
+                
+                // Nến gốc đóng cửa -> Ra lệnh nướng (Bake) lại dữ liệu
+                if (!this._isBaking) {
+                    this._isBaking = true;
+                    setTimeout(() => {
+                        if (window.WA_Chart) {
+                            let reprocessed = this.processHistory(this.rawHistory, true);
+                            window.WA_Chart.applyNewData(reprocessed);
+                        }
+                        this._isBaking = false;
+                    }, 50);
+                }
+            } else {
+                // Cập nhật nến gốc realtime
+                lastRaw.close = curr.close;
+                lastRaw.high = Math.max(lastRaw.high, curr.high);
+                lastRaw.low = Math.min(lastRaw.low, curr.low);
+                lastRaw.volume = curr.volume;
             }
+
+            // 2. TÍNH TOÁN KHỐI DỰ KIẾN (Ghost Block) TRÊN MÀN HÌNH
+            const close = curr.close;
+            let lastBlock = state.blocks[state.blocks.length - 1];
+            
+            // Ép timestamp cố định để Native Chart vẽ đè lên nến cuối, không đẻ thêm nến rác
+            let ghost = { ...curr, timestamp: state.lastTimestamp + 100 }; 
+            let ghostOpen;
+
+            if (lastBlock.dir === 1) { // Đang Tăng
+                if (close > lastBlock.high) { ghostOpen = lastBlock.high; } 
+                else {
+                    let minLow = lastBlock.low;
+                    let lookback = Math.min(state.LINE_COUNT, state.blocks.length);
+                    for(let b=1; b<=lookback; b++) minLow = Math.min(minLow, state.blocks[state.blocks.length-b].low);
+                    
+                    if (close < minLow) { ghostOpen = lastBlock.low; }
+                    else { ghostOpen = close; } // Không phá vỡ -> Co lại thành nét gạch ngang (Ẩn đi)
+                }
+            } else { // Đang Giảm
+                if (close < lastBlock.low) { ghostOpen = lastBlock.low; } 
+                else {
+                    let maxHigh = lastBlock.high;
+                    let lookback = Math.min(state.LINE_COUNT, state.blocks.length);
+                    for(let b=1; b<=lookback; b++) maxHigh = Math.max(maxHigh, state.blocks[state.blocks.length-b].high);
+                    
+                    if (close > maxHigh) { ghostOpen = lastBlock.high; }
+                    else { ghostOpen = close; } // Không phá vỡ -> Co lại thành nét gạch ngang (Ẩn đi)
+                }
+            }
+
+            ghost.open = ghostOpen; 
+            ghost.close = close;
+            ghost.high = Math.max(ghost.open, ghost.close); 
+            ghost.low = Math.min(ghost.open, ghost.close);
+
             return ghost;
         }
     }; // Kết thúc Object WaveDataEngine
