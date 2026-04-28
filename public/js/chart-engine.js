@@ -516,17 +516,41 @@ window.WaveChartEngine = {
             watermarkEl.style.display = this.config.showWatermark === false ? 'none' : 'flex';
             watermarkEl.style.opacity = this.config.watermarkOpacity || 0.05;
 
-            // 🚀 BỔ SUNG: Đổi nội dung Watermark thông minh để tránh gây hiểu nhầm
-            let symbolText = window.currentChartToken ? window.currentChartToken.symbol.toUpperCase() : '';
+            // 🚀 BỔ SUNG: DÙNG RADAR MUTATION OBSERVER KHÓA CHẶT CHỮ RENKO
+            // Ép kiểu chartType về số nguyên để tránh lỗi string '14'
+            let isRenko = parseInt(this.config.chartType) === 14; 
             
-            // chartType === 14 là biểu đồ Renko
-            if (this.config.chartType === 14) {
-                // Đổi khung giờ thành chữ "RENKO" (Ví dụ: BTCUSDT RENKO)
-                watermarkEl.innerText = symbolText ? `${symbolText} RENKO` : 'RENKO';
-            } else {
-                // Nếu là nến thường, trả lại Khung giờ chuẩn (Ví dụ: BTCUSDT 1M)
-                let intervalText = window.currentChartInterval === 'tick' ? 'TICK' : (window.currentChartInterval || '').toUpperCase();
-                watermarkEl.innerText = symbolText ? `${symbolText} ${intervalText}` : intervalText;
+            const forceWatermarkText = () => {
+                let sym = window.currentChartToken ? window.currentChartToken.symbol.toUpperCase() : '';
+                let targetText = isRenko 
+                    ? (sym ? `${sym} RENKO` : 'RENKO') 
+                    : (sym ? `${sym} ${window.currentChartInterval === 'tick' ? 'TICK' : (window.currentChartInterval || '').toUpperCase()}` : '');
+                
+                // Cập nhật nếu text đang bị sai
+                if (watermarkEl.innerText !== targetText) {
+                    watermarkEl.innerText = targetText;
+                }
+            };
+
+            // 1. Ép đổi chữ ngay lập tức
+            forceWatermarkText();
+
+            // 2. Kích hoạt Radar: Bất kỳ file nào cố ghi đè, ta bẻ lái lại ngay!
+            if (!window._waWatermarkObserver) {
+                window._waWatermarkObserver = new MutationObserver(() => {
+                    // Tạm ngắt Radar để tự đổi chữ mà không bị lặp vô hạn
+                    window._waWatermarkObserver.disconnect(); 
+                    
+                    // Kiểm tra lại cấu hình xem có đang bật Renko không
+                    isRenko = parseInt(window.WaveChartEngine.config.chartType) === 14;
+                    forceWatermarkText(); 
+                    
+                    // Bật Radar lại
+                    window._waWatermarkObserver.observe(watermarkEl, { childList: true, characterData: true, subtree: true });
+                });
+                
+                // Lần đầu khởi động Radar
+                window._waWatermarkObserver.observe(watermarkEl, { childList: true, characterData: true, subtree: true });
             }
         }
 
