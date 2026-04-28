@@ -129,7 +129,7 @@ setTimezone: function(tz) { try { if(_chartInstance) _chartInstance.setTimezone(
                 if (config.chartType === 2) kcChartType = 'candle_stroke';
                 else if (config.chartType === 3) kcChartType = 'ohlc';
                 else if (config.chartType === 6 || config.chartType === 9) { kcChartType = 'area'; isLine = (config.chartType === 6); }
-                else if (config.chartType === 14) kcChartType = 'candle_solid'; // Kích hoạt nến đặc cho Renko
+                else if (config.chartType === 14 || config.chartType === 15) kcChartType = 'candle_solid';
 
                 if (config.chartType === 4) { _chartInstance.createIndicator('WA_COL_CHART', true, {id: 'candle_pane'}); hideCandle = true; }
                 else if (config.chartType === 5) { _chartInstance.createIndicator('WA_HL_CHART', true, {id: 'candle_pane'}); hideCandle = true; }
@@ -138,7 +138,7 @@ setTimezone: function(tz) { try { if(_chartInstance) _chartInstance.setTimezone(
                 else if (config.chartType === 10) { _chartInstance.createIndicator('WA_HLC_AREA', true, {id: 'candle_pane'}); hideCandle = true; }
                 else if (config.chartType === 11) { _chartInstance.createIndicator('WA_BASELINE', true, {id: 'candle_pane'}); hideCandle = true; }
                 else if (config.chartType === 13) { _chartInstance.createIndicator('WA_VOL_CANDLE', true, {id: 'candle_pane'}); hideCandle = true; }
-                else if (config.chartType === 15) { _chartInstance.createIndicator('WA_LINE_BREAK', true, {id: 'candle_pane'}); hideCandle = true; }
+                
                 const isHollow = (config.chartType === 2);
                 const isRenko = (config.chartType === 14);
 

@@ -26,13 +26,15 @@
             const cType = parseInt(config.chartType);
             this.lastChartType = cType;
 
-            // 2. Dọn dẹp trạng thái cũ nếu không phải nến Renko
-            if (cType !== 14) {
+            // 2. Dọn dẹp trạng thái cũ nếu không phải nến phi thời gian
+            if (cType !== 14 && cType !== 15) {
                 this._renkoState = null;
+                this._lineBreakState = null; // Thêm dòng này
             }
 
             if (cType === 12) return this._toHeikinAshi(this.rawHistory);
             if (cType === 14) return this._toRenko(this.rawHistory, config);
+            if (cType === 15) return this._toLineBreak(this.rawHistory, config); // 🚀 THÊM DÒNG NÀY
             
             return JSON.parse(JSON.stringify(this.rawHistory)); 
         },
@@ -46,7 +48,7 @@
             // TRỐNG LỖI: Nếu không ở chế độ nến đặc biệt, trả về tick gốc ngay lập tức
             if (cType === 12) return this._updateHeikinAshiTick(rawTick, currentChartData);
             if (cType === 14) return this._updateRenkoTick(rawTick, currentChartData, config);
-
+            if (cType === 15) return this._updateLineBreakTick(rawTick, currentChartData, config); // 🚀 THÊM DÒNG NÀY
             return rawTick;
         },
 
@@ -247,18 +249,115 @@
             return ghost;
         },
 
+        // 🚀 1. HÀM TÍNH ATR CHUẨN WILDER (Thay cho bản cũ của bạn)
         _calculateATR: function(data, length) {
-            if (!data || data.length <= length) return (data?.[0]?.close ?? 1) * 0.005;
+            if (!data || data.length < 2) return (data?.[0]?.close ?? 1) * 0.005;
+            const n = parseInt(length) || 14;
+            let atr = 0;
             let sumTR = 0;
-            for (let i = 1; i <= length; i++) {
-                const curr = data[data.length - i];
-                const prev = data[data.length - i - 1];
-                const tr = Math.max(curr.high - curr.low, Math.abs(curr.high - prev.close), Math.abs(curr.low - prev.close));
-                sumTR += tr;
+            const getTR = (curr, prev) => Math.max(curr.high - curr.low, Math.abs(curr.high - prev.close), Math.abs(curr.low - prev.close));
+
+            const firstN = Math.min(n, data.length - 1);
+            for (let i = 1; i <= firstN; i++) sumTR += getTR(data[i], data[i - 1]);
+            atr = sumTR / firstN;
+
+            for (let i = firstN + 1; i < data.length; i++) {
+                atr = (atr * (n - 1) + getTR(data[i], data[i - 1])) / n;
             }
-            return sumTR / length;
+            return Math.max(atr, data[data.length - 1].close * 0.0001);
+        },
+
+        // 🚀 2. THUẬT TOÁN LINE BREAK BẢN THỂ GỐC (Phi thời gian)
+        _toLineBreak: function(data, config) {
+            let lbData = [];
+            if (!data || data.length === 0) return lbData;
+
+            let blocks = [];
+            const LINE_COUNT = parseInt(config.lineBreakCount) || 3;
+
+            let startClose = data[0].close, startOpen = data[0].open;
+            let startDir = startClose >= startOpen ? 1 : -1;
+            let b1 = { ...data[0], open: startOpen, close: startClose, high: Math.max(startOpen, startClose), low: Math.min(startOpen, startClose), dir: startDir };
+            blocks.push(b1);
+            lbData.push(b1);
+
+            for (let i = 1; i < data.length; i++) {
+                const curr = data[i], close = curr.close;
+                let lastBlock = blocks[blocks.length - 1], newBlock = null;
+
+                if (lastBlock.dir === 1) { 
+                    if (close > lastBlock.high) {
+                        newBlock = { open: lastBlock.high, close: close, dir: 1, high: close, low: lastBlock.high };
+                    } else {
+                        let lookback = Math.min(LINE_COUNT, blocks.length), minLow = lastBlock.low;
+                        for (let b = 1; b <= lookback; b++) minLow = Math.min(minLow, blocks[blocks.length - b].low);
+                        if (close < minLow) newBlock = { open: lastBlock.low, close: close, dir: -1, high: lastBlock.low, low: close };
+                    }
+                } else { 
+                    if (close < lastBlock.low) {
+                        newBlock = { open: lastBlock.low, close: close, dir: -1, high: lastBlock.low, low: close };
+                    } else {
+                        let lookback = Math.min(LINE_COUNT, blocks.length), maxHigh = lastBlock.high;
+                        for (let b = 1; b <= lookback; b++) maxHigh = Math.max(maxHigh, blocks[blocks.length - b].high);
+                        if (close > maxHigh) newBlock = { open: lastBlock.high, close: close, dir: 1, high: close, low: lastBlock.high };
+                    }
+                }
+
+                if (newBlock) {
+                    let fullBlock = {
+                        ...curr,
+                        timestamp: curr.timestamp + lbData.length * 100, // Ép dính nến
+                        open: newBlock.open, close: newBlock.close, high: newBlock.high, low: newBlock.low, dir: newBlock.dir
+                    };
+                    blocks.push(fullBlock);
+                    lbData.push(fullBlock);
+                }
+            }
+            this._lineBreakState = { blocks: blocks.slice(-10), lastTimestamp: lbData[lbData.length-1].timestamp, LINE_COUNT };
+            return lbData;
+        },
+
+        // 🚀 3. CẬP NHẬT REALTIME CHO LINE BREAK
+        _updateLineBreakTick: function(curr, chartData, config) {
+            if (parseInt(config.chartType) !== 15) return curr;
+            const state = this._lineBreakState;
+            if (!state || state.blocks.length === 0) return curr;
+
+            const close = curr.close;
+            let lastBlock = state.blocks[state.blocks.length - 1];
+            let ghost = { ...curr, timestamp: state.lastTimestamp + 100 }, shouldBake = false, ghostOpen;
+
+            if (lastBlock.dir === 1) {
+                if (close > lastBlock.high) { ghostOpen = lastBlock.high; shouldBake = true; } 
+                else {
+                    let minLow = lastBlock.low, lookback = Math.min(state.LINE_COUNT, state.blocks.length);
+                    for(let b=1; b<=lookback; b++) minLow = Math.min(minLow, state.blocks[state.blocks.length-b].low);
+                    ghostOpen = (close < minLow) ? (shouldBake = true, lastBlock.low) : lastBlock.high;
+                }
+            } else {
+                if (close < lastBlock.low) { ghostOpen = lastBlock.low; shouldBake = true; } 
+                else {
+                    let maxHigh = lastBlock.high, lookback = Math.min(state.LINE_COUNT, state.blocks.length);
+                    for(let b=1; b<=lookback; b++) maxHigh = Math.max(maxHigh, state.blocks[state.blocks.length-b].high);
+                    ghostOpen = (close > maxHigh) ? (shouldBake = true, lastBlock.high) : lastBlock.low;
+                }
+            }
+
+            ghost.open = ghostOpen; ghost.close = close;
+            ghost.high = Math.max(ghost.open, ghost.close); ghost.low = Math.min(ghost.open, ghost.close);
+
+            if (shouldBake && !this._isBaking) {
+                this._isBaking = true;
+                this.rawHistory.push({ ...curr });
+                if (this.rawHistory.length > 1000) this.rawHistory.shift();
+                setTimeout(() => {
+                    if (window.WA_Chart) window.WA_Chart.applyNewData(this.processHistory(this.rawHistory, true));
+                    this._isBaking = false;
+                }, 10);
+            }
+            return ghost;
         }
-    };
+    }; // Kết thúc Object WaveDataEngine
 
     // Cập nhật Listener an toàn hơn (Cuối file)
     window.addEventListener('wa_chart_config_updated', (e) => {
