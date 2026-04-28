@@ -84,118 +84,88 @@
             return ha;
         },
 
-        // ==========================================
-        // 🧱 THUẬT TOÁN SMART NINZARENKO
-        // ==========================================
+        // ======================================================
+        // 🧱 ĐỘNG CƠ RENKO DUAL-CORE (CLASSIC & NINZA)
+        // ======================================================
         _toRenko: function(data, config) {
             let renkoData = [];
             if (!data || data.length === 0) return renkoData;
 
-            // 1. TÍNH KÍCH THƯỚC GẠCH (Brick Size)
+            // 1. Tính BrickSize (Giữ nguyên logic thông minh cũ)
             let method = config.renkoMethod || 'atr';
             let brickSize = 1;
-
-            if (method === 'atr') {
-                brickSize = this._calculateATR(data, config.renkoAtrLength || 14);
-            } else if (method === 'percentage') {
-                brickSize = data[0].close * ((config.renkoPercentage || 1.0) / 100);
-            } else {
-                brickSize = config.renkoBoxSize || 10;
-            }
+            if (method === 'atr') brickSize = this._calculateATR(data, config.renkoAtrLength || 14);
+            else if (method === 'percentage') brickSize = data[0].close * ((config.renkoPercentage || 1.0) / 100);
+            else brickSize = config.renkoBoxSize || 10;
             if (brickSize <= 0) brickSize = data[0].close * 0.001;
 
-            // 2. TÍNH NGƯỠNG ĐẢO CHIỀU BẰNG PHẦN TRĂM (%) 
-            // Giải quyết triệt để lỗi khác biệt Token
-            let pct = parseFloat(config.renkoTrendPct);
-            if (isNaN(pct) || pct <= 0) pct = 50; // Mặc định chuẩn 50%
+            const isClassic = (config.renkoStyle === 'classic'); // Check loại Renko
             
-            // Tính ra Trend Threshold thực tế dựa trên phần trăm của Brick Size
-            let trendThreshold = brickSize * (pct / 100);
+            // 2. Cấu hình Threshold (Chỉ Ninza mới dùng cái này)
+            let pct = parseFloat(config.renkoTrendPct) || 50;
+            let trendThreshold = isClassic ? brickSize : brickSize * (pct / 100);
             let openOffset = brickSize - trendThreshold;
 
             // 3. Khởi tạo
             let lastBrickClose = data[0].close;
             let lastBrickOpen  = lastBrickClose - brickSize;
             let lastDir        = 1; 
-
-            let runningHigh = data[0].high;
-            let runningLow  = data[0].low;
+            let runningHigh = data[0].high, runningLow = data[0].low;
 
             renkoData.push({
-                ...data[0],
-                open:  lastBrickOpen,
-                close: lastBrickClose,
-                high:  Math.max(lastBrickOpen, lastBrickClose, runningHigh),
-                low:   Math.min(lastBrickOpen, lastBrickClose, runningLow),
+                ...data[0], open: lastBrickOpen, close: lastBrickClose,
+                high: Math.max(lastBrickOpen, lastBrickClose, runningHigh),
+                low: Math.min(lastBrickOpen, lastBrickClose, runningLow)
             });
 
             // 4. Vòng lặp đúc gạch
             for (let i = 1; i < data.length; i++) {
-                const curr  = data[i];
-                const price = (config.renkoSource === 'ohlc')
-                    ? (curr.high + curr.low + curr.close) / 3
-                    : curr.close;
-
+                const curr = data[i];
+                const price = (config.renkoSource === 'ohlc') ? (curr.high + curr.low + curr.close) / 3 : curr.close;
                 runningHigh = Math.max(runningHigh, curr.high);
-                runningLow  = Math.min(runningLow,  curr.low);
+                runningLow = Math.min(runningLow, curr.low);
 
                 let brickAdded;
                 do {
                     brickAdded = false;
-
-                    if (lastDir === 1) {
-                        if (price >= lastBrickClose + trendThreshold) { // Lên tiếp
-                            lastBrickOpen  = lastBrickClose - openOffset;
+                    if (lastDir === 1) { // ĐANG TĂNG
+                        if (price >= lastBrickClose + trendThreshold) { // Tiếp diễn
+                            lastBrickOpen  = lastBrickClose - (isClassic ? 0 : openOffset);
                             lastBrickClose = lastBrickOpen  + brickSize; 
-                            lastDir = 1;
-                            brickAdded = true;
-                        } else if (price <= lastBrickClose - trendThreshold) { // Đảo chiều xuống
-                            lastBrickOpen  = lastBrickClose + openOffset;
+                            lastDir = 1; brickAdded = true;
+                        } else if (price <= (isClassic ? lastBrickOpen - brickSize : lastBrickClose - trendThreshold)) { // Đảo chiều
+                            lastBrickOpen  = lastBrickClose + (isClassic ? 0 : openOffset);
                             lastBrickClose = lastBrickOpen  - brickSize; 
-                            lastDir = -1;
-                            brickAdded = true;
+                            lastDir = -1; brickAdded = true;
                         }
-                    } else {
-                        if (price <= lastBrickClose - trendThreshold) { // Xuống tiếp
-                            lastBrickOpen  = lastBrickClose + openOffset;
+                    } else { // ĐANG GIẢM
+                        if (price <= lastBrickClose - trendThreshold) { // Tiếp diễn
+                            lastBrickOpen  = lastBrickClose + (isClassic ? 0 : openOffset);
                             lastBrickClose = lastBrickOpen  - brickSize;
-                            lastDir = -1;
-                            brickAdded = true;
-                        } else if (price >= lastBrickClose + trendThreshold) { // Đảo chiều lên
-                            lastBrickOpen  = lastBrickClose - openOffset;
+                            lastDir = -1; brickAdded = true;
+                        } else if (price >= (isClassic ? lastBrickOpen + brickSize : lastBrickClose + trendThreshold)) { // Đảo chiều
+                            lastBrickOpen  = lastBrickClose - (isClassic ? 0 : openOffset);
                             lastBrickClose = lastBrickOpen  + brickSize;
-                            lastDir = 1;
-                            brickAdded = true;
+                            lastDir = 1; brickAdded = true;
                         }
                     }
 
                     if (brickAdded) {
                         renkoData.push({
-                            ...curr,
-                            timestamp: curr.timestamp + renkoData.length * 100, 
-                            open:   lastBrickOpen,
-                            close:  lastBrickClose,
-                            high:   Math.max(lastBrickOpen, lastBrickClose, runningHigh),
-                            low:    Math.min(lastBrickOpen, lastBrickClose, runningLow),
-                            volume: curr.volume,
+                            ...curr, timestamp: curr.timestamp + renkoData.length * 100,
+                            open: lastBrickOpen, close: lastBrickClose,
+                            high: Math.max(lastBrickOpen, lastBrickClose, runningHigh),
+                            low: Math.min(lastBrickOpen, lastBrickClose, runningLow),
+                            volume: curr.volume
                         });
                         runningHigh = Math.max(lastBrickOpen, lastBrickClose);
-                        runningLow  = Math.min(lastBrickOpen, lastBrickClose);
+                        runningLow = Math.min(lastBrickOpen, lastBrickClose);
                     }
-                } while (brickAdded); 
+                } while (brickAdded);
             }
 
-            // 5. CẤT VÀO BỘ NHỚ
-            this._renkoState = {
-                brickSize: brickSize,
-                trendThreshold: trendThreshold,
-                openOffset: openOffset,
-                lastBrickClose: lastBrickClose,
-                lastDir: lastDir,
-                lastTimestamp: renkoData[renkoData.length - 1].timestamp
-            };
-
-            return renkoData.length > 1 ? renkoData : data;
+            this._renkoState = { brickSize, trendThreshold, openOffset, lastBrickClose, lastDir, lastTimestamp: renkoData[renkoData.length-1].timestamp, isClassic };
+            return renkoData;
         },
 
         _calculateATR: function(data, length) {

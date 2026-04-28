@@ -1769,24 +1769,28 @@ window.closeProChart = function() {
 
 
 <div id="csm-ui-renko" style="display:none; flex-direction:column; gap:16px;">
-    <div style="background: rgba(0, 240, 255, 0.03); border: 1px solid rgba(0, 240, 255, 0.15); padding: 12px; border-radius: 6px; font-size: 11px; color: #EAECEF; line-height: 1.6;">
-        <div style="margin-bottom: 8px; font-weight: 500; color: #00F0FF; display: flex; align-items: center;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-            HƯỚNG DẪN CÁCH TÍNH BRICK SIZE
+    <div style="display: flex; gap: 10px; margin-bottom: 5px;">
+        <div class="renko-style-card" onclick="setRenkoStyle('classic')" id="rsc-classic" style="flex: 1; padding: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; text-align: center; transition: 0.2s;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#848e9c" stroke-width="2" style="margin-bottom:8px;"><path d="M3 17h4v4H3zM7 13h4v4H7zM11 9h4v4h-4zM15 5h4v4h-4z"/></svg>
+            <div style="font-size: 11px; font-weight: 500; color: #EAECEF;">Classic Renko</div>
+            <div style="font-size: 9px; color: #848e9c; margin-top: 4px;">Chuẩn gốc, gạch nối góc, lọc nhiễu mạnh.</div>
         </div>
-        <div style="color: #848e9c; margin-bottom: 6px;">Brick Size là độ lớn của 1 viên gạch. Có 3 cách để thiết lập:</div>
-        <ul style="margin: 0; padding-left: 16px; color: #b7bdc6;">
-            <li style="margin-bottom: 4px;"><b>ATR (Tự động):</b> Hệ thống tự đo độ giật của giá để chọn size chuẩn nhất <span style="color: #0ECB81;">(Khuyên dùng)</span>.</li>
-            <li style="margin-bottom: 4px;"><b>Phần trăm (%):</b> Tính theo % giá Token hiện tại. Rất dễ dùng cho mọi loại coin.</li>
-            <li><b>Kích thước tĩnh ($):</b> Tự nhập số cứng (VD: Nhập 10 thì giá chạy 10$ vẽ 1 gạch).</li>
-        </ul>
+        <div class="renko-style-card" onclick="setRenkoStyle('ninza')" id="rsc-ninza" style="flex: 1; padding: 12px; background: rgba(0, 240, 255, 0.05); border: 1px solid #00F0FF; border-radius: 8px; cursor: pointer; text-align: center; transition: 0.2s;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00F0FF" stroke-width="2" style="margin-bottom:8px;"><path d="M3 15h6v6H3zM6 10h6v6H6zM9 5h6v6H9z"/></svg>
+            <div style="font-size: 11px; font-weight: 500; color: #00F0FF;">NinZaRenko Pro</div>
+            <div style="font-size: 9px; color: #848e9c; margin-top: 4px;">Xếp vảy cá, siêu nhạy, soi Order Flow.</div>
+        </div>
     </div>
-    
-    <div class="wa-csm-row">
-        <div class="wa-csm-label">Nguồn giá</div>
-        <div class="wa-csm-control"><div id="dd-wrapper-renkoSource"></div><input type="hidden" id="csm-renko-source" data-bind="renkoSource"></div>
+    <input type="hidden" id="csm-renko-style" data-bind="renkoStyle" value="ninza">
+
+    <div style="background: rgba(0, 240, 255, 0.02); border: 1px solid rgba(0, 240, 255, 0.1); padding: 12px; border-radius: 6px; font-size: 11px; color: #EAECEF; line-height: 1.5;">
+        <div style="display: flex; align-items: center; color: #00F0FF; font-weight: 500; margin-bottom: 6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            THÔNG SỐ ĐIỀU CHỈNH
+        </div>
+        <div id="renko-help-text" style="color: #848e9c;">NinZaRenko giúp bạn bắt kịp xu hướng sớm hơn nhờ cơ chế xếp chồng nến.</div>
     </div>
-    
+
     <div class="wa-csm-row">
         <div class="wa-csm-label">Cách tính Brick Size</div>
         <div class="wa-csm-control"><div id="dd-wrapper-renkoMethod"></div><input type="hidden" id="csm-renko-method" data-bind="renkoMethod"></div>
@@ -1794,36 +1798,13 @@ window.closeProChart = function() {
     
     <div class="wa-csm-row" id="row-renko-atr">
         <div class="wa-csm-label">Độ dài ATR</div>
-        <div class="wa-csm-control">
-            <input type="number" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px;" data-bind="renkoAtrLength" data-type="number">
-        </div>
+        <div class="wa-csm-control"><input type="number" class="wa-csm-input-dark" data-bind="renkoAtrLength" data-type="number"></div>
     </div>
-    
-    <div class="wa-csm-row" id="row-renko-trad" style="display:none;">
-        <div class="wa-csm-label">Kích thước gạch tĩnh ($)</div>
-        <div class="wa-csm-control">
-            <input type="number" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px;" data-bind="renkoBoxSize" data-type="number">
-        </div>
-    </div>
-    
-    <div class="wa-csm-row" id="row-renko-perc" style="display:none;">
-        <div class="wa-csm-label">Phần trăm giá (%)</div>
-        <div class="wa-csm-control">
-            <input type="number" step="0.1" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px;" data-bind="renkoPercentage" data-type="number">
-        </div>
-    </div>
-    
-    <div class="wa-csm-divider">Cấu hình Đảo chiều (Threshold)</div>
-    
-    <div class="wa-csm-row">
-        <div class="wa-csm-label" style="flex-direction: column; align-items: flex-start; gap: 4px;">
-            <div>Tỷ lệ Threshold (%)</div>
-            <div style="font-size: 10.5px; color: #848e9c; max-width: 250px; font-weight: normal; line-height: 1.4;">
-                Độ nhạy tạo râu nến. Chuẩn NinZa là <b>50%</b>. Muốn gạch vuông vức không lồng vào nhau thì nhập <b>100%</b>.
-            </div>
-        </div>
-        <div class="wa-csm-control">
-            <input type="number" step="1" min="1" max="100" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px;" data-bind="renkoTrendPct" data-type="number" placeholder="50">
+    <div id="ninza-only-settings">
+        <div class="wa-csm-divider">Cấu hình Đảo chiều (Threshold)</div>
+        <div class="wa-csm-row">
+            <div class="wa-csm-label">Tỷ lệ Threshold (%)</div>
+            <div class="wa-csm-control"><input type="number" class="wa-csm-input-dark" data-bind="renkoTrendPct" data-type="number" placeholder="50"></div>
         </div>
     </div>
 </div>
@@ -2693,3 +2674,28 @@ window.closeProChart = function() {
     });
 })();
 
+window.setRenkoStyle = function(style) {
+    const input = document.getElementById('csm-renko-style');
+    const cardClassic = document.getElementById('rsc-classic');
+    const cardNinza = document.getElementById('rsc-ninza');
+    const ninzaSettings = document.getElementById('ninza-only-settings');
+    const helpText = document.getElementById('renko-help-text');
+
+    input.value = style;
+    
+    // Cập nhật UI
+    if (style === 'classic') {
+        cardClassic.style.borderColor = '#00F0FF'; cardClassic.style.background = 'rgba(0, 240, 255, 0.05)';
+        cardNinza.style.borderColor = 'rgba(255,255,255,0.1)'; cardNinza.style.background = 'rgba(255,255,255,0.03)';
+        if(ninzaSettings) ninzaSettings.style.display = 'none';
+        helpText.innerText = "Classic Renko: Nến chỉ được tạo khi giá đi hết 1 thân nến. Lọc nhiễu tối đa.";
+    } else {
+        cardNinza.style.borderColor = '#00F0FF'; cardNinza.style.background = 'rgba(0, 240, 255, 0.05)';
+        cardClassic.style.borderColor = 'rgba(255,255,255,0.1)'; cardClassic.style.background = 'rgba(255,255,255,0.03)';
+        if(ninzaSettings) ninzaSettings.style.display = 'block';
+        helpText.innerText = "NinZaRenko Pro: Nến xếp chồng lên nhau giúp phản ứng cực nhạy với đảo chiều.";
+    }
+
+    // Phát lệnh render lại chart ngay lập tức
+    input.dispatchEvent(new Event('change'));
+};
