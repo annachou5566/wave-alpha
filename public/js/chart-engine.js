@@ -461,8 +461,7 @@ window.WaveChartEngine = {
                     }
 
                     ctx.save();
-                    // 🚀 RỬA CỌ VẼ: Ép nét vẽ thành nét liền, chống rò rỉ nét đứt từ biểu đồ khác
-                    ctx.setLineDash([]); 
+                    ctx.setLineDash([]); // Rửa cọ
 
                     const maxBarWidth = Math.max(1, (barSpace.gapBar || barSpace.bar || 6) * 0.95);
                     const minBarWidth = 1; 
@@ -471,16 +470,29 @@ window.WaveChartEngine = {
                         const kd = dataList[i];
                         if (!kd || kd.close === undefined || kd.volume === undefined) continue;
 
-                        const x = xAxis.convertToPixel(i);
-                        const openY = yAxis.convertToPixel(kd.open);
-                        const closeY = yAxis.convertToPixel(kd.close);
-                        const highY = yAxis.convertToPixel(kd.high);
-                        const lowY = yAxis.convertToPixel(kd.low);
+                        const rawX = xAxis.convertToPixel(i);
 
-                        // 2. Tính bề ngang theo Volume
+                        // 🚀 BÍ QUYẾT 1: Chốt Pixel Trung Tâm tuyệt đối (Mốc để cắm râu nến)
+                        const cx = Math.round(rawX); 
+
+                        // 2. Tính bề ngang lý thuyết theo Volume
                         let volRatio = maxVol > 0 ? (kd.volume / maxVol) : 0.1;
-                        let candleWidth = Math.max(minBarWidth, maxBarWidth * volRatio);
-                        let halfWidth = candleWidth / 2;
+                        let rawWidth = Math.max(minBarWidth, maxBarWidth * volRatio);
+                        
+                        // 🚀 BÍ QUYẾT 2: ÉP THÂN NẾN LÀ SỐ LẺ (Odd Width Trick)
+                        let w = Math.max(1, Math.round(rawWidth));
+                        if (w % 2 === 0) {
+                            w += 1; // Nếu là số chẵn (2, 4, 6), biến thành số lẻ (3, 5, 7)
+                        }
+
+                        // Tính mép trái của thân nến dựa trên tâm cx
+                        const leftX = cx - Math.floor(w / 2);
+
+                        // 🚀 BÍ QUYẾT 3: Làm tròn tất cả trục Y để chống mờ nét (Anti-aliasing)
+                        const openY = Math.round(yAxis.convertToPixel(kd.open));
+                        const closeY = Math.round(yAxis.convertToPixel(kd.close));
+                        const highY = Math.round(yAxis.convertToPixel(kd.high));
+                        const lowY = Math.round(yAxis.convertToPixel(kd.low));
 
                         const isUp = kd.close >= kd.open;
                         const bodyTop = Math.min(openY, closeY);
@@ -493,28 +505,22 @@ window.WaveChartEngine = {
                         const fWick = isUp ? (c.showWick ? (c.wickIndependent ? c.wickUpColor : c.upColor) : fBody) 
                                            : (c.showWick ? (c.wickIndependent ? c.wickDownColor : c.downColor) : fBody);
 
-                        // 🚀 TINH CHỈNH TỌA ĐỘ (Pixel Snapping): Chống mờ viền (Anti-aliasing)
-                        const roundedX = Math.round(x);
-                        const roundedBodyX = Math.round(x - halfWidth);
-                        const roundedWidth = Math.max(1, Math.round(candleWidth));
-
+                        // VẼ RÂU NẾN (Cắm thẳng vào pixel trung tâm cx)
                         if (c.showWick) {
                             ctx.fillStyle = fWick;
-                            // Râu nến dịch -0.5 để nét 1px luôn nằm đúng giữa pixel, cực sắc nét
-                            ctx.fillRect(roundedX - 0.5, highY, 1, bodyTop - highY); 
-                            ctx.fillRect(roundedX - 0.5, bodyBottom, 1, lowY - bodyBottom); 
+                            ctx.fillRect(cx, highY, 1, bodyTop - highY);     // Râu trên
+                            ctx.fillRect(cx, bodyBottom, 1, lowY - bodyBottom); // Râu dưới
                         }
 
+                        // VẼ THÂN NẾN (Bọc đều 2 bên râu nến)
                         ctx.fillStyle = fBody;
-                        ctx.fillRect(roundedBodyX, bodyTop, roundedWidth, bodyHeight);
+                        ctx.fillRect(leftX, bodyTop, w, bodyHeight);
 
-                        // 🚀 CHỈ vẽ viền khi nến đủ mập (rộng > 2px). 
-                        // Nếu nến mỏng tang 1-2px mà vẽ viền nó sẽ biến thành "con lãi"
-                        if (c.showBorder && roundedWidth > 2) {
+                        // VẼ VIỀN (Chỉ vẽ viền khi nến đủ béo, width > 3)
+                        if (c.showBorder && w > 3) {
                             ctx.strokeStyle = fBorder;
                             ctx.lineWidth = 1;
-                            // Viền dịch -0.5 để nét 1px ôm sát thân nến, không bị lem màu
-                            ctx.strokeRect(roundedBodyX - 0.5, bodyTop - 0.5, roundedWidth + 1, bodyHeight + 1);
+                            ctx.strokeRect(leftX - 0.5, bodyTop - 0.5, w + 1, bodyHeight + 1);
                         }
                     }
                     ctx.restore();
