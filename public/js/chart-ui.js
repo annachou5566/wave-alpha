@@ -1792,19 +1792,35 @@ window.closeProChart = function() {
     </div>
 
     <div class="wa-csm-row">
+        <div class="wa-csm-label">Nguồn giá</div>
+        <div class="wa-csm-control"><div id="dd-wrapper-renkoSource"></div><input type="hidden" id="csm-renko-source" data-bind="renkoSource"></div>
+    </div>
+
+    <div class="wa-csm-row">
         <div class="wa-csm-label">Cách tính Brick Size</div>
         <div class="wa-csm-control"><div id="dd-wrapper-renkoMethod"></div><input type="hidden" id="csm-renko-method" data-bind="renkoMethod"></div>
     </div>
     
     <div class="wa-csm-row" id="row-renko-atr">
         <div class="wa-csm-label">Độ dài ATR</div>
-        <div class="wa-csm-control"><input type="number" class="wa-csm-input-dark" data-bind="renkoAtrLength" data-type="number"></div>
+        <div class="wa-csm-control"><input type="number" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px;" data-bind="renkoAtrLength" data-type="number"></div>
     </div>
+    
+    <div class="wa-csm-row" id="row-renko-trad" style="display:none;">
+        <div class="wa-csm-label">Kích thước gạch tĩnh ($)</div>
+        <div class="wa-csm-control"><input type="number" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px;" data-bind="renkoBoxSize" data-type="number"></div>
+    </div>
+
+    <div class="wa-csm-row" id="row-renko-perc" style="display:none;">
+        <div class="wa-csm-label">Phần trăm giá (%)</div>
+        <div class="wa-csm-control"><input type="number" step="0.1" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px;" data-bind="renkoPercentage" data-type="number"></div>
+    </div>
+
     <div id="ninza-only-settings">
         <div class="wa-csm-divider">Cấu hình Đảo chiều (Threshold)</div>
         <div class="wa-csm-row">
             <div class="wa-csm-label">Tỷ lệ Threshold (%)</div>
-            <div class="wa-csm-control"><input type="number" class="wa-csm-input-dark" data-bind="renkoTrendPct" data-type="number" placeholder="50"></div>
+            <div class="wa-csm-control"><input type="number" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px;" data-bind="renkoTrendPct" data-type="number" placeholder="50"></div>
         </div>
     </div>
 </div>
