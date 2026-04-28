@@ -1769,6 +1769,21 @@ window.closeProChart = function() {
 
 
 <div id="csm-ui-renko" style="display:none; flex-direction:column; gap:16px;">
+    
+    <div class="wa-csm-divider">Màu sắc Renko</div>
+    <div class="wa-csm-row">
+        <div class="wa-csm-label">Thân gạch (Tăng / Giảm)</div>
+        <div class="wa-csm-control">
+            <div class="wa-ism-swatch" data-color-bind="renkoUpColor"></div>
+            <div class="wa-ism-swatch" data-color-bind="renkoDownColor"></div>
+        </div>
+    </div>
+    <div class="wa-csm-row" style="margin-bottom: 10px;">
+        <div class="wa-csm-label">Râu & Viền gạch</div>
+        <div class="wa-csm-control">
+            <div class="wa-ism-swatch" data-color-bind="renkoBorderColor"></div>
+        </div>
+    </div>
     <div style="display: flex; gap: 10px; margin-bottom: 5px;">
         <div class="renko-style-card" onclick="setRenkoStyle('classic')" id="rsc-classic" style="flex: 1; padding: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; text-align: center; transition: 0.2s;">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#848e9c" stroke-width="2" style="margin-bottom:8px;"><path d="M3 17h4v4H3zM7 13h4v4H7zM11 9h4v4h-4zM15 5h4v4h-4z"/></svg>
@@ -2045,7 +2060,7 @@ window.closeProChart = function() {
         const t = parseInt(config.chartType) || 1; 
         
         // 🚀 ĐÃ SỬA: Bao gồm tất cả các loại biểu đồ Pro (13-21) để không bị mất bảng màu
-        const isCandles = [1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21].includes(t);
+        const isCandles = [1, 2, 3, 4, 5, 12, 13, 15, 16, 17, 18, 19, 20, 21].includes(t);
         const isLines = [6, 7, 9].includes(t);
         const isStep = (t === 8);
         const isHLC = (t === 10);
@@ -2274,7 +2289,8 @@ window.closeProChart = function() {
                         baselineUpColor: '#0ECB81', baselineDownColor: '#F6465D',
                         baselineUpFill: '#0ECB81', baselineDownFill: '#F6465D',
                         baselineFillOpacity: 0.2, baselineValue: 50, baselinePriceSource: 'close',
-                        renkoBrickPct: 0.5, renkoTrendThreshold: 0
+                        renkoBrickPct: 0.5, renkoTrendThreshold: 0,
+                        renkoUpColor: '#FFFFFF', renkoDownColor: '#B250FF', renkoBorderColor: '#787B86' // 🚀 THÊM DÒNG NÀY VÀO CUỐI
                     };
                     
                     window.WaveChartEngine.config = { ...defaultCfg };

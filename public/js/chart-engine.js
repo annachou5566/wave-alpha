@@ -41,6 +41,9 @@ const DEFAULT_CHART_CONFIG = {
     renkoBoxSize: 10,           // Kích thước gạch cho phương pháp Truyền thống
     renkoPercentage: 1,         // 1% cho phương pháp LTP
     renkoSource: 'close',       // Nguồn giá: close hoặc ohlc
+    renkoUpColor: '#FFFFFF',       // 🚀 THÊM MỚI: Màu gạch tăng
+    renkoDownColor: '#B250FF',     // 🚀 THÊM MỚI: Màu gạch giảm (Tím sáng rực rỡ)
+    renkoBorderColor: '#787B86',   // 🚀 THÊM MỚI: Màu râu/viền
 
     // 🚀 STEP LINE & OTHERS
     stepLineSingleColor: false,
