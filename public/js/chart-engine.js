@@ -1200,7 +1200,7 @@ try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'
 
 window.fetchBinanceHistory = async function(t, interval, isArea = false) {
     try {
-        let limit = isArea ? 100 : 300; 
+        let limit = isArea ? 100 : 1000; 
         let smartCtx = await window.getSmartTokenContext(t);
         let contract = smartCtx.contract;
         let chainId = smartCtx.chainId;
