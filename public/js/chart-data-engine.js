@@ -99,15 +99,26 @@
             for (let i = 1; i < data.length; i++) {
                 const curr = data[i];
                 const price = (config.renkoSource === 'ohlc') ? (curr.high + curr.low + curr.close) / 3 : curr.close;
-                runningHigh = Math.max(runningHigh, curr.high);
-                runningLow  = Math.min(runningLow, curr.low);
+                
+                // 🛡️ BỘ LỌC RÂU MA (SCAM WICK FILTER): Cắt râu tối đa 5 lần gạch
+                const maxWick = brickSize * 5;
+                const safeHigh = Math.min(curr.high, price + maxWick);
+                const safeLow  = Math.max(curr.low, price - maxWick);
+
+                runningHigh = Math.max(runningHigh, safeHigh);
+                runningLow  = Math.min(runningLow, safeLow);
 
                 let brickAdded;
                 let loopGuard = 0; 
                 do {
                     brickAdded = false;
                     loopGuard++;
-                    if (loopGuard > 1000) break; // Chặn kẹt CPU
+                    if (loopGuard > 1000) {
+                        // 🛡️ TELEPORT: Ép neo gạch về giá hiện tại để tránh nến khổng lồ kéo sập UI
+                        lastBrickClose = price;
+                        lastBrickOpen = lastDir === 1 ? price - brickSize : price + brickSize;
+                        break; 
+                    }
 
                     if (lastDir === 1) { 
                         if (price >= lastBrickClose + trendThreshold) {
@@ -173,12 +184,26 @@
             }
             ghost.close = price;
 
-            // Áp dụng râu nến ảo
-            if (state.isClassic) { ghost.high = Math.max(ghost.open, ghost.close); ghost.low = Math.min(ghost.open, ghost.close); }
+            // 🛡️ LỌC RÂU MA REALTIME
+            const maxWick = state.brickSize * 5;
+            const safeHigh = Math.min(curr.high, price + maxWick);
+            const safeLow  = Math.max(curr.low, price - maxWick);
+
+            // Áp dụng râu nến ảo (Đã tích hợp bộ lọc)
+            if (state.isClassic) { 
+                ghost.high = Math.max(ghost.open, ghost.close); 
+                ghost.low = Math.min(ghost.open, ghost.close); 
+            }
             else {
                 let ghostDir = ghost.close >= ghost.open ? 1 : -1;
-                if (ghostDir === 1) { ghost.high = Math.max(ghost.open, ghost.close); ghost.low = Math.min(ghost.open, ghost.close, curr.low); }
-                else { ghost.high = Math.max(ghost.open, ghost.close, curr.high); ghost.low = Math.min(ghost.open, ghost.close); }
+                if (ghostDir === 1) { 
+                    ghost.high = Math.max(ghost.open, ghost.close); 
+                    ghost.low = Math.min(ghost.open, ghost.close, safeLow); // 🛡️ Dùng safeLow thay cho curr.low
+                }
+                else { 
+                    ghost.high = Math.max(ghost.open, ghost.close, safeHigh); // 🛡️ Dùng safeHigh thay cho curr.high
+                    ghost.low = Math.min(ghost.open, ghost.close); 
+                }
             }
 
             // KIỂM TRA ĐIỀU KIỆN CHỐT GẠCH
