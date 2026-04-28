@@ -9,11 +9,13 @@
     global.WaveDataEngine = {
         rawHistory: [],
         lastChartType: 1, 
-        _renkoState: null, // Bộ nhớ đệm cho Nến ma Realtime
+        _renkoState: null,
+        _isBaking: false, // Cờ chặn việc nấu gạch chồng chéo gây lag
 
         processHistory: function (rawData, isReapply = false) {
             if (!rawData || rawData.length === 0) return [];
             
+            // 1. Cập nhật lịch sử và ép kiểu dữ liệu
             if (!isReapply) {
                 this.rawHistory = JSON.parse(JSON.stringify(rawData)); 
             }
@@ -23,6 +25,11 @@
 
             const cType = parseInt(config.chartType);
             this.lastChartType = cType;
+
+            // 2. Dọn dẹp trạng thái cũ nếu không phải nến Renko
+            if (cType !== 14) {
+                this._renkoState = null;
+            }
 
             if (cType === 12) return this._toHeikinAshi(this.rawHistory);
             if (cType === 14) return this._toRenko(this.rawHistory, config);
@@ -35,99 +42,48 @@
             if (!config || !currentChartData || currentChartData.length === 0) return rawTick;
 
             const cType = parseInt(config.chartType);
+            
+            // TRỐNG LỖI: Nếu không ở chế độ nến đặc biệt, trả về tick gốc ngay lập tức
             if (cType === 12) return this._updateHeikinAshiTick(rawTick, currentChartData);
             if (cType === 14) return this._updateRenkoTick(rawTick, currentChartData, config);
 
             return rawTick;
         },
 
-        // ==========================================
-        // 🧪 THUẬT TOÁN HEIKIN ASHI
-        // ==========================================
-        _toHeikinAshi: function (data) {
-            let haData = [];
-            for (let i = 0; i < data.length; i++) {
-                let curr = data[i];
-                let ha = { ...curr }; 
-                ha.close = (curr.open + curr.high + curr.low + curr.close) / 4;
-                if (i === 0) {
-                    ha.open = (curr.open + curr.close) / 2;
-                    ha.high = curr.high; 
-                    ha.low = curr.low;
-                } else {
-                    let prevHA = haData[i - 1];
-                    ha.open = (prevHA.open + prevHA.close) / 2;
-                    ha.high = Math.max(curr.high, ha.open, ha.close);
-                    ha.low = Math.min(curr.low, ha.open, ha.close);
-                }
-                haData.push(ha);
-            }
-            return haData;
-        },
+        // ... (Giữ nguyên hàm _toHeikinAshi và _updateHeikinAshiTick của bạn) ...
 
-        _updateHeikinAshiTick: function (curr, chartData) {
-            let lastRendered = chartData[chartData.length - 1];
-            let prevHA = (curr.timestamp === lastRendered.timestamp && chartData.length > 1) 
-                            ? chartData[chartData.length - 2] : lastRendered;
-
-            let ha = { ...curr };
-            ha.close = (curr.open + curr.high + curr.low + curr.close) / 4;
-            ha.open = (prevHA.open + prevHA.close) / 2;
-            ha.high = Math.max(curr.high, ha.open, ha.close);
-            ha.low = Math.min(curr.low, ha.open, ha.close);
-            return ha;
-        },
-
-        // ======================================================
-        // 🧱 ĐỘNG CƠ RENKO DUAL-CORE (CLASSIC & NINZA PRO)
-        // ======================================================
         _toRenko: function(data, config) {
             let renkoData = [];
             if (!data || data.length === 0) return renkoData;
 
-            // 1. Tính toán Kích thước Gạch (Smart Brick Size)
+            // 1. ÉP KIỂU TUYỆT ĐỐI: Chống lỗi cộng chuỗi gây sập web
             let method = config.renkoMethod || 'atr';
             let brickSize = 1;
-            
-            // 🛡️ LỚP BẢO VỆ ÉP KIỂU TUYỆT ĐỐI FLOAT/INT (Chống lỗi cộng chuỗi gây sụp Web)
             if (method === 'atr') {
                 brickSize = this._calculateATR(data, parseInt(config.renkoAtrLength) || 14);
             } else if (method === 'percentage') {
                 brickSize = data[0].close * ((parseFloat(config.renkoPercentage) || 1.0) / 100);
             } else {
-                brickSize = parseFloat(config.renkoBoxSize) || 10; 
+                brickSize = parseFloat(config.renkoBoxSize) || 10;
             }
 
-            // 🛡️ LỚP BẢO VỆ 1 (PHIÊN BẢN SMART SCALE - BAO CẢ MEMECOIN)
-            // Quét tìm giá cao nhất và thấp nhất trong toàn bộ lịch sử data
+            // 2. TỰ ĐỘNG CÂN CHỈNH QUY MÔ (Auto-Scale)
             let maxHigh = data[0].high, minLow = data[0].low;
             for (let i = 1; i < data.length; i++) {
                 if (data[i].high > maxHigh) maxHigh = data[i].high;
                 if (data[i].low < minLow) minLow = data[i].low;
             }
-            
             let priceRange = maxHigh - minLow;
-            
-            // Ép ngưỡng an toàn: Giới hạn tối đa khoảng 5000 gạch cho toàn bộ biểu đồ.
-            // Dù coin giá 100,000$ hay 0.00000001$, thuật toán vẫn tính ra tỷ lệ chuẩn.
             let minSafeSize = priceRange > 0 ? (priceRange / 5000) : (data[0].close * 0.0001);
             
-            // Xử lý triệt để số 0 hoặc số âm (nếu có lỗi data)
-            if (brickSize <= 0) brickSize = minSafeSize;
-
-            if (brickSize < minSafeSize) {
-                brickSize = minSafeSize;
-                console.warn(`[Renko Engine] Brick size quá nhỏ so với biên độ giá. Đã Auto-Scale về: ${brickSize}`);
-            }
+            if (brickSize < minSafeSize) brickSize = minSafeSize;
 
             const isClassic = (config.renkoStyle === 'classic'); 
-            
-            // 2. Tính toán Ngưỡng Đảo chiều
             let pct = parseFloat(config.renkoTrendPct) || 50;
             let trendThreshold = isClassic ? brickSize : brickSize * (pct / 100);
             let openOffset = brickSize - trendThreshold;
 
-            // 3. Khởi tạo Thông số Vòng lặp
+            // 3. KHỞI TẠO VÒNG LẶP
             let lastBrickClose = data[0].close;
             let lastBrickOpen  = lastBrickClose - brickSize;
             let lastDir        = 1; 
@@ -140,43 +96,35 @@
                 low: Math.min(lastBrickOpen, lastBrickClose, runningLow)
             });
 
-            // 4. Vòng lặp Nấu Gạch
             for (let i = 1; i < data.length; i++) {
                 const curr = data[i];
                 const price = (config.renkoSource === 'ohlc') ? (curr.high + curr.low + curr.close) / 3 : curr.close;
-                
                 runningHigh = Math.max(runningHigh, curr.high);
                 runningLow  = Math.min(runningLow, curr.low);
 
                 let brickAdded;
-                let loopGuard = 0; // 🛡️ BỘ ĐẾM CHỐNG KẸT CPU
-
+                let loopGuard = 0; 
                 do {
                     brickAdded = false;
                     loopGuard++;
-                    
-                    // CHỐT CHẶN AN TOÀN: Nếu nấu 1 nến mà tốn hơn 1000 viên gạch thì ép thoát
-                    if (loopGuard > 1000) {
-                        console.error("[Renko Panic] Phát hiện nến dị thường hoặc brickSize quá nhỏ! Ép thoát để cứu Web.");
-                        break; 
-                    }
+                    if (loopGuard > 1000) break; // Chặn kẹt CPU
 
-                    if (lastDir === 1) { // ĐANG TĂNG
-                        if (price >= lastBrickClose + trendThreshold) { // Tiếp diễn Tăng
+                    if (lastDir === 1) { 
+                        if (price >= lastBrickClose + trendThreshold) {
                             lastBrickOpen  = lastBrickClose - (isClassic ? 0 : openOffset);
                             lastBrickClose = lastBrickOpen  + brickSize; 
                             lastDir = 1; brickAdded = true;
-                        } else if (price <= (isClassic ? lastBrickOpen - brickSize : lastBrickClose - trendThreshold)) { // Đảo chiều Giảm
+                        } else if (price <= (isClassic ? lastBrickOpen - brickSize : lastBrickClose - trendThreshold)) {
                             lastBrickOpen  = lastBrickClose + (isClassic ? 0 : openOffset);
                             lastBrickClose = lastBrickOpen  - brickSize; 
                             lastDir = -1; brickAdded = true;
                         }
-                    } else { // ĐANG GIẢM
-                        if (price <= lastBrickClose - trendThreshold) { // Tiếp diễn Giảm
+                    } else { 
+                        if (price <= lastBrickClose - trendThreshold) {
                             lastBrickOpen  = lastBrickClose + (isClassic ? 0 : openOffset);
                             lastBrickClose = lastBrickOpen  - brickSize;
                             lastDir = -1; brickAdded = true;
-                        } else if (price >= (isClassic ? lastBrickOpen + brickSize : lastBrickClose + trendThreshold)) { // Đảo chiều Tăng
+                        } else if (price >= (isClassic ? lastBrickOpen + brickSize : lastBrickClose + trendThreshold)) {
                             lastBrickOpen  = lastBrickClose - (isClassic ? 0 : openOffset);
                             lastBrickClose = lastBrickOpen  + brickSize;
                             lastDir = 1; brickAdded = true;
@@ -184,48 +132,88 @@
                     }
 
                     if (brickAdded) {
-                        // 🚀 LOGIC CẠO RÂU SIÊU CHUẨN XÁC
                         let bHigh, bLow;
                         if (isClassic) {
-                            // Classic: Gạch vuông vức 100%, cắt bỏ mọi râu
                             bHigh = Math.max(lastBrickOpen, lastBrickClose);
                             bLow  = Math.min(lastBrickOpen, lastBrickClose);
                         } else {
-                            // NinZa: Cắt râu thuận xu hướng, giữ râu ngược xu hướng
-                            if (lastDir === 1) { // Tăng (Xanh) -> Phẳng đỉnh
-                                bHigh = lastBrickClose; 
-                                bLow  = Math.min(lastBrickOpen, runningLow); 
-                            } else {             // Giảm (Đỏ) -> Phẳng đáy
-                                bHigh = Math.max(lastBrickOpen, runningHigh); 
-                                bLow  = lastBrickClose; 
-                            }
+                            if (lastDir === 1) { bHigh = lastBrickClose; bLow  = Math.min(lastBrickOpen, runningLow); }
+                            else { bHigh = Math.max(lastBrickOpen, runningHigh); bLow  = lastBrickClose; }
                         }
-
                         renkoData.push({
                             ...curr,
                             timestamp: curr.timestamp + renkoData.length * 100, 
-                            open:   lastBrickOpen,
-                            close:  lastBrickClose,
-                            high:   bHigh,
-                            low:    bLow,
-                            volume: curr.volume,
+                            open: lastBrickOpen, close: lastBrickClose, high: bHigh, low: bLow, volume: curr.volume,
                         });
-
-                        // Reset râu nến cho chu kỳ đo tiếp theo
-                        runningHigh = lastBrickClose;
-                        runningLow  = lastBrickClose;
+                        runningHigh = lastBrickClose; runningLow = lastBrickClose;
                     }
                 } while (brickAdded);
             }
 
-            // Lưu lại state chuẩn xác cho Nến Realtime
-            this._renkoState = { 
-                brickSize, trendThreshold, openOffset, 
-                lastBrickClose, lastBrickOpen, lastDir, 
-                lastTimestamp: renkoData[renkoData.length-1].timestamp, 
-                isClassic 
-            };
+            // Lưu lại state mới để realtime sử dụng
+            this._renkoState = { brickSize, trendThreshold, openOffset, lastBrickClose, lastBrickOpen, lastDir, lastTimestamp: renkoData[renkoData.length-1].timestamp, isClassic };
             return renkoData;
+        },
+
+        _updateRenkoTick: function(curr, chartData, config) {
+            // CHỐT CHẶN 1: Nếu không phải nến Renko, thoát ngay
+            if (parseInt(config.chartType) !== 14) return curr;
+
+            const state = this._renkoState;
+            if (!state) return curr; 
+
+            const price = curr.close;
+            const ghost = { ...curr, timestamp: state.lastTimestamp + 100 };
+
+            // Tính toán nến ảo (Ghost candle)
+            if (state.lastDir === 1) {
+                ghost.open = (price >= state.lastBrickClose) ? state.lastBrickClose - state.openOffset : state.lastBrickClose + state.openOffset;  
+            } else {
+                ghost.open = (price <= state.lastBrickClose) ? state.lastBrickClose + state.openOffset : state.lastBrickClose - state.lastBrickClose - state.openOffset;  
+            }
+            ghost.close = price;
+
+            // Áp dụng râu nến ảo
+            if (state.isClassic) { ghost.high = Math.max(ghost.open, ghost.close); ghost.low = Math.min(ghost.open, ghost.close); }
+            else {
+                let ghostDir = ghost.close >= ghost.open ? 1 : -1;
+                if (ghostDir === 1) { ghost.high = Math.max(ghost.open, ghost.close); ghost.low = Math.min(ghost.open, ghost.close, curr.low); }
+                else { ghost.high = Math.max(ghost.open, ghost.close, curr.high); ghost.low = Math.min(ghost.open, ghost.close); }
+            }
+
+            // KIỂM TRA ĐIỀU KIỆN CHỐT GẠCH
+            let shouldBake = false;
+            if (state.isClassic) {
+                if (state.lastDir === 1) { if (price >= state.lastBrickClose + state.brickSize || price <= state.lastBrickOpen - state.brickSize) shouldBake = true; }
+                else { if (price <= state.lastBrickClose - state.brickSize || price >= state.lastBrickOpen + state.brickSize) shouldBake = true; }
+            } else {
+                if (Math.abs(price - state.lastBrickClose) >= state.trendThreshold) shouldBake = true;
+            }
+
+            if (shouldBake && !this._isBaking) {
+                this._isBaking = true; // Khóa bake
+                this.rawHistory.push({ timestamp: curr.timestamp, open: price, high: price, low: price, close: price, volume: curr.volume || 0 });
+                
+                // GIỚI HẠN LỊCH SỬ: Tránh phình to khi test size nhỏ (tối đa 1000 nến gốc)
+                if (this.rawHistory.length > 1000) this.rawHistory.shift();
+
+                if (window._renkoBakeTimeout) clearTimeout(window._renkoBakeTimeout);
+                window._renkoBakeTimeout = setTimeout(() => {
+                    if (window.WA_Chart) {
+                        let reprocessed = this.processHistory(this.rawHistory, true);
+                        let currentList = window.WA_Chart.getDataList();
+                        if (currentList && currentList.length > 0) {
+                            let lastTime = currentList[currentList.length - 1].timestamp;
+                            let newBricks = reprocessed.filter(c => c.timestamp >= lastTime);
+                            for (let b of newBricks) window.WA_Chart.updateData(b);
+                        } else {
+                            window.WA_Chart.applyNewData(reprocessed);
+                        }
+                    }
+                    this._isBaking = false; // Mở khóa
+                }, 10); 
+            }
+            return ghost;
         },
 
         _calculateATR: function(data, length) {
@@ -234,126 +222,23 @@
             for (let i = 1; i <= length; i++) {
                 const curr = data[data.length - i];
                 const prev = data[data.length - i - 1];
-                const tr   = Math.max(
-                    curr.high - curr.low,
-                    Math.abs(curr.high - prev.close),
-                    Math.abs(curr.low  - prev.close)
-                );
+                const tr = Math.max(curr.high - curr.low, Math.abs(curr.high - prev.close), Math.abs(curr.low - prev.close));
                 sumTR += tr;
             }
             return sumTR / length;
-        },
-
-        // ==========================================
-        // 🚀 CƠ CHẾ AUTO-BAKE REALTIME (FIX BUG GIẬT NẾN)
-        // ==========================================
-        _updateRenkoTick: function(curr, chartData, config) {
-            const state = this._renkoState;
-            if (!state) return curr; 
-
-            const price = curr.close;
-            const ghost = { ...curr };
-
-            // Tránh đè timestamp
-            ghost.timestamp = state.lastTimestamp + 100;
-
-            // Xác định điểm mở cửa của nến ảo
-            if (state.lastDir === 1) {
-                ghost.open = (price >= state.lastBrickClose)
-                    ? state.lastBrickClose - state.openOffset   
-                    : state.lastBrickClose + state.openOffset;  
-            } else {
-                ghost.open = (price <= state.lastBrickClose)
-                    ? state.lastBrickClose + state.openOffset   
-                    : state.lastBrickClose - state.openOffset;  
-            }
-
-            ghost.close = price;
-
-            // 🚀 ÁP DỤNG LUẬT CẠO RÂU LÊN NẾN ẢO (GHOST)
-            if (state.isClassic) {
-                ghost.high = Math.max(ghost.open, ghost.close);
-                ghost.low  = Math.min(ghost.open, ghost.close);
-            } else {
-                let ghostDir = ghost.close >= ghost.open ? 1 : -1;
-                if (ghostDir === 1) { // Tăng
-                    ghost.high = Math.max(ghost.open, ghost.close); // Phẳng đỉnh
-                    ghost.low  = Math.min(ghost.open, ghost.close, curr.low);
-                } else {              // Giảm
-                    ghost.high = Math.max(ghost.open, ghost.close, curr.high);
-                    ghost.low  = Math.min(ghost.open, ghost.close); // Phẳng đáy
-                }
-            }
-
-            // 🎯 LOGIC TỰ ĐỘNG CHỐT SỔ (PHÂN BIỆT RÕ CLASSIC VÀ NINZA)
-            let shouldBake = false;
-            
-            if (state.isClassic) {
-                // Classic: Đảo chiều cần biên độ gấp đôi (2x BrickSize)
-                if (state.lastDir === 1) {
-                    if (price >= state.lastBrickClose + state.brickSize || price <= state.lastBrickOpen - state.brickSize) shouldBake = true;
-                } else {
-                    if (price <= state.lastBrickClose - state.brickSize || price >= state.lastBrickOpen + state.brickSize) shouldBake = true;
-                }
-            } else {
-                // Ninza: Đối xứng 2 chiều (Chỉ cần 1x Threshold)
-                if (price >= state.lastBrickClose + state.trendThreshold || price <= state.lastBrickClose - state.trendThreshold) shouldBake = true;
-            }
-
-            if (shouldBake) {
-                // 1. Ghi nhận tick mới vào lịch sử gốc 
-                // 🛠️ VÁ LỖI NGỚ NGẨN: Bỏ "+ this.rawHistory.length" để tránh trôi dạt thời gian về tương lai
-                this.rawHistory.push({
-                    timestamp: curr.timestamp, 
-                    open: price, high: price, low: price, close: price, volume: curr.volume || 0
-                });
-
-                if (window._renkoBakeTimeout) clearTimeout(window._renkoBakeTimeout);
-                window._renkoBakeTimeout = setTimeout(() => {
-                    if (window.WaveChartEngine && window.WA_Chart) {
-                        const chart = window.WA_Chart;
-                        
-                        // 2. Nấu lại toàn bộ lịch sử (logic bắt buộc của Renko)
-                        let reprocessed = this.processHistory(this.rawHistory, true);
-                        
-                        // 🚀 GIẢI PHÁP TỐI THƯỢNG: Trích xuất các gạch mới và dùng updateData
-                        let currentChartData = chart.getDataList();
-                        
-                        if (currentChartData && currentChartData.length > 0) {
-                            let lastOldTime = currentChartData[currentChartData.length - 1].timestamp;
-                            
-                            // Lọc ra viên gạch cuối (để cập nhật râu/giá) và các viên gạch mới vừa sinh ra
-                            let newDataToUpdate = reprocessed.filter(c => c.timestamp >= lastOldTime);
-                            
-                            // Nạp từng viên gạch vào. updateData sẽ append/update mà KHÔNG reset lề phải!
-                            for (let i = 0; i < newDataToUpdate.length; i++) {
-                                chart.updateData(newDataToUpdate[i]);
-                            }
-                        } else {
-                            // Chỉ dùng applyNewData khi chart hoàn toàn trống
-                            chart.applyNewData(reprocessed);
-                        }
-                    }
-                }, 5); 
-            }
-
-            return ghost;
         }
     };
 
-    // Lắng nghe thay đổi Cài đặt để kích hoạt vẽ lại
+    // Cập nhật Listener an toàn hơn (Cuối file)
     window.addEventListener('wa_chart_config_updated', (e) => {
         const config = e.detail;
         if (global.WaveDataEngine) {
-            // SỬA LỖI 1: Bắt buộc vẽ lại nếu đổi chartType HOẶC đang ở Renko (14) mà bị đổi config
-            const isChartTypeChanged = config.chartType !== global.WaveDataEngine.lastChartType;
-            const isRenkoForcedUpdate = (parseInt(config.chartType) === 14); 
+            const isRenkoMode = (parseInt(config.chartType) === 14);
+            const isTypeChanged = (config.chartType !== global.WaveDataEngine.lastChartType);
 
-            if (isChartTypeChanged || isRenkoForcedUpdate) {
+            if (isTypeChanged || isRenkoMode) {
                 global.WaveDataEngine.lastChartType = config.chartType;
                 if (window.WA_Chart && global.WaveDataEngine.rawHistory.length > 0) {
-                    window._waTargetCandle = null;
-                    window._waCurrentCandle = null;
                     let reCookedData = global.WaveDataEngine.processHistory(global.WaveDataEngine.rawHistory, true);
                     window.WA_Chart.applyNewData(reCookedData);
                 }
