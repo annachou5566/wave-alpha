@@ -1807,15 +1807,21 @@ window.closeProChart = function() {
     
     <div class="wa-csm-row" id="row-renko-atr">
         <div class="wa-csm-label">Độ dài ATR</div>
-        <div class="wa-csm-control"><input type="number" class="wa-csm-input-dark" data-bind="renkoAtrLength" data-type="number"></div>
+        <div class="wa-csm-control">
+            <input type="number" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px; outline: none;" data-bind="renkoAtrLength" data-type="number">
+        </div>
     </div>
     <div class="wa-csm-row" id="row-renko-trad" style="display:none;">
         <div class="wa-csm-label">Kích thước tĩnh ($)</div>
-        <div class="wa-csm-control"><input type="number" class="wa-csm-input-dark" data-bind="renkoBoxSize" data-type="number"></div>
+        <div class="wa-csm-control">
+            <input type="number" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px; outline: none;" data-bind="renkoBoxSize" data-type="number">
+        </div>
     </div>
     <div class="wa-csm-row" id="row-renko-perc" style="display:none;">
         <div class="wa-csm-label">Phần trăm giá (%)</div>
-        <div class="wa-csm-control"><input type="number" step="0.1" class="wa-csm-input-dark" data-bind="renkoPercentage" data-type="number"></div>
+        <div class="wa-csm-control">
+            <input type="number" step="0.1" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px; outline: none;" data-bind="renkoPercentage" data-type="number">
+        </div>
     </div>
 
     <div id="ninza-only-settings">
@@ -1828,7 +1834,7 @@ window.closeProChart = function() {
                 </div>
             </div>
             <div class="wa-csm-control">
-                <input type="number" step="1" min="1" max="100" class="wa-csm-input-dark" data-bind="renkoTrendPct" data-type="number" placeholder="50">
+                <input type="number" step="1" min="1" max="100" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px; outline: none;" data-bind="renkoTrendPct" data-type="number" placeholder="50">
             </div>
         </div>
     </div>
