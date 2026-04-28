@@ -264,9 +264,10 @@
             }
 
             if (shouldBake) {
-                // 1. Ghi nhận tick mới vào lịch sử gốc
+                // 1. Ghi nhận tick mới vào lịch sử gốc 
+                // 🛠️ VÁ LỖI NGỚ NGẨN: Bỏ "+ this.rawHistory.length" để tránh trôi dạt thời gian về tương lai
                 this.rawHistory.push({
-                    timestamp: curr.timestamp + this.rawHistory.length, 
+                    timestamp: curr.timestamp, 
                     open: price, high: price, low: price, close: price, volume: curr.volume || 0
                 });
 
@@ -275,28 +276,25 @@
                     if (window.WaveChartEngine && window.WA_Chart) {
                         const chart = window.WA_Chart;
                         
-                        // 🚀 1. API KLINECHART: ĐO KHOẢNG CÁCH LỀ PHẢI
-                        let rightOffset = 0;
-                        if (typeof chart.getOffsetRightDistance === 'function') {
-                            rightOffset = chart.getOffsetRightDistance();
-                        }
-                        
-                        // Nếu cách lề phải > 30 pixel nghĩa là bác đang kéo về quá khứ soi chart
-                        const isLookingBack = rightOffset > 30; 
-
-                        // 2. Nấu data và nạp vào (KLineChart sẽ tự reset lề phải về 0)
+                        // 2. Nấu lại toàn bộ lịch sử (logic bắt buộc của Renko)
                         let reprocessed = this.processHistory(this.rawHistory, true);
-                        chart.applyNewData(reprocessed);
-
-                        // 🚀 3. KHÓA TỌA ĐỘ CHUẨN KLINECHART
-                        if (isLookingBack && typeof chart.setOffsetRightDistance === 'function') {
-                            // Ép chart lùi lại đúng khoảng cách bác đang xem
-                            chart.setOffsetRightDistance(rightOffset);
+                        
+                        // 🚀 GIẢI PHÁP TỐI THƯỢNG: Trích xuất các gạch mới và dùng updateData
+                        let currentChartData = chart.getDataList();
+                        
+                        if (currentChartData && currentChartData.length > 0) {
+                            let lastOldTime = currentChartData[currentChartData.length - 1].timestamp;
                             
-                            // Chốt chặn kép: Bồi thêm 1 lệnh sau 15ms để đè bẹp hiệu ứng cuộn mượt của KLineChart
-                            setTimeout(() => {
-                                chart.setOffsetRightDistance(rightOffset);
-                            }, 15);
+                            // Lọc ra viên gạch cuối (để cập nhật râu/giá) và các viên gạch mới vừa sinh ra
+                            let newDataToUpdate = reprocessed.filter(c => c.timestamp >= lastOldTime);
+                            
+                            // Nạp từng viên gạch vào. updateData sẽ append/update mà KHÔNG reset lề phải!
+                            for (let i = 0; i < newDataToUpdate.length; i++) {
+                                chart.updateData(newDataToUpdate[i]);
+                            }
+                        } else {
+                            // Chỉ dùng applyNewData khi chart hoàn toàn trống
+                            chart.applyNewData(reprocessed);
                         }
                     }
                 }, 5); 

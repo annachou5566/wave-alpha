@@ -107,7 +107,10 @@
         getOverlayById: function(id) { try { return _chartInstance ? _chartInstance.getOverlayById(id) : null; } catch(e){ return null; } },
         convertFromPixel: function(coordinate, finder) { try { return _chartInstance ? _chartInstance.convertFromPixel(coordinate, finder) : null; } catch(e){ return null; } },
         getChartStore: function() { try { return _chartInstance ? _chartInstance.getChartStore() : null; } catch(e){ return null; } },
-
+// 🚀 BỔ SUNG CÁC API BỊ THIẾU GÂY LỖI NGẦM (GIẬT CHART, LỖI TIMEZONE)
+getOffsetRightDistance: function() { try { return _chartInstance ? _chartInstance.getOffsetRightDistance() : 0; } catch(e){ return 0; } },
+setOffsetRightDistance: function(distance) { try { if(_chartInstance) _chartInstance.setOffsetRightDistance(distance); } catch(e){} },
+setTimezone: function(tz) { try { if(_chartInstance) _chartInstance.setTimezone(tz); } catch(e){} },
         // ========================================================
         // 🛡️ LÕI KIỂM SOÁT GIAO DIỆN NẾN
         // ========================================================
