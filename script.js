@@ -4,41 +4,60 @@ function formatCompact(num) {
 
 function renderMultiplierPath(c) {
     let isEarlyBird = c.earlyBird || (c.data && c.data.earlyBird) || false;
-    if (!c || !c.start || !isEarlyBird) return ''; 
+    // Thêm điều kiện check c.end để đảm bảo có mốc thời gian kết thúc
+    if (!c || !c.start || !c.end || !isEarlyBird) return ''; 
 
     const multipliers = [1.4, 1.3, 1.2, 1.2, 1.1, 1.1, 1.0];
     let sTime = c.startTime || "13:00:00";
     if (sTime.length === 5) sTime += ":00";
     
+    let eTime = c.endTime || "23:59:59";
+    if (eTime.length === 5) eTime += ":00";
+
     const now = new Date();
     const startTime = new Date(c.start + 'T' + sTime + 'Z');
-    const diffMs = now - startTime;
+    const endTime = new Date(c.end + 'T' + eTime + 'Z');
     
-    let elapsedDays = Math.max(0, diffMs / 86400000);
-    let currentDayInt = Math.min(7, Math.floor(elapsedDays) + 1);
-    let fillPct = Math.min(100, (elapsedDays / 6) * 100);
+    // Tính tổng thời gian từ Start đến End làm mốc 100% (7 ngày)
+    const totalMs = Math.max(1, endTime - startTime);
+    const diffMs = Math.max(0, now - startTime);
+    
+    // Phần trăm thanh progress
+    let fillPct = Math.min(100, (diffMs / totalMs) * 100);
+    
+    // Chia tổng thời gian làm 7 chặng đều nhau
+    let currentDayInt = Math.floor((diffMs / totalMs) * 7) + 1;
+    if (currentDayInt > 7) currentDayInt = 7;
+    
     const currentMul = multipliers[currentDayInt - 1];
 
-    const nextBoundary = new Date(startTime.getTime() + currentDayInt * 86400000);
-    const msLeft = nextBoundary - now;
+    // Thời gian đếm ngược đến chặng tiếp theo (hoặc báo Final nếu đã qua EndTime)
     let countdownStr = '';
-    if (msLeft > 0 && currentDayInt < 7) {
+    if (now >= endTime) {
+        countdownStr = 'Final';
+    } else {
+        const nextBoundaryMs = startTime.getTime() + (currentDayInt / 7) * totalMs;
+        const msLeft = nextBoundaryMs - now.getTime();
+        
         const h = Math.floor(msLeft / 3600000);
         const m = Math.floor((msLeft % 3600000) / 60000);
         countdownStr = `${h}h${m}m`;
-    } else if (currentDayInt === 7) {
-        countdownStr = 'Final';
     }
 
     let runnerIcon = 'fa-running'; 
     if (currentMul >= 1.3) runnerIcon = 'fa-skating'; 
-    if (currentDayInt === 7) runnerIcon = 'fa-flag-checkered'; 
+    if (now >= endTime) runnerIcon = 'fa-flag-checkered'; 
 
     let dotsHtml = '';
     let labelsHtml = '';
     multipliers.forEach((mul, i) => {
         const day = i + 1;
-        let cls = (day < currentDayInt) ? 'passed' : (day === currentDayInt ? 'active' : '');
+        let cls = '';
+        if (now >= endTime) {
+            cls = 'passed';
+        } else {
+            cls = (day < currentDayInt) ? 'passed' : (day === currentDayInt ? 'active' : '');
+        }
         dotsHtml += `<div class="eb-capsule-dot ${cls}"></div>`;
         labelsHtml += `<div class="eb-capsule-label ${cls}">${mul}</div>`;
     });
