@@ -267,131 +267,230 @@
             return Math.max(atr, data[data.length - 1].close * 0.0001);
         },
 
-        // 🚀 THUẬT TOÁN LINE BREAK CHUẨN GỐC (Đã sửa lỗi Volume)
-        _toLineBreak: function(data, config) {
-            let lbData = [];
-            if (!data || data.length === 0) return lbData;
+        // ============================================================
+// 🚀 THUẬT TOÁN LINE BREAK CHUẨN GỐC — Bản sửa lỗi đầy đủ
+// ============================================================
 
-            let blocks = [];
-            const LINE_COUNT = parseInt(config.lineBreakCount) || 3;
-            let pendingVolume = data[0].volume || 0; // 🚀 Kho chứa Volume đi ngang
+_toLineBreak: function(data, config) {
+    let lbData = [];
+    if (!data || data.length === 0) return lbData;
 
-            let startClose = data[0].close, startOpen = data[0].open;
-            let startDir = startClose >= startOpen ? 1 : -1;
-            let b1 = { ...data[0], open: startOpen, close: startClose, high: Math.max(startOpen, startClose), low: Math.min(startOpen, startClose), dir: startDir, volume: pendingVolume };
-            blocks.push(b1);
-            lbData.push(b1);
-            pendingVolume = 0; // Reset kho
+    const LINE_COUNT = parseInt(config.lineBreakCount) || 3;
+    let blocks = [];
+    let pendingVolume = 0;
 
-            for (let i = 1; i < data.length; i++) {
-                const curr = data[i], close = curr.close;
-                let lastBlock = blocks[blocks.length - 1], newBlock = null;
+    // ✅ FIX #2: Dùng timestamp của candle đầu tiên làm gốc cố định
+    const baseTimestamp = data[0].timestamp;
 
-                if (lastBlock.dir === 1) { 
-                    if (close > lastBlock.high) newBlock = { open: lastBlock.high, close: close, dir: 1, high: close, low: lastBlock.high };
-                    else {
-                        let lookback = Math.min(LINE_COUNT, blocks.length), minLow = lastBlock.low;
-                        for (let b = 1; b <= lookback; b++) minLow = Math.min(minLow, blocks[blocks.length - b].low);
-                        if (close < minLow) newBlock = { open: lastBlock.low, close: close, dir: -1, high: lastBlock.low, low: close };
-                    }
-                } else { 
-                    if (close < lastBlock.low) newBlock = { open: lastBlock.low, close: close, dir: -1, high: lastBlock.low, low: close };
-                    else {
-                        let lookback = Math.min(LINE_COUNT, blocks.length), maxHigh = lastBlock.high;
-                        for (let b = 1; b <= lookback; b++) maxHigh = Math.max(maxHigh, blocks[blocks.length - b].high);
-                        if (close > maxHigh) newBlock = { open: lastBlock.high, close: close, dir: 1, high: close, low: lastBlock.high };
-                    }
-                }
+    // --- Khởi tạo block đầu tiên ---
+    const first = data[0];
+    const startDir = first.close >= first.open ? 1 : -1;
+    const b0 = {
+        ...first,
+        timestamp: baseTimestamp,
+        open:  first.open,
+        close: first.close,
+        high:  Math.max(first.open, first.close),
+        low:   Math.min(first.open, first.close),
+        dir:   startDir,
+        volume: first.volume || 0
+    };
+    blocks.push(b0);
+    lbData.push(b0);
 
-                if (newBlock) {
-                    let fullBlock = {
-                        ...curr,
-                        timestamp: curr.timestamp + lbData.length * 100,
-                        open: newBlock.open, close: newBlock.close, high: newBlock.high, low: newBlock.low, dir: newBlock.dir,
-                        volume: pendingVolume + (curr.volume || 0) // 🚀 Chốt tổng Volume khi Breakout
-                    };
-                    blocks.push(fullBlock);
-                    lbData.push(fullBlock);
-                    pendingVolume = 0; // Reset kho cho nến sau
-                } else {
-                    pendingVolume += (curr.volume || 0); // 🚀 Cộng dồn Volume nếu giá đi ngang
-                }
-            }
-            this._lineBreakState = { blocks: blocks.slice(-50), lastTimestamp: lbData[lbData.length-1].timestamp, LINE_COUNT, pendingVolume };
-            return lbData;
-        },
+    for (let i = 1; i < data.length; i++) {
+        const curr      = data[i];
+        const close     = curr.close;
+        const lastBlock = blocks[blocks.length - 1];
+        let newBlock    = null;
 
-        // 🚀 CẬP NHẬT REALTIME LINE BREAK (Tích lũy Volume thông minh)
-        _updateLineBreakTick: function(curr, chartData, config) {
-            if (parseInt(config.chartType) !== 15) return curr;
-            const state = this._lineBreakState;
-            if (!state || state.blocks.length === 0) return curr;
-
-            let lastRaw = this.rawHistory[this.rawHistory.length - 1];
-            let isNewCandle = (!lastRaw || lastRaw.timestamp !== curr.timestamp);
-
-            if (isNewCandle) {
-                // 🚀 Nến thời gian đóng cửa: Đổ Volume cuối cùng của nó vào Kho tích lũy
-                if (lastRaw) state.pendingVolume += (lastRaw.volume || 0);
-                this.rawHistory.push({ ...curr });
-                if (this.rawHistory.length > 2000) this.rawHistory.shift(); 
+        if (lastBlock.dir === 1) {
+            // --- Upblock: kiểm tra tiếp diễn hoặc đảo chiều xuống ---
+            if (close > lastBlock.high) {
+                // Tiếp diễn tăng
+                newBlock = { open: lastBlock.high, close, dir: 1, high: close, low: lastBlock.high };
             } else {
-                lastRaw.close = curr.close;
-                lastRaw.high = Math.max(lastRaw.high, curr.high);
-                lastRaw.low = Math.min(lastRaw.low, curr.low);
-                lastRaw.volume = curr.volume;
-            }
-
-            // Tính tổng Volume hiện tại = Kho chứa + Volume của tick hiện tại
-            let currentTotalVol = (state.pendingVolume || 0) + (curr.volume || 0);
-
-            const close = curr.close;
-            let lastBlock = state.blocks[state.blocks.length - 1];
-            let ghostOpen, isBreakout = false, newBlockDir = 0;
-
-            if (lastBlock.dir === 1) { 
-                if (close > lastBlock.high) { ghostOpen = lastBlock.high; isBreakout = true; newBlockDir = 1; } 
-                else {
-                    let minLow = lastBlock.low, lookback = Math.min(state.LINE_COUNT, state.blocks.length);
-                    for(let b=1; b<=lookback; b++) minLow = Math.min(minLow, state.blocks[state.blocks.length-b].low);
-                    if (close < minLow) { ghostOpen = lastBlock.low; isBreakout = true; newBlockDir = -1; } 
-                    else { ghostOpen = lastBlock.high; } 
+                const lookback = Math.min(LINE_COUNT, blocks.length);
+                // ✅ FIX #4: khởi tạo Infinity thay vì lastBlock.low để tránh double-count
+                let minLow = Infinity;
+                for (let b = 1; b <= lookback; b++) {
+                    minLow = Math.min(minLow, blocks[blocks.length - b].low);
                 }
-            } else { 
-                if (close < lastBlock.low) { ghostOpen = lastBlock.low; isBreakout = true; newBlockDir = -1; } 
-                else {
-                    let maxHigh = lastBlock.high, lookback = Math.min(state.LINE_COUNT, state.blocks.length);
-                    for(let b=1; b<=lookback; b++) maxHigh = Math.max(maxHigh, state.blocks[state.blocks.length-b].high);
-                    if (close > maxHigh) { ghostOpen = lastBlock.high; isBreakout = true; newBlockDir = 1; } 
-                    else { ghostOpen = lastBlock.low; } 
+                if (close < minLow) {
+                    // ✅ FIX #1 CRITICAL: open = minLow (ngưỡng thực sự bị phá), KHÔNG phải lastBlock.low
+                    newBlock = { open: minLow, close, dir: -1, high: minLow, low: close };
                 }
             }
-
-            if (isBreakout) {
-                let fullBlock = {
-                    ...curr, timestamp: state.lastTimestamp + 100, open: ghostOpen, close: close,
-                    high: Math.max(ghostOpen, close), low: Math.min(ghostOpen, close),
-                    dir: newBlockDir, volume: currentTotalVol // 🚀 Chốt Volume
-                };
-
-                state.blocks.push(fullBlock);
-                if (state.blocks.length > 50) state.blocks.shift();
-                if (window.WA_Chart) window.WA_Chart.updateData(fullBlock); 
-
-                state.lastTimestamp += 100;
-                // 🚀 THUẬT TOÁN CHIA TÁCH VOLUME INTRA-CANDLE: 
-                // Ép kho chứa âm bằng đúng volume hiện tại để bù trừ cho các tick tiếp theo của nến chưa đóng
-                state.pendingVolume = -(curr.volume || 0); 
-
-                return { ...curr, timestamp: state.lastTimestamp + 100, open: close, close: close, high: close, low: close, volume: 0 };
+        } else {
+            // --- Downblock: kiểm tra tiếp diễn hoặc đảo chiều lên ---
+            if (close < lastBlock.low) {
+                // Tiếp diễn giảm
+                newBlock = { open: lastBlock.low, close, dir: -1, high: lastBlock.low, low: close };
+            } else {
+                const lookback = Math.min(LINE_COUNT, blocks.length);
+                // ✅ FIX #4: khởi tạo -Infinity
+                let maxHigh = -Infinity;
+                for (let b = 1; b <= lookback; b++) {
+                    maxHigh = Math.max(maxHigh, blocks[blocks.length - b].high);
+                }
+                if (close > maxHigh) {
+                    // ✅ FIX #1 CRITICAL: open = maxHigh (ngưỡng thực sự bị phá), KHÔNG phải lastBlock.high
+                    newBlock = { open: maxHigh, close, dir: 1, high: close, low: maxHigh };
+                }
             }
-
-            // Nằm im chờ đợi, hiển thị Volume cộng dồn liên tục
-            return {
-                ...curr, timestamp: state.lastTimestamp + 100, open: ghostOpen, close: close,
-                high: Math.max(ghostOpen, close), low: Math.min(ghostOpen, close), volume: currentTotalVol
-            };
         }
+
+        if (newBlock) {
+            const fullBlock = {
+                ...curr,
+                // ✅ FIX #2: timestamp nhất quán — gốc cố định + index * 100
+                timestamp: baseTimestamp + lbData.length * 100,
+                open:   newBlock.open,
+                close:  newBlock.close,
+                high:   newBlock.high,
+                low:    newBlock.low,
+                dir:    newBlock.dir,
+                volume: pendingVolume + (curr.volume || 0) // Chốt tổng volume khi breakout
+            };
+            blocks.push(fullBlock);
+            lbData.push(fullBlock);
+            pendingVolume = 0;
+        } else {
+            pendingVolume += (curr.volume || 0); // Tích lũy volume khi giá đi ngang
+        }
+    }
+
+    this._lineBreakState = {
+        blocks:        blocks.slice(-50),
+        lastTimestamp: lbData[lbData.length - 1].timestamp,
+        LINE_COUNT,
+        pendingVolume
+    };
+    return lbData;
+},
+
+// ============================================================
+// 🚀 CẬP NHẬT REALTIME LINE BREAK — Bản sửa lỗi đầy đủ
+// ============================================================
+
+_updateLineBreakTick: function(curr, chartData, config) {
+    if (parseInt(config.chartType) !== 15) return curr;
+    const state = this._lineBreakState;
+    if (!state || state.blocks.length === 0) return curr;
+
+    // --- Quản lý raw history ---
+    let lastRaw      = this.rawHistory[this.rawHistory.length - 1];
+    const isNewCandle = !lastRaw || lastRaw.timestamp !== curr.timestamp;
+
+    if (isNewCandle) {
+        // Nến cũ đóng: đổ volume cuối của nó vào kho tích lũy
+        if (lastRaw) state.pendingVolume += (lastRaw.volume || 0);
+        this.rawHistory.push({ ...curr });
+        if (this.rawHistory.length > 2000) this.rawHistory.shift();
+    } else {
+        lastRaw.close  = curr.close;
+        lastRaw.high   = Math.max(lastRaw.high, curr.high);
+        lastRaw.low    = Math.min(lastRaw.low, curr.low);
+        lastRaw.volume = curr.volume;
+    }
+
+    const close          = curr.close;
+    const lastBlock      = state.blocks[state.blocks.length - 1];
+    const currentTotalVol = (state.pendingVolume || 0) + (curr.volume || 0);
+
+    let ghostOpen, breakoutOpen;
+    let isBreakout = false, newBlockDir = 0;
+
+    if (lastBlock.dir === 1) {
+        if (close > lastBlock.high) {
+            // Breakout tiếp diễn tăng
+            ghostOpen = breakoutOpen = lastBlock.high;
+            isBreakout = true;
+            newBlockDir = 1;
+        } else {
+            const lookback = Math.min(state.LINE_COUNT, state.blocks.length);
+            let minLow = Infinity;
+            for (let b = 1; b <= lookback; b++) {
+                minLow = Math.min(minLow, state.blocks[state.blocks.length - b].low);
+            }
+            if (close < minLow) {
+                // ✅ FIX #1 CRITICAL: ghostOpen = minLow, KHÔNG phải lastBlock.low
+                ghostOpen = breakoutOpen = minLow;
+                isBreakout = true;
+                newBlockDir = -1;
+            } else {
+                ghostOpen = lastBlock.high; // Ghost đang chờ breakout tăng
+            }
+        }
+    } else {
+        if (close < lastBlock.low) {
+            // Breakout tiếp diễn giảm
+            ghostOpen = breakoutOpen = lastBlock.low;
+            isBreakout = true;
+            newBlockDir = -1;
+        } else {
+            const lookback = Math.min(state.LINE_COUNT, state.blocks.length);
+            let maxHigh = -Infinity;
+            for (let b = 1; b <= lookback; b++) {
+                maxHigh = Math.max(maxHigh, state.blocks[state.blocks.length - b].high);
+            }
+            if (close > maxHigh) {
+                // ✅ FIX #1 CRITICAL: ghostOpen = maxHigh, KHÔNG phải lastBlock.high
+                ghostOpen = breakoutOpen = maxHigh;
+                isBreakout = true;
+                newBlockDir = 1;
+            } else {
+                ghostOpen = lastBlock.low; // Ghost đang chờ breakout giảm
+            }
+        }
+    }
+
+    if (isBreakout) {
+        // ✅ FIX #3: Dùng newTs rõ ràng để tránh lệch timestamp +200
+        const newTs = state.lastTimestamp + 100;
+
+        const fullBlock = {
+            ...curr,
+            timestamp: newTs,
+            open:      breakoutOpen,
+            close,
+            high:      Math.max(breakoutOpen, close),
+            low:       Math.min(breakoutOpen, close),
+            dir:       newBlockDir,
+            volume:    currentTotalVol
+        };
+
+        state.blocks.push(fullBlock);
+        if (state.blocks.length > 50) state.blocks.shift();
+        if (window.WA_Chart) window.WA_Chart.updateData(fullBlock);
+
+        // ✅ FIX #3: Cập nhật state SAU khi đã dùng newTs
+        state.lastTimestamp = newTs;
+
+        // Thuật toán bù trừ volume nội nến (volume là cumulative của candle)
+        state.pendingVolume = -(curr.volume || 0);
+
+        // Ghost rỗng sau breakout, chờ tick tiếp theo
+        return {
+            ...curr,
+            timestamp: state.lastTimestamp + 100,
+            open:  close,
+            close, high: close, low: close,
+            volume: 0
+        };
+    }
+
+    // --- Chờ breakout: hiển thị ghost block cộng dồn volume ---
+    return {
+        ...curr,
+        timestamp: state.lastTimestamp + 100,
+        open:   ghostOpen,
+        close,
+        high:   Math.max(ghostOpen, close),
+        low:    Math.min(ghostOpen, close),
+        volume: currentTotalVol
+    };
+}
     }; // Kết thúc Object WaveDataEngine
 
     // Cập nhật Listener an toàn hơn (Cuối file)
