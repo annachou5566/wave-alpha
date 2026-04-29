@@ -1209,12 +1209,18 @@ try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'
 
         window.scSpeedWindow = window.scSpeedWindow.filter(x => now - x.t <= 5000);
 
-        // 💡 VÁ LỖI: Chỉ chạy vòng lặp Fish Filter NẾU THỰC SỰ có marker mới được thêm vào
+        // 💡 VÁ LỖI CỰC MẠNH: Dùng ID tín hiệu cuối thay vì đếm độ dài mảng (tránh lỗi kẹt ở 50 do hàm shift)
         if (typeof window.applyFishFilter === 'function') {
-            let currentMarkerCount = (window.scChartMarkers || []).length;
-            if (currentMarkerCount !== window._lastMarkerCount) {
+            let markers = window.scChartMarkers || [];
+            let latestMarker = markers.length > 0 ? markers[markers.length - 1] : null;
+            
+            // Tạo tem định danh duy nhất cho marker cuối (Thời gian + Tên)
+            let latestMarkerId = latestMarker ? (latestMarker.time + '_' + latestMarker.text) : null;
+            
+            // Nếu có tín hiệu mới khác với tín hiệu cũ -> Vẽ ngay lập tức
+            if (latestMarkerId !== window._lastRenderedMarkerId) {
                 window.applyFishFilter();
-                window._lastMarkerCount = currentMarkerCount;
+                window._lastRenderedMarkerId = latestMarkerId;
             }
         }
         if (typeof window.updateCommandCenterUI === 'function') window.updateCommandCenterUI();
