@@ -3,10 +3,19 @@ function formatCompact(num) {
 }
 
 function renderMultiplierPath(c) {
-    let isEarlyBird = c.earlyBird || (c.data && c.data.earlyBird) || false;
-    if (!c || !c.start || !c.end || !isEarlyBird) return ''; 
+    let ebValue = c.earlyBird || (c.data && c.data.earlyBird);
+    // Xử lý tương thích với các tournament cũ lưu dạng boolean
+    if (ebValue === true || ebValue === 'true') ebValue = '1.4x';
+    
+    // Nếu giải đấu không có Early Bird hoặc không đủ start/end thì không hiển thị
+    if (!c || !c.start || !c.end || !ebValue || ebValue === 'none' || ebValue === false || ebValue === 'false') return ''; 
 
-    const multipliers = [1.4, 1.3, 1.2, 1.2, 1.1, 1.1, 1.0];
+    // Chọn mảng hệ số dựa theo cấu hình của giải
+    let multipliers = [1.4, 1.3, 1.2, 1.2, 1.1, 1.1, 1.0];
+    if (ebValue === '2.0x') {
+        multipliers = [2.0, 1.8, 1.7, 1.5, 1.3, 1.1, 1.0];
+    }
+
     let sTime = c.startTime || "13:00:00";
     if (sTime.length === 5) sTime += ":00";
     
@@ -17,23 +26,15 @@ function renderMultiplierPath(c) {
     const startTime = new Date(c.start + 'T' + sTime + 'Z');
     const endTime = new Date(c.end + 'T' + eTime + 'Z');
     
-    // Tính tổng thời gian thực tế của giải đấu
     const totalMs = Math.max(1, endTime - startTime);
-    
-    // Tính toán thời lượng của 1 "ngày" chuẩn bằng cách chia tổng thời gian làm 7 chặng
     const oneDayMs = totalMs / 7;
     const diffMs = Math.max(0, now - startTime);
     const elapsedDays = diffMs / oneDayMs;
     
-    // Xác định đang ở chặng nào (từ 1 đến 7)
     let currentDayInt = Math.floor(elapsedDays) + 1;
     if (currentDayInt > 7) currentDayInt = 7;
     
     const currentMul = multipliers[currentDayInt - 1];
-
-    // Mấu chốt UI: UI có 7 chấm tròn tương ứng với 6 khoảng trống.
-    // Do đó thanh fillPct cần hoàn thành 100% trong đúng 6 ngày đầu tiên.
-    // Sang ngày thứ 7, fillPct = 100% -> Viên thuốc sẽ nằm đè chính xác lên mốc 1.0x cuối cùng.
     let fillPct = Math.min(100, (elapsedDays / 6) * 100);
 
     let countdownStr = '';
@@ -3236,7 +3237,12 @@ let logoInput = document.getElementById('c-logo');
     document.getElementById('c-winners').value = c.topWinners;
     document.getElementById('c-alphaType').value = c.alphaType;
     document.getElementById('c-rule').value = c.ruleType;
-    if (document.getElementById('c-earlyBird')) document.getElementById('c-earlyBird').value = c.earlyBird ? 'true' : 'false';
+    if (document.getElementById('c-earlyBird')) {
+        let eb = c.earlyBird;
+        if (eb === true || eb === 'true') eb = '1.4x'; // Tương thích ngược dữ liệu cũ
+        else if (eb === false || eb === 'false' || !eb) eb = 'none';
+        document.getElementById('c-earlyBird').value = eb;
+    }
 
     document.getElementById('c-start').value = c.start;
     document.getElementById('c-start-time').value = c.startTime || "00:00"; 
@@ -3309,7 +3315,7 @@ function saveComp() {
 
         alphaType: document.getElementById('c-alphaType').value,
         ruleType: document.getElementById('c-rule').value,
-        earlyBird: document.getElementById('c-earlyBird').value === 'true',
+        earlyBird: document.getElementById('c-earlyBird').value,
         inputTokens: tokensArr,
         
         history: c.history || [],
