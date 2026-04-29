@@ -84,7 +84,6 @@ window.WaveChartEngine = {
             // =====================================================================
             // 🚀 GIẢI PHÁP CHUYÊN NGHIỆP: WRAPPER FUNCTION
             // Tự động "tiêm" logic chém bay nút Xóa/Cài đặt cho MỌI chart đi qua nó.
-            // Sau này tạo thêm 100 chart mới cũng tự động được áp dụng.
             // =====================================================================
             const registerWaveChart = (config) => {
                 if (!config.createTooltipDataSource) {
@@ -98,6 +97,14 @@ window.WaveChartEngine = {
                         };
                     };
                 }
+                
+                // 🚀 FIX LỖI DẸP LÉP TRỤC GIÁ (ANTI-SQUASH Y-AXIS)
+                // Ép mảng figures rỗng để thư viện KHÔNG quét nhầm Volume và Timestamp 
+                // vào việc tính toán Auto-Scale của trục giá (Y-Axis).
+                if (!config.figures) {
+                    config.figures = [];
+                }
+                
                 window.klinecharts.registerIndicator(config);
             };
 
