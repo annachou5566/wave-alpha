@@ -268,20 +268,17 @@
         },
 
         // ============================================================
-// 🚀 LINE BREAK — BẢN FIX CUỐI CÙNG CHÍNH XÁC (5 bugs patched)
+// 🚀 LINE BREAK — FULL CODE HOÀN CHỈNH (All bugs fixed)
 // ============================================================
 
 _toLineBreak: function(data, config) {
     let lbData = [];
 
-    // ✅ [BUG-1 CRITICAL] Reset rawHistory khi chart vẽ lại từ đầu.
-    // Thiếu dòng này: đổi timeframe → lastRaw = nến cũ session trước
-    // → _updateLineBreakTick tạo block giả từ dữ liệu hoàn toàn sai.
+    // [BUG-1] Reset rawHistory khi vẽ lại — tránh nến cũ tạo block giả
     this.rawHistory = [];
 
     if (!data || data.length === 0) {
-        // ✅ [BUG-3 MEDIUM] Clear state khi data rỗng, tránh state cũ rò rỉ
-        // sang biểu đồ mới (đổi symbol, đổi timeframe trả về rỗng).
+        // [BUG-3] Clear state khi data rỗng — tránh state cũ rò rỉ
         this._lineBreakState = null;
         return lbData;
     }
@@ -290,8 +287,7 @@ _toLineBreak: function(data, config) {
     let blocks = [];
     const baseTimestamp = data[0].timestamp;
 
-    // ✅ [BUG-6 LOW] Validate candle đầu tiên.
-    // Nếu open/close = NaN: Math.max(NaN,NaN)=NaN → toàn bộ chart lỗi cascade.
+    // [BUG-6] Validate candle đầu tiên — tránh NaN cascade
     const first      = data[0];
     const firstOpen  = parseFloat(first.open)  || 0;
     const firstClose = parseFloat(first.close) || firstOpen;
@@ -305,23 +301,22 @@ _toLineBreak: function(data, config) {
         high:   Math.max(firstOpen, firstClose),
         low:    Math.min(firstOpen, firstClose),
         dir:    startDir,
-        // ✅ [BUG-4 MEDIUM] parseFloat(x) || 0, KHÔNG phải parseFloat(x || 0)
-        // parseFloat("abc" || 0) = parseFloat("abc") = NaN ❌
-        // parseFloat("abc") || 0 = NaN || 0 = 0               ✅
-        volume: parseFloat(first.volume) || 0
+        volume: parseFloat(first.volume) || 0 // [BUG-4]
     };
     blocks.push(b0);
     lbData.push(b0);
 
     for (let i = 1; i < data.length; i++) {
-        const curr      = data[i];
-        const close     = parseFloat(curr.close);
-        if (isNaN(close)) continue; // ✅ [BUG-6] skip nến lỗi, tránh NaN cascade
+        const curr  = data[i];
+        const close = parseFloat(curr.close);
+        if (isNaN(close)) continue; // [BUG-6] skip nến lỗi
+
         const lastBlock = blocks[blocks.length - 1];
         let newBlock    = null;
 
         if (lastBlock.dir === 1) {
             if (close > lastBlock.high) {
+                // Tiếp diễn tăng
                 newBlock = { open: lastBlock.high, close, dir: 1, high: close, low: lastBlock.high };
             } else {
                 let minLow = Infinity;
@@ -329,11 +324,13 @@ _toLineBreak: function(data, config) {
                     minLow = Math.min(minLow, blocks[blocks.length - b].low);
                 }
                 if (close < minLow) {
+                    // Đảo chiều xuống — neo vào đỉnh block cũ
                     newBlock = { open: lastBlock.high, close, dir: -1, high: lastBlock.high, low: close };
                 }
             }
         } else {
             if (close < lastBlock.low) {
+                // Tiếp diễn giảm
                 newBlock = { open: lastBlock.low, close, dir: -1, high: lastBlock.low, low: close };
             } else {
                 let maxHigh = -Infinity;
@@ -341,6 +338,7 @@ _toLineBreak: function(data, config) {
                     maxHigh = Math.max(maxHigh, blocks[blocks.length - b].high);
                 }
                 if (close > maxHigh) {
+                    // Đảo chiều lên — neo vào đáy block cũ
                     newBlock = { open: lastBlock.low, close, dir: 1, high: close, low: lastBlock.low };
                 }
             }
@@ -355,7 +353,7 @@ _toLineBreak: function(data, config) {
                 high:   newBlock.high,
                 low:    newBlock.low,
                 dir:    newBlock.dir,
-                volume: parseFloat(curr.volume) || 0 // ✅ [BUG-4]
+                volume: parseFloat(curr.volume) || 0 // [BUG-4]
             };
             blocks.push(fullBlock);
             lbData.push(fullBlock);
@@ -365,29 +363,32 @@ _toLineBreak: function(data, config) {
     this._lineBreakState = {
         blocks:        blocks.slice(-50),
         lastTimestamp: lbData[lbData.length - 1].timestamp,
-        LINE_COUNT
+        LINE_COUNT,
+        pendingVolume: 0 // [VOL-FIX] Kho tích lũy volume cho ghost display
     };
     return lbData;
 },
 
 // ============================================================
-// 🚀 REALTIME UPDATE — BẢN FIX CUỐI CÙNG CHÍNH XÁC
+// 🚀 REALTIME UPDATE — FULL CODE HOÀN CHỈNH
 // ============================================================
 
 _updateLineBreakTick: function(curr, chartData, config) {
     if (parseInt(config.chartType) !== 15) return curr;
 
-    // ✅ [BUG-2 HIGH] Guard khởi tạo rawHistory.
-    // Race condition / hot-reload → this.rawHistory = undefined → TypeError crash.
+    // [BUG-2] Guard khởi tạo rawHistory — tránh TypeError crash
     if (!this.rawHistory) this.rawHistory = [];
 
     const state = this._lineBreakState;
     if (!state || state.blocks.length === 0) return curr;
 
+    // Backward compat: đảm bảo pendingVolume luôn tồn tại
+    if (state.pendingVolume === undefined) state.pendingVolume = 0;
+
     let lastRaw       = this.rawHistory[this.rawHistory.length - 1];
     const isNewCandle = !lastRaw || lastRaw.timestamp !== curr.timestamp;
 
-    // 1. NẾN GỐC ĐÓNG CỬA → kiểm tra breakout trên nến đã confirmed
+    // ── BƯỚC 1: Nến gốc vừa đóng cửa ──────────────────────────────────
     if (isNewCandle) {
         if (lastRaw) {
             const close     = lastRaw.close;
@@ -402,7 +403,9 @@ _updateLineBreakTick: function(curr, chartData, config) {
                     for (let b = 1; b <= Math.min(state.LINE_COUNT, state.blocks.length); b++) {
                         minLow = Math.min(minLow, state.blocks[state.blocks.length - b].low);
                     }
-                    if (close < minLow) { openPrice = lastBlock.high; isBreakout = true; newBlockDir = -1; }
+                    if (close < minLow) {
+                        openPrice = lastBlock.high; isBreakout = true; newBlockDir = -1;
+                    }
                 }
             } else {
                 if (close < lastBlock.low) {
@@ -412,7 +415,9 @@ _updateLineBreakTick: function(curr, chartData, config) {
                     for (let b = 1; b <= Math.min(state.LINE_COUNT, state.blocks.length); b++) {
                         maxHigh = Math.max(maxHigh, state.blocks[state.blocks.length - b].high);
                     }
-                    if (close > maxHigh) { openPrice = lastBlock.low; isBreakout = true; newBlockDir = 1; }
+                    if (close > maxHigh) {
+                        openPrice = lastBlock.low; isBreakout = true; newBlockDir = 1;
+                    }
                 }
             }
 
@@ -426,17 +431,26 @@ _updateLineBreakTick: function(curr, chartData, config) {
                     high:   Math.max(openPrice, close),
                     low:    Math.min(openPrice, close),
                     dir:    newBlockDir,
-                    volume: parseFloat(lastRaw.volume) || 0 // ✅ [BUG-4]
+                    volume: parseFloat(lastRaw.volume) || 0 // Pure volume nến breakout
                 };
                 state.blocks.push(fullBlock);
                 if (state.blocks.length > 50) state.blocks.shift();
                 if (window.WA_Chart) window.WA_Chart.updateData(fullBlock);
                 state.lastTimestamp = newTs;
+
+                // [VOL-FIX] Reset kho sau breakout confirm
+                state.pendingVolume = 0;
+            } else {
+                // [VOL-FIX] Không breakout: cộng dồn volume nến vừa đóng vào kho
+                // → ghost volume sẽ không bị reset về 0 mỗi đầu nến mới
+                state.pendingVolume += parseFloat(lastRaw.volume) || 0;
             }
         }
 
         this.rawHistory.push({ ...curr });
         if (this.rawHistory.length > 2000) this.rawHistory.shift();
+
+    // ── BƯỚC 2: Cập nhật nến gốc đang chạy ────────────────────────────
     } else {
         lastRaw.close  = curr.close;
         lastRaw.high   = Math.max(lastRaw.high, curr.high);
@@ -444,12 +458,11 @@ _updateLineBreakTick: function(curr, chartData, config) {
         lastRaw.volume = curr.volume;
     }
 
-    // 2. GHOST BLOCK — visual only, chưa đóng cửa chưa tính
-    // ghostOpen = lastBlock.close (= high cho upblock, = low cho downblock)
-    // Đây là điểm MỞ CỦA BRICK TIẾP THEO — đúng cho cả Line Break lẫn Renko.
-    // KHÔNG thay đổi logic này vì nó là bản chất chung của mọi loại chart dạng brick.
+    // ── BƯỚC 3: Trả về ghost block (visual only) ───────────────────────
     const close     = curr.close;
     const lastBlock = state.blocks[state.blocks.length - 1];
+
+    // ghostOpen = điểm đóng của block cuối = điểm mở của brick tiếp theo
     const ghostOpen = lastBlock.dir === 1 ? lastBlock.high : lastBlock.low;
 
     return {
@@ -459,7 +472,8 @@ _updateLineBreakTick: function(curr, chartData, config) {
         close,
         high:   Math.max(ghostOpen, close),
         low:    Math.min(ghostOpen, close),
-        volume: parseFloat(curr.volume) || 0 // ✅ [BUG-4]
+        // [VOL-FIX] Kho tích lũy + volume nến đang chạy = không bao giờ reset giữa chừng
+        volume: state.pendingVolume + (parseFloat(curr.volume) || 0)
     };
 }
     }; // Kết thúc Object WaveDataEngine
