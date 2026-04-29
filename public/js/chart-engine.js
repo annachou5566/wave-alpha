@@ -1748,71 +1748,166 @@ window.evaluateQuantVerdict = function() {
 };
 
 // ==========================================
-// 🛡️ BƯỚC 1: WAVE ALPHA EVENT HUB (Tách ghép Tight-Coupling)
-// Hệ thống thần kinh trung ương xử lý mọi sự kiện biểu đồ
+// 🛡️ BƯỚC 1: WAVE ALPHA EVENT HUB (ĐA LUỒNG - MULTI-STREAM ROUTER)
+// Phân luồng WebSocket & Klines cho 9 ô độc lập (Chuẩn TradingView)
 // ==========================================
+
+window.waSubWebSockets = window.waSubWebSockets || {};
+window.waCellTokens = window.waCellTokens || {}; 
+window.waCellIntervals = window.waCellIntervals || {}; 
+
+// 🚀 ĐỘNG CƠ WS SIÊU NHẸ DÀNH RIÊNG TỪNG Ô (CHỈ KÉO NẾN VẼ CHART)
+window.connectLightweightStream = async function(t, interval, cellId) {
+    if (window.waSubWebSockets[cellId]) { 
+        window.waSubWebSockets[cellId].close(); 
+        delete window.waSubWebSockets[cellId]; 
+    }
+
+    let smartCtx = await window.getSmartTokenContext(t);
+    let contract = smartCtx.contract;
+    let chainId = smartCtx.chainId;
+    let rawId = (t.alphaId || t.id || '').toLowerCase().replace('alpha_', '');
+    let streamPrefix = rawId ? `alpha_${rawId}usdt` : (t.symbol || '').toLowerCase() + 'usdt';
+
+    let targetInterval = interval === 'tick' ? '1s' : interval;
+    let streamName = contract ? `came@${contract}@${chainId}@kline_${targetInterval}` : `${streamPrefix}@kline_${targetInterval}`;
+
+    let ws = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream');
+    window.waSubWebSockets[cellId] = ws;
+
+    ws.onopen = () => {
+        ws.send(JSON.stringify({ "method": "SUBSCRIBE", "params": [streamName], "id": Date.now() }));
+    };
+
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.e === 'kline' || (data.stream && data.stream.includes('kline_'))) {
+            let k = data.data.k || data.data;
+            if (!k) return;
+            
+            let rawTk = parseInt(k.t || k.ot);
+            let correctTk = rawTk < 100000000000 ? rawTk * 1000 : rawTk;
+            let c = parseFloat(k.c);
+            
+            let candle = {
+                timestamp: correctTk, open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: c, volume: parseFloat(k.q !== undefined ? k.q : (k.v || 0))
+            };
+            
+            // Xử lý nến qua bộ lọc Renko/Heikin Ashi nếu có
+            let finalCandle = candle;
+            if (window.WaveDataEngine) {
+                let chartInstance = window.WA_Chart.getChartSpecific(cellId);
+                let dataList = chartInstance ? chartInstance.getDataList() : [];
+                finalCandle = window.WaveDataEngine.processTick(candle, dataList);
+            }
+
+            // 🚀 BƠM DATA VÀO CHÍNH XÁC Ô ĐÃ GỌI
+            if (window.WA_Chart) window.WA_Chart.updateDataSpecific(cellId, finalCandle);
+
+            // Cập nhật giá trên thanh Toolbar nếu ô này đang là ô chính (Active)
+            if (cellId === window.WA_Chart.activeId && !window._isCrosshairActive && typeof window.updateLegendUI === 'function') {
+                window.updateLegendUI(finalCandle);
+            }
+        }
+    };
+
+    ws.onclose = () => {
+        // Tự động kết nối lại nếu bị đứt mạng
+        if (window.waSubWebSockets[cellId] === ws) {
+            setTimeout(() => window.connectLightweightStream(t, interval, cellId), 2000);
+        }
+    };
+};
 
 window.addEventListener('WA_TOKEN_SWITCHED', function(e) {
     const t = e.detail.token;
     const interval = e.detail.interval;
-    console.log('📡 [Event Hub] Nhận lệnh đổi Token sang:', t.symbol);
+    const cellId = window.WA_Chart.activeId; 
+    const isMainChart = (cellId === 'wa-chart-cell-0'); // Nếu UI chưa kịp update activeId
 
-    // 1. Dập tắt động cơ cũ và dọn rác
-    window._waRafRunning = false;
-    window._waTargetCandle = null;
-    window._waCurrentCandle = null;
-    if (window.chartWs) { window.chartWs.close(); window.chartWs = null; }
-    if (window.liquidationWs) { window.liquidationWs.close(); window.liquidationWs = null; }
+    console.log(`📡 [Router] Ô [${cellId}] load Token: ${t.symbol}`);
+    window.waCellTokens[cellId] = t;
+    window.waCellIntervals[cellId] = interval;
 
-    // 2. Trực tiếp kéo Data lịch sử & Đổ vào Tường Lửa
     window.fetchBinanceHistory(t, interval, interval === 'tick').then(histData => {
         if (histData && histData.length > 0) {
             let finalData = window.WaveDataEngine ? window.WaveDataEngine.processHistory(histData) : histData;
-            if (window.WA_Chart) window.WA_Chart.applyNewData(finalData);
+            // 🚀 ĐỔ LỊCH SỬ VÀO ĐÚNG Ô
+            if (window.WA_Chart) window.WA_Chart.applyNewDataSpecific(cellId, finalData);
         }
         
-        // 3. Khởi động các hệ thống vệ tinh
-        if (window.WaveIndicatorAPI) {
-            if (typeof window.WaveIndicatorAPI.initUI === 'function') window.WaveIndicatorAPI.initUI();
-            // 🚀 VÁ LỖI MẤT CHỈ BÁO KHI ĐỔI COIN: Gọi hàm phục hồi để vẽ lại EMA/MACD lên Chart mới
-            if (typeof window.WaveIndicatorAPI.restore === 'function') window.WaveIndicatorAPI.restore();
+        // Khởi động WS vệ tinh siêu nhẹ cho ô này
+        window.connectLightweightStream(t, interval, cellId);
+
+        // 🚀 NẾU Ô NÀY ĐANG ĐƯỢC CHỌN (ACTIVE), DỒN TOÀN BỘ SỨC MẠNH QUANT VÀO NÓ
+        if (cellId === window.WA_Chart.activeId) {
+            window._waRafRunning = false; window._waTargetCandle = null; window._waCurrentCandle = null;
+            if (window.chartWs) { window.chartWs.close(); window.chartWs = null; }
+            if (window.liquidationWs) { window.liquidationWs.close(); window.liquidationWs = null; }
+
+            if (window.WaveIndicatorAPI) {
+                if (typeof window.WaveIndicatorAPI.initUI === 'function') window.WaveIndicatorAPI.initUI();
+                if (typeof window.WaveIndicatorAPI.restore === 'function') window.WaveIndicatorAPI.restore();
+            }
+            if (typeof window.__wa_onChartReady === 'function') window.__wa_onChartReady();
+            if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, false);
+            if (typeof window.startFuturesEngine === 'function') window.startFuturesEngine(t.symbol);
         }
-        if (typeof window.__wa_onChartReady === 'function') window.__wa_onChartReady();
-        if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, false);
-        if (typeof window.startFuturesEngine === 'function') window.startFuturesEngine(t.symbol);
     });
 });
 
 window.addEventListener('WA_TIMEFRAME_CHANGED', function(e) {
     const t = e.detail.token;
     const interval = e.detail.interval;
-    const oldInterval = e.detail.oldInterval;
-    console.log('📡 [Event Hub] Nhận lệnh đổi Timeframe:', oldInterval, '->', interval);
+    const cellId = window.WA_Chart.activeId;
 
-    // 1. Tạm ngưng nội suy Waterfall
-    window._waRafRunning = false;
-    window._waTargetCandle = null;
-    window._waCurrentCandle = null;
+    console.log(`📡 [Router] Ô [${cellId}] đổi Timeframe: ${interval}`);
+    window.waCellTokens[cellId] = t;
+    window.waCellIntervals[cellId] = interval;
 
-    // 2. Chuyển đổi giao diện (VD: đổi sang Line nếu là khung Tick)
-    if (window.WaveChartEngine) {
-        if (interval === 'tick') window.WaveChartEngine.update({ chartType: 9 }, true);
-        else window.WaveChartEngine.applyNow();
+    if (cellId === window.WA_Chart.activeId) {
+        window._waRafRunning = false; window._waTargetCandle = null; window._waCurrentCandle = null;
+        if (window.WaveChartEngine) {
+            if (interval === 'tick') window.WaveChartEngine.update({ chartType: 9 }, true);
+            else window.WaveChartEngine.applyNow();
+        }
     }
 
-    // 3. Kéo Data mới và đảo luồng WebSocket
     window.fetchBinanceHistory(t, interval, interval === 'tick').then(histData => {
         if (histData && histData.length > 0) {
             let finalData = window.WaveDataEngine ? window.WaveDataEngine.processHistory(histData) : histData;
-            if (window.WA_Chart) window.WA_Chart.applyNewData(finalData);
+            // 🚀 ĐỔ LỊCH SỬ VÀO ĐÚNG Ô
+            if (window.WA_Chart) window.WA_Chart.applyNewDataSpecific(cellId, finalData);
         }
         
-        // 🚀 Đảm bảo chỉ báo luôn bám chặt theo biểu đồ khi đổi Timeframe
-        if (window.WaveIndicatorAPI && typeof window.WaveIndicatorAPI.restore === 'function') {
-            window.WaveIndicatorAPI.restore();
+        window.connectLightweightStream(t, interval, cellId);
+
+        if (cellId === window.WA_Chart.activeId) {
+            if (window.WaveIndicatorAPI && typeof window.WaveIndicatorAPI.restore === 'function') window.WaveIndicatorAPI.restore();
+            if (typeof window.__wa_onChartReady === 'function') window.__wa_onChartReady();
+            if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, true);
         }
-        
-        if (typeof window.__wa_onChartReady === 'function') window.__wa_onChartReady();
-        if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, true);
     });
+});
+
+// 🚀 LẮNG NGHE SỰ KIỆN CLICK ĐỂ "CHUYỂN NHÀ" ĐỘNG CƠ QUANT SANG Ô MỚI
+window.addEventListener('WA_ACTIVE_CHART_CHANGED', function(e) {
+    const cellId = e.detail.cellId;
+    const t = window.waCellTokens[cellId];
+    
+    if (t && typeof window.connectRealtimeChart === 'function') {
+        console.log(`🔄 [Shift] Chuyển đổi Quant Engine sang ô: ${cellId} (${t.symbol})`);
+        
+        // Cập nhật lại UI Header của Chart
+        window.currentChartToken = t;
+        window.currentChartInterval = window.waCellIntervals[cellId] || '15m';
+        
+        document.getElementById('sc-coin-symbol').innerText = (t.symbol || 'UNKNOWN') + '/USDT';
+        let nameEl = document.getElementById('sc-coin-name'); if (nameEl) nameEl.innerText = t.name || t.symbol; 
+        document.getElementById('sc-coin-logo').src = t.icon || 'assets/tokens/default.png';
+
+        // Tái khởi động động cơ nặng cho Coin vừa chọn
+        window.connectRealtimeChart(t, false);
+        if (typeof window.startFuturesEngine === 'function') window.startFuturesEngine(t.symbol);
+    }
 });
