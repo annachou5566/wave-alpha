@@ -4043,8 +4043,6 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
    */
   global.addIndicatorToChart = function (indName, options) {
     if (!window.WA_Chart) return;
-    
-    // [FIX 1] Mình đã xóa lệnh tắt modal ở đây để người dùng chọn nhiều chỉ báo không bị tắt bảng
 
     const meta    = INDICATOR_REGISTRY.find(function (x) { return x.name === indName; });
     const isStack = meta ? meta.isStack : false;
@@ -4052,29 +4050,24 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     const params  = (options && options.params) || (meta ? meta.defaultParams.slice() : []);
 
     try {
-        window.WA_Chart.createIndicator({
-            name: indName,
-            // 🚀 FIX: Kết hợp logic đổi icon Mắt VÀ giấu các tham số thừa thãi
-            createTooltipDataSource: function({ indicator, defaultStyles }) {
-                const icons = defaultStyles.tooltip.icons;
-                const eyeIcon = indicator.visible ? icons[1] : icons[0];
-                
-                // Các chỉ báo Pro có quá nhiều tham số cần giấu đi cho sạch Chart
-                const hideParamsList = ['WAVE_VPVR', 'WAVE_TPO', 'WAVE_COB', 'WAVE_BOOKMAP'];
-                
-                if (hideParamsList.includes(indicator.name)) {
-                    return { 
-                        icons: [eyeIcon, icons[2], icons[3]],
-                        name: indicator.shortName || indicator.name,
-                        calcParamsText: ' ', // Khoảng trắng để chặn KLineCharts in số
-                        values: []           // Dọn sạch mảng giá trị hiển thị
-                    };
-                }
-                
-                // Các chỉ báo bình thường (như RSI, MA) vẫn hiển thị tham số như cũ
-                return { icons: [eyeIcon, icons[2], icons[3]] };
-            }
-        }, isStack, { id: paneId });
+        // 🚀 BÍ QUYẾT SỬA LỖI SQUASH Y-AXIS (DẸP LÉP TRỤC GIÁ):
+        // Bắt buộc phải truyền Tên Chỉ Báo (String) thay vì Object.
+        // Việc truyền Object trực tiếp vào createIndicator sẽ ghi đè làm mất cấu trúc mảng figures gốc,
+        // khiến thư viện ngáo ngơ đi quét nhầm số Timestamp/Volume khổng lồ!
+        window.WA_Chart.createIndicator(indName, isStack, { id: paneId });
+        
+        // Sau khi đã tạo chỉ báo an toàn từ bản gốc, ta mới dùng overrideIndicator để ghi đè Params & UI
+        let overrideData = { name: indName, calcParams: params };
+        
+        // Ẩn sạch các con số tham số loằng ngoằng của các siêu chỉ báo để Chart sạch đẹp
+        const hideParamsList = ['WAVE_VPVR', 'WAVE_TPO', 'WAVE_COB', 'WAVE_BOOKMAP'];
+        if (hideParamsList.includes(indName)) {
+            overrideData.createTooltipDataSource = function({ indicator }) {
+                return { name: indicator.shortName || indName, calcParamsText: ' ', values: [] };
+            };
+        }
+        
+        window.WA_Chart.overrideIndicator(overrideData, paneId);
         
         if (!global.scActiveIndicators.find(function (x) { return x.name === indName; })) {
             global.scActiveIndicators.push({ name: indName, isStack: isStack, paneId: paneId, params: params, visible: true });
