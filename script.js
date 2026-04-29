@@ -14,6 +14,8 @@ function renderMultiplierPath(c) {
     let multipliers = [1.4, 1.3, 1.2, 1.2, 1.1, 1.1, 1.0];
     if (ebValue === '2.0x') {
         multipliers = [2.0, 1.8, 1.7, 1.5, 1.3, 1.1, 1.0];
+    } else if (ebValue === '1.8x') {
+        multipliers = [1.8, 1.6, 1.4, 1.3, 1.3, 1.1, 1.0]; // <--- Thêm mảng hệ số 1.8x ở đây
     }
 
     let sTime = c.startTime || "13:00:00";
