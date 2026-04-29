@@ -111,13 +111,14 @@ window.WaveChartEngine = {
             // ─────────────────────────────────────────────────────────────
             // 1. CỘT (COLUMNS - ID 4)
             // ─────────────────────────────────────────────────────────────
-            registerWaveChart({ // 👉 SỬ DỤNG HÀM MỚI Ở ĐÂY
-                name: 'WA_COL_CHART', shortName: 'BIỂU ĐỒ CỘT', series: 'price', calc: (d) => d,
-                draw: ({ ctx, indicator, visibleRange, bounding, barSpace, xAxis, yAxis }) => {
+            registerWaveChart({
+                name: 'WA_COL_CHART', shortName: 'BIỂU ĐỒ CỘT', series: 'price', 
+                calc: (dataList) => dataList.map(() => ({})), // 🚀 Chặn ngộ độc Auto-Scale
+                draw: ({ ctx, indicator, visibleRange, bounding, barSpace, xAxis, yAxis, kLineDataList }) => { 
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
                     const bottomY = bounding.height;
-                    const dataList = indicator.result;
+                    const dataList = kLineDataList || []; // 🚀 Lấy data gốc trực tiếp từ kLineDataList
                     if (!dataList || dataList.length === 0) return true;
 
                     ctx.save();
@@ -143,11 +144,12 @@ window.WaveChartEngine = {
             // 2. ĐỈNH-ĐÁY (HIGH-LOW - ID 5)
             // ─────────────────────────────────────────────────────────────
             registerWaveChart({
-                name: 'WA_HL_CHART', shortName: 'ĐỈNH - ĐÁY', series: 'price', calc: (d) => d,
-                draw: ({ ctx, indicator, visibleRange, barSpace, xAxis, yAxis }) => {
+                name: 'WA_HL_CHART', shortName: 'ĐỈNH - ĐÁY', series: 'price', 
+                calc: (dataList) => dataList.map(() => ({})), 
+                draw: ({ ctx, indicator, visibleRange, barSpace, xAxis, yAxis, kLineDataList }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
-                    const dataList = indicator.result;
+                    const dataList = kLineDataList || []; 
                     if (!dataList || dataList.length === 0) return true;
 
                     ctx.save();
@@ -189,11 +191,12 @@ window.WaveChartEngine = {
             //    Hỗ trợ 1 màu tĩnh (stepLineSingleColor=true) hoặc 2 màu động
             // ─────────────────────────────────────────────────────────────
             registerWaveChart({
-                name: 'WA_STEP_LINE', shortName: 'BẬC THANG', series: 'price', calc: (d) => d,
-                draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
+                name: 'WA_STEP_LINE', shortName: 'BẬC THANG', series: 'price',
+                calc: (dataList) => dataList.map(() => ({})), // Chặn Auto-Scale rác
+                draw: ({ ctx, indicator, visibleRange, xAxis, yAxis, kLineDataList }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
-                    const dataList = indicator.result;
+                    const dataList = kLineDataList || [];
                     if (!dataList || dataList.length === 0) return true;
 
                     ctx.save();
@@ -241,11 +244,12 @@ window.WaveChartEngine = {
             // 4. ĐƯỜNG + ĐIỂM MARKER (LINE MARKER - ID 7)
             // ─────────────────────────────────────────────────────────────
             registerWaveChart({
-                name: 'WA_LINE_MARKER', shortName: 'ĐƯỜNG ĐIỂM', series: 'price', calc: (d) => d,
-                draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
+                name: 'WA_LINE_MARKER', shortName: 'ĐƯỜNG ĐIỂM', series: 'price',
+                calc: (dataList) => dataList.map(() => ({})),
+                draw: ({ ctx, indicator, visibleRange, xAxis, yAxis, kLineDataList }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
-                    const dataList = indicator.result;
+                    const dataList = kLineDataList || [];
                     if (!dataList || dataList.length === 0) return true;
 
                     ctx.save();
@@ -293,11 +297,12 @@ window.WaveChartEngine = {
             // 5. VÙNG HLC AREA (ID 10) — Tách nền trên & dưới đường Close
             // ─────────────────────────────────────────────────────────────
             registerWaveChart({
-                name: 'WA_HLC_AREA', shortName: 'VÙNG HLC', series: 'price', calc: (d) => d,
-                draw: ({ ctx, indicator, visibleRange, xAxis, yAxis }) => {
+                name: 'WA_HLC_AREA', shortName: 'VÙNG HLC', series: 'price',
+                calc: (dataList) => dataList.map(() => ({})),
+                draw: ({ ctx, indicator, visibleRange, xAxis, yAxis, kLineDataList }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
-                    const dataList = indicator.result;
+                    const dataList = kLineDataList || [];
                     if (!dataList || dataList.length === 0) return true;
 
                     ctx.save();
@@ -364,11 +369,12 @@ window.WaveChartEngine = {
             // 6. ĐƯỜNG CƠ SỞ (BASELINE - ID 11)
             // ─────────────────────────────────────────────────────────────
             registerWaveChart({
-                name: 'WA_BASELINE', shortName: 'ĐƯỜNG CƠ SỞ', series: 'price', calc: (d) => d,
-                draw: ({ ctx, indicator, visibleRange, bounding, xAxis, yAxis }) => {
+                name: 'WA_BASELINE', shortName: 'ĐƯỜNG CƠ SỞ', series: 'price',
+                calc: (dataList) => dataList.map(() => ({})),
+                draw: ({ ctx, indicator, visibleRange, bounding, xAxis, yAxis, kLineDataList }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
-                    const dataList = indicator.result;
+                    const dataList = kLineDataList || [];
                     if (!dataList || dataList.length === 0) return true;
 
                     // ✅ baselineValue = 0 không bị override thành 50
@@ -459,11 +465,12 @@ window.WaveChartEngine = {
             // 7. NẾN KHỐI LƯỢNG (CANDLE VOLUME) - ID 13
             // ─────────────────────────────────────────────────────────────
             registerWaveChart({
-                name: 'WA_VOL_CANDLE', shortName: 'NẾN KHỐI LƯỢNG', series: 'price', calc: (d) => d,
-                draw: ({ ctx, indicator, visibleRange, barSpace, xAxis, yAxis }) => {
+                name: 'WA_VOL_CANDLE', shortName: 'NẾN KHỐI LƯỢNG', series: 'price',
+                calc: (dataList) => dataList.map(() => ({})),
+                draw: ({ ctx, indicator, visibleRange, barSpace, xAxis, yAxis, kLineDataList }) => {
                     const c = window.WaveChartEngine.config;
                     const { from, to } = visibleRange;
-                    const dataList = indicator.result;
+                    const dataList = kLineDataList || [];
                     if (!dataList || dataList.length === 0) return true;
 
                     // 1. Quét tìm Volume lớn nhất trong khung hình
