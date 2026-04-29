@@ -2844,3 +2844,86 @@ window.setRenkoStyle = function(style) {
     // Phát lệnh render lại chart ngay lập tức
     input.dispatchEvent(new Event('change'));
 };
+
+// ========================================================
+// 🚀 GIAI ĐOẠN 2: LOGIC ĐIỀU KHIỂN BỐ CỤC MULTI-CHART
+// (Dán vào cuối cùng của file chart-ui.js)
+// ========================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    const btnSelector = document.getElementById('btn-layout-selector');
+    const dropdown = document.getElementById('layout-dropdown-menu');
+    
+    if(!btnSelector || !dropdown) return;
+
+    // 1. Toggle bật/tắt menu
+    btnSelector.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('hidden');
+    });
+
+    // 2. Ẩn menu khi click ra ngoài vùng
+    document.addEventListener('click', (e) => {
+        if (!btnSelector.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    // 3. Xử lý chia màn hình khi click vào 1 tùy chọn lưới
+    const options = document.querySelectorAll('.layout-option');
+    options.forEach(opt => {
+        opt.addEventListener('click', async function() {
+            const layoutType = this.getAttribute('data-layout');
+            const cellCount = parseInt(this.getAttribute('data-count'));
+            
+            // Đổi màu Active cho UI menu
+            options.forEach(o => o.classList.remove('active'));
+            this.classList.add('active');
+            dropdown.classList.add('hidden');
+
+            // ID chuẩn từ hệ thống của sếp
+            const containerId = 'sc-chart-container'; 
+            
+            // 🚀 GỌI API LÕI ĐỂ CHIA MÀN HÌNH
+            const success = window.WA_Chart.initMultiLayout(containerId, layoutType, cellCount);
+            
+            if(success) {
+                console.log(`Đã chia màn hình: ${cellCount} ô`);
+                
+                try {
+                    const currentCoin = window.currentChartToken; 
+                    const currentInterval = window.currentChartInterval || '15m';
+
+                    if (currentCoin) {
+                        // Duyệt qua từng ô để bơm data
+                        const chartIds = Object.keys(window.WA_Chart.instances);
+                        for(let i = 0; i < chartIds.length; i++) {
+                            const cellId = chartIds[i];
+                            // Ép ô này thành Active
+                            window.WA_Chart.setActiveChart(cellId);
+                            
+                            // Bắn pháo hiệu để chart-data-engine.js tự kéo nến về đúng ô này
+                            let dataInterval = window.getOptimalDataInterval(currentInterval);
+                            window.dispatchEvent(new CustomEvent('WA_TIMEFRAME_CHANGED', {
+                                detail: { 
+                                    token: currentCoin, 
+                                    interval: dataInterval, 
+                                    oldInterval: currentInterval,
+                                    uiInterval: currentInterval 
+                                }
+                            }));
+                            
+                            // Trễ 200ms để API không bị ngộp
+                            await new Promise(res => setTimeout(res, 200));
+                        }
+                        
+                        // Trả viền Active về ô đầu tiên
+                        window.WA_Chart.setActiveChart(chartIds[0]);
+                    }
+                } catch(err) {
+                    console.log("Lỗi load data khởi tạo Multi-chart:", err);
+                }
+            }
+        });
+    });
+});

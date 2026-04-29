@@ -455,15 +455,34 @@
 
         <div class="glass-card">
             <div class="glass-head" style="justify-content:space-between">
-                <span><i class="fas fa-chart-area me-2"></i> MARKET VISUALIZER</span>
+                <div class="d-flex align-items-center gap-3">
+                    <span><i class="fas fa-chart-area me-2"></i> MARKET VISUALIZER</span>
+                    
+                    <div class="wa-layout-selector-wrapper">
+                        <button id="btn-layout-selector" class="wa-chart-tool-btn" title="Chọn bố cục biểu đồ">
+                            <i class="fa-solid fa-table-cells-large"></i>
+                        </button>
+                        <div id="layout-dropdown-menu" class="wa-dropdown-menu hidden">
+                            <div class="layout-grid-options">
+                                <div class="layout-option active" data-layout="1" data-count="1"><span class="grid-icon grid-1"></span></div>
+                                <div class="layout-option" data-layout="2-h" data-count="2"><span class="grid-icon grid-2-h"></span></div>
+                                <div class="layout-option" data-layout="2-v" data-count="2"><span class="grid-icon grid-2-v"></span></div>
+                                <div class="layout-option" data-layout="3" data-count="3"><span class="grid-icon grid-3"></span></div>
+                                <div class="layout-option" data-layout="4" data-count="4"><span class="grid-icon grid-4"></span></div>
+                                <div class="layout-option" data-layout="6" data-count="6"><span class="grid-icon grid-6"></span></div>
+                                <div class="layout-option" data-layout="8" data-count="8"><span class="grid-icon grid-8"></span></div>
+                                <div class="layout-option" data-layout="9" data-count="9"><span class="grid-icon grid-9"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="token-badge">
                     <img id="pt-logo" src="" style="width:20px; height:20px; border-radius:50%;">
                     <span id="pt-symbol" class="fw-bold text-white small">BTC</span>
                 </div>
             </div>
-            <div class="chart-wrapper">
-                <canvas id="marketChart"></canvas>
-            </div>
+            <div class="chart-wrapper" id="wa-main-chart-container"></div>
         </div>
 
         <div class="glass-card">
