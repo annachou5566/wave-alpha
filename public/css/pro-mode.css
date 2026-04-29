@@ -2048,3 +2048,43 @@ body.overlay-active {
         #sc-algo-limit, .sc-stats-row { display: none !important; }
     }
 }
+
+
+/* ==========================================
+   🚀 KIẾN TRÚC MULTI-CHART GPU (COINGLASS/TV STYLE)
+   ========================================== */
+   .wa-multi-grid-wrapper {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    gap: 2px; /* Khe hở đen xám cực kỳ tinh tế giữa các chart */
+    background: #000;
+}
+
+/* Các preset Layout lên tới 9 ô */
+.wa-layout-1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+.wa-layout-2-h { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; } /* 2 cột dọc */
+.wa-layout-2-v { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; } /* 2 hàng ngang */
+.wa-layout-3 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; } 
+.wa-layout-3 > div:first-child { grid-column: 1 / span 2; } /* Ô trên chiếm 2 cột */
+.wa-layout-4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; } /* 4 ô vuông */
+.wa-layout-6 { grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr; } /* 6 ô (3x2) */
+.wa-layout-8 { grid-template-columns: repeat(4, 1fr); grid-template-rows: 1fr 1fr; } /* 8 ô (4x2) */
+.wa-layout-9 { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); } /* 9 ô (3x3) */
+
+/* Vùng chứa từng KLineChart độc lập */
+.wa-chart-cell {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: var(--term-bg, #131722);
+    overflow: hidden;
+    border: 1px solid transparent;
+    transition: border-color 0.15s ease;
+}
+
+/* Hiệu ứng viền phát sáng cho Chart đang được user click vào */
+.wa-chart-cell.active-cell {
+    border-color: #00F0FF;
+    z-index: 2;
+}
