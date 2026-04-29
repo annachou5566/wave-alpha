@@ -1864,6 +1864,38 @@ window.closeProChart = function() {
 </div>
 
 
+<div id="csm-ui-linebreak" style="display:none; flex-direction:column; gap:16px;">
+    <div class="wa-csm-divider">Cài đặt Line Break</div>
+    <div class="wa-csm-row">
+        <div class="wa-csm-label" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+            <div>Số đường phá vỡ (Line Count)</div>
+            <div style="font-size: 10.5px; color: #848e9c; max-width: 250px; font-weight: normal; line-height: 1.4;">
+                Số lượng khối nến trước đó cần bị phá vỡ để tạo khối đảo chiều mới. Mặc định là 3.
+            </div>
+        </div>
+        <div class="wa-csm-control">
+            <input type="number" min="1" max="10" style="width:80px; text-align:center; background: #131722; color: #EAECEF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px; outline: none;" data-bind="lineBreakCount" data-type="number" placeholder="3">
+        </div>
+    </div>
+    
+    <div class="wa-csm-divider">Màu sắc Line Break</div>
+    <div class="wa-csm-row">
+        <div class="wa-csm-label">Màu Khối (Tăng / Giảm)</div>
+        <div class="wa-csm-control">
+            <div class="wa-ism-swatch" data-color-bind="upColor"></div>
+            <div class="wa-ism-swatch" data-color-bind="downColor"></div>
+        </div>
+    </div>
+    <div class="wa-csm-row">
+        <div class="wa-csm-label"><label class="wa-switch"><input type="checkbox" data-bind="showBorder"><span class="wa-slider"></span></label> Viền khối</div>
+        <div class="wa-csm-control">
+            <label class="wa-switch" title="Màu độc lập"><input type="checkbox" data-bind="borderIndependent"><span class="wa-slider"></span></label>
+            <div id="csm-lb-border-swatches" style="display:flex; gap:10px; opacity:0.5; pointer-events:none;">
+                <div class="wa-ism-swatch" data-color-bind="borderUpColor"></div><div class="wa-ism-swatch" data-color-bind="borderDownColor"></div>
+            </div>
+        </div>
+    </div>
+</div>
 
                             <div class="wa-csm-divider">Trục Y</div>
                             <div class="wa-csm-row">
@@ -2065,12 +2097,13 @@ window.closeProChart = function() {
         const t = parseInt(config.chartType) || 1; 
         
         // 🚀 ĐÃ SỬA: Bao gồm tất cả các loại biểu đồ Pro (13-21) để không bị mất bảng màu
-        const isCandles = [1, 2, 3, 4, 5, 12, 13, 15, 16, 17, 18, 19, 20, 21].includes(t);
+        const isCandles = [1, 2, 3, 4, 5, 12, 13, 16, 17, 18, 19, 20, 21].includes(t);
         const isLines = [6, 7, 9].includes(t);
         const isStep = (t === 8);
         const isHLC = (t === 10);
         const isBaseline = (t === 11);
         const isRenko = (t === 14); // 🚀 THÊM DÒNG NÀY
+        const isLineBreak = (t === 15);
         let candleEl = document.getElementById('csm-ui-candles');
         if (candleEl) candleEl.style.display = isCandles ? 'flex' : 'none';
 
@@ -2093,6 +2126,14 @@ window.closeProChart = function() {
         let hlcEl = document.getElementById('csm-ui-hlc'); if(hlcEl) hlcEl.style.display = isHLC ? 'flex' : 'none';
         let baseEl = document.getElementById('csm-ui-baseline'); if(baseEl) baseEl.style.display = isBaseline ? 'flex' : 'none';
         let renkoEl = document.getElementById('csm-ui-renko'); if(renkoEl) renkoEl.style.display = isRenko ? 'flex' : 'none';
+        // 🚀 BẮT ĐẦU DÁN LINE BREAK Ở ĐÂY 🚀
+        let lbEl = document.getElementById('csm-ui-linebreak'); if(lbEl) lbEl.style.display = isLineBreak ? 'flex' : 'none';
+        let lbBorderSwatches = document.getElementById('csm-lb-border-swatches');
+        if(lbBorderSwatches) {
+            lbBorderSwatches.style.opacity = config.borderIndependent ? '1' : '0.5';
+            lbBorderSwatches.style.pointerEvents = config.borderIndependent ? 'auto' : 'none';
+        }
+        // 🚀 KẾT THÚC LINE BREAK 🚀
         let bg2Swatch = document.getElementById('csm-bg2-swatch');
         if (bg2Swatch) bg2Swatch.style.display = config.bgType === 'gradient' ? 'block' : 'none';
         
@@ -2240,7 +2281,7 @@ window.closeProChart = function() {
                     let reprocessedData = window.WaveDataEngine.processHistory(window.WaveDataEngine.rawHistory, true);
                     window.WA_Chart.applyNewData(reprocessedData);
                 }
-            } else if (key.startsWith('renko') || parseInt(window.WaveChartEngine.getConfig().chartType) === 12) {
+            } else if (key.startsWith('renko') || key === 'lineBreakCount' || parseInt(window.WaveChartEngine.getConfig().chartType) === 12) {
                 // Đổi thông số gạch/nến -> Cập nhật trực tiếp lên màn hình
                 if (window.WaveDataEngine && window.WA_Chart) {
                     let reprocessedData = window.WaveDataEngine.processHistory(window.WaveDataEngine.rawHistory, true);
@@ -2305,7 +2346,7 @@ window.closeProChart = function() {
                         renkoMethod: 'atr', renkoBoxSize: 10, renkoAtrLength: 14, 
                         renkoPercentage: 1.0, renkoStyle: 'ninza', renkoTrendPct: 50, renkoSource: 'close',
                         renkoBrickPct: 0.5, renkoTrendThreshold: 0,
-                        renkoUpColor: '#FFFFFF', renkoDownColor: '#B250FF', renkoBorderColor: '#787B86'
+                        renkoUpColor: '#FFFFFF', renkoDownColor: '#B250FF', renkoBorderColor: '#787B86', lineBreakCount: 3
                     };
                     
                     // 2. GHI ĐÈ BỘ NHỚ LÕI
