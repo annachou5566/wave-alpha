@@ -2846,84 +2846,111 @@ window.setRenkoStyle = function(style) {
 };
 
 // ========================================================
-// 🚀 GIAI ĐOẠN 2: LOGIC ĐIỀU KHIỂN BỐ CỤC MULTI-CHART
-// (Dán vào cuối cùng của file chart-ui.js)
+// 🚀 GIAI ĐOẠN 2: BỘ CHỌN MULTI-CHART (AUTO-INJECT VÀO TOOLBAR)
+// Dán đè vào cuối file chart-ui.js
 // ========================================================
+(function initMultiChartLayoutSelector() {
+    'use strict';
+    const checkToolbar = setInterval(() => {
+        // Tìm đúng nhóm chứa các nút Timeframe, Settings mà hệ thống đã tạo
+        const targetGroup = document.getElementById('wa-chart-controls-group') || document.querySelector('.sc-toolbar');
+        
+        if (targetGroup) {
+            clearInterval(checkToolbar);
 
-document.addEventListener('DOMContentLoaded', () => {
-    const btnSelector = document.getElementById('btn-layout-selector');
-    const dropdown = document.getElementById('layout-dropdown-menu');
-    
-    if(!btnSelector || !dropdown) return;
+            // 1. Tạo Nút bấm
+            const layoutWrap = document.createElement('div');
+            layoutWrap.style.cssText = 'position: relative; display: inline-flex; align-items: center; margin-left: 6px;';
+            layoutWrap.innerHTML = `
+                <button id="btn-layout-selector" data-wa-tip="Bố cục Đa Màn Hình" style="background: rgba(255,255,255,0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                </button>
+            `;
+            targetGroup.appendChild(layoutWrap);
 
-    // 1. Toggle bật/tắt menu
-    btnSelector.addEventListener('click', (e) => {
-        e.stopPropagation();
-        dropdown.classList.toggle('hidden');
-    });
+            // 2. Tạo Menu xổ xuống (Dùng absolute/fixed để không bị khuất)
+            const menu = document.createElement('div');
+            menu.id = 'layout-dropdown-menu';
+            menu.style.cssText = `
+                display: none; position: fixed; background: #1e222d; border: 1px solid rgba(255,255,255,0.1); 
+                border-radius: 8px; z-index: 999999; box-shadow: 0 16px 40px rgba(0,0,0,0.8); padding: 12px;
+            `;
+            menu.innerHTML = `
+                <div class="layout-grid-options" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                    <div class="layout-option active" data-layout="1" data-count="1"><span class="grid-icon grid-1"></span></div>
+                    <div class="layout-option" data-layout="2-h" data-count="2"><span class="grid-icon grid-2-h"></span></div>
+                    <div class="layout-option" data-layout="2-v" data-count="2"><span class="grid-icon grid-2-v"></span></div>
+                    <div class="layout-option" data-layout="3" data-count="3"><span class="grid-icon grid-3"></span></div>
+                    <div class="layout-option" data-layout="4" data-count="4"><span class="grid-icon grid-4"></span></div>
+                    <div class="layout-option" data-layout="6" data-count="6"><span class="grid-icon grid-6"></span></div>
+                    <div class="layout-option" data-layout="8" data-count="8"><span class="grid-icon grid-8"></span></div>
+                    <div class="layout-option" data-layout="9" data-count="9"><span class="grid-icon grid-9"></span></div>
+                </div>
+            `;
+            document.body.appendChild(menu);
 
-    // 2. Ẩn menu khi click ra ngoài vùng
-    document.addEventListener('click', (e) => {
-        if (!btnSelector.contains(e.target) && !dropdown.contains(e.target)) {
-            dropdown.classList.add('hidden');
-        }
-    });
+            const btn = document.getElementById('btn-layout-selector');
+            btn.onmouseenter = () => { btn.style.background = 'rgba(255,255,255,0.08)'; btn.style.color = '#EAECEF'; };
+            btn.onmouseleave = () => { btn.style.background = 'rgba(255,255,255,0.05)'; btn.style.color = '#848e9c'; };
 
-    // 3. Xử lý chia màn hình khi click vào 1 tùy chọn lưới
-    const options = document.querySelectorAll('.layout-option');
-    options.forEach(opt => {
-        opt.addEventListener('click', async function() {
-            const layoutType = this.getAttribute('data-layout');
-            const cellCount = parseInt(this.getAttribute('data-count'));
-            
-            // Đổi màu Active cho UI menu
-            options.forEach(o => o.classList.remove('active'));
-            this.classList.add('active');
-            dropdown.classList.add('hidden');
-
-            // ID chuẩn từ hệ thống của sếp
-            const containerId = 'sc-chart-container'; 
-            
-            // 🚀 GỌI API LÕI ĐỂ CHIA MÀN HÌNH
-            const success = window.WA_Chart.initMultiLayout(containerId, layoutType, cellCount);
-            
-            if(success) {
-                console.log(`Đã chia màn hình: ${cellCount} ô`);
-                
-                try {
-                    const currentCoin = window.currentChartToken; 
-                    const currentInterval = window.currentChartInterval || '15m';
-
-                    if (currentCoin) {
-                        // Duyệt qua từng ô để bơm data
-                        const chartIds = Object.keys(window.WA_Chart.instances);
-                        for(let i = 0; i < chartIds.length; i++) {
-                            const cellId = chartIds[i];
-                            // Ép ô này thành Active
-                            window.WA_Chart.setActiveChart(cellId);
-                            
-                            // Bắn pháo hiệu để chart-data-engine.js tự kéo nến về đúng ô này
-                            let dataInterval = window.getOptimalDataInterval(currentInterval);
-                            window.dispatchEvent(new CustomEvent('WA_TIMEFRAME_CHANGED', {
-                                detail: { 
-                                    token: currentCoin, 
-                                    interval: dataInterval, 
-                                    oldInterval: currentInterval,
-                                    uiInterval: currentInterval 
-                                }
-                            }));
-                            
-                            // Trễ 200ms để API không bị ngộp
-                            await new Promise(res => setTimeout(res, 200));
-                        }
-                        
-                        // Trả viền Active về ô đầu tiên
-                        window.WA_Chart.setActiveChart(chartIds[0]);
-                    }
-                } catch(err) {
-                    console.log("Lỗi load data khởi tạo Multi-chart:", err);
+            // Logic Bật/Tắt Menu
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                if (menu.style.display === 'none') {
+                    const rect = btn.getBoundingClientRect();
+                    menu.style.top = (rect.bottom + 6) + 'px';
+                    menu.style.left = (rect.right - 180) + 'px'; // Neo menu sang bên phải cho đẹp
+                    menu.style.display = 'block';
+                    btn.style.borderColor = '#00F0FF'; btn.style.color = '#00F0FF';
+                } else {
+                    menu.style.display = 'none';
+                    btn.style.borderColor = 'rgba(255,255,255,0.1)'; btn.style.color = '#848e9c';
                 }
-            }
-        });
-    });
-});
+            };
+
+            document.addEventListener('click', (e) => {
+                if(!menu.contains(e.target) && e.target !== btn) {
+                    menu.style.display = 'none';
+                    btn.style.borderColor = 'rgba(255,255,255,0.1)'; btn.style.color = '#848e9c';
+                }
+            });
+
+            // 3. Logic Chia Màn Hình
+            const options = menu.querySelectorAll('.layout-option');
+            options.forEach(opt => {
+                opt.onclick = async function() {
+                    const type = this.dataset.layout;
+                    const count = parseInt(this.dataset.count);
+                    
+                    options.forEach(o => o.classList.remove('active'));
+                    this.classList.add('active');
+                    menu.style.display = 'none';
+                    btn.style.borderColor = 'rgba(255,255,255,0.1)'; btn.style.color = '#848e9c';
+
+                    if (window.WA_Chart && typeof window.WA_Chart.initMultiLayout === 'function') {
+                        // Gọi ID chuẩn từ HTML
+                        const ok = window.WA_Chart.initMultiLayout('sc-chart-container', type, count);
+                        if (ok && window.currentChartToken) {
+                            const ids = Object.keys(window.WA_Chart.instances);
+                            for (let id of ids) {
+                                window.WA_Chart.setActiveChart(id);
+                                let interval = window.getOptimalDataInterval(window.currentChartInterval);
+                                // Ép load data nến cho từng ô
+                                window.dispatchEvent(new CustomEvent('WA_TIMEFRAME_CHANGED', {
+                                    detail: { 
+                                        token: window.currentChartToken, 
+                                        interval: interval,
+                                        oldInterval: window.currentChartInterval,
+                                        uiInterval: window.currentChartInterval
+                                    }
+                                }));
+                                await new Promise(r => setTimeout(r, 150));
+                            }
+                            window.WA_Chart.setActiveChart(ids[0]);
+                        }
+                    }
+                };
+            });
+        }
+    }, 200);
+})();

@@ -2053,7 +2053,7 @@ body.overlay-active {
 /* ==========================================
    🚀 KIẾN TRÚC MULTI-CHART GPU (COINGLASS/TV STYLE)
    ========================================== */
-   .wa-multi-grid-wrapper {
+.wa-multi-grid-wrapper {
     display: grid;
     width: 100%;
     height: 100%;
@@ -2089,75 +2089,25 @@ body.overlay-active {
     z-index: 2;
 }
 
-/* ==========================================
-   🚀 UI: MENU CHỌN BỐ CỤC ĐA MÀN HÌNH
-   ========================================== */
-   .wa-layout-selector-wrapper { 
-    position: relative; 
-}
+/* --- Core Multi-Grid Layout --- */
+.wa-multi-grid-wrapper { display: grid; width: 100%; height: 100%; gap: 2px; background: #000; }
+.wa-layout-1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+.wa-layout-2-h { grid-template-columns: 1fr 1fr; }
+.wa-layout-2-v { grid-template-rows: 1fr 1fr; }
+.wa-layout-3 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.wa-layout-3 > div:first-child { grid-column: 1 / span 2; }
+.wa-layout-4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.wa-layout-6 { grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr; }
+.wa-layout-8 { grid-template-columns: repeat(4, 1fr); grid-template-rows: 1fr 1fr; }
+.wa-layout-9 { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); }
 
-/* Nút bấm trên toolbar của biểu đồ */
-.wa-chart-tool-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #848e9c;
-    cursor: pointer;
-    width: 28px;
-    height: 28px;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    transition: all 0.2s;
-}
+.wa-chart-cell { position: relative; width: 100%; height: 100%; background: var(--term-bg, #131722); border: 1px solid transparent; }
+.wa-chart-cell.active-cell { border-color: #00F0FF; z-index: 5; }
 
-.wa-chart-tool-btn:hover { 
-    background: rgba(0, 240, 255, 0.1);
-    border-color: #00F0FF;
-    color: #00F0FF;
-}
-
-/* Menu dropdown chứa các lưới */
-.wa-dropdown-menu {
-    position: absolute; 
-    top: 35px;
-    left: 0;
-    right: auto;
-    background: #1e222d; 
-    border: 1px solid #2b313f; 
-    border-radius: 8px; 
-    padding: 12px;
-    z-index: 9999; 
-    box-shadow: 0 8px 24px rgba(0,0,0,0.5); 
-    width: 180px;
-    opacity: 1; 
-    transform: translateY(0); 
-    transition: opacity 0.2s, transform 0.2s;
-}
-
-.wa-dropdown-menu.hidden { 
-    opacity: 0; 
-    transform: translateY(-10px); 
-    pointer-events: none; 
-}
-
-.layout-grid-options { 
-    display: grid; 
-    grid-template-columns: repeat(3, 1fr); 
-    gap: 8px; 
-}
-
-.layout-option {
-    width: 44px; height: 44px; background: #2b313f; border-radius: 6px;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    border: 1px solid transparent; transition: all 0.2s;
-}
-
+/* --- CSS vẽ Icon cho Menu --- */
+.layout-option { width: 44px; height: 44px; background: #2b313f; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; border: 1px solid transparent; }
 .layout-option:hover { background: #3b4256; }
-.layout-option.active { border-color: #00F0FF; background: rgba(0, 240, 255, 0.1); }
-
-/* Vẽ các Icon Lưới bằng CSS */
+.layout-option.active { border-color: #00F0FF; background: rgba(0,240,255,0.1); }
 .grid-icon { display: block; border: 1.5px solid #848e9c; width: 22px; height: 22px; border-radius: 2px; }
 .grid-1 { background: #848e9c; }
 .grid-2-h { border-right-width: 10px; }
@@ -2168,6 +2118,5 @@ body.overlay-active {
 .grid-6 { border-right-width: 7px; border-left-width: 7px; border-bottom-width: 10px; }
 .grid-8 { border-right-width: 5px; border-left-width: 5px; border-bottom-width: 10px; box-shadow: inset 0 0 0 1.5px #848e9c; }
 .grid-9 { border: 6px double #848e9c; background: #848e9c; border-style: double; }
-
 .layout-option.active .grid-icon { border-color: #00F0FF; }
 .layout-option.active .grid-1 { background: #00F0FF; }
