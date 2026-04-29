@@ -4,7 +4,6 @@ function formatCompact(num) {
 
 function renderMultiplierPath(c) {
     let isEarlyBird = c.earlyBird || (c.data && c.data.earlyBird) || false;
-    // Thêm điều kiện check c.end để đảm bảo có mốc thời gian kết thúc
     if (!c || !c.start || !c.end || !isEarlyBird) return ''; 
 
     const multipliers = [1.4, 1.3, 1.2, 1.2, 1.1, 1.1, 1.0];
@@ -18,25 +17,32 @@ function renderMultiplierPath(c) {
     const startTime = new Date(c.start + 'T' + sTime + 'Z');
     const endTime = new Date(c.end + 'T' + eTime + 'Z');
     
-    // Tính tổng thời gian từ Start đến End làm mốc 100% (7 ngày)
+    // Tính tổng thời gian thực tế của giải đấu
     const totalMs = Math.max(1, endTime - startTime);
+    
+    // Tính toán thời lượng của 1 "ngày" chuẩn bằng cách chia tổng thời gian làm 7 chặng
+    const oneDayMs = totalMs / 7;
     const diffMs = Math.max(0, now - startTime);
+    const elapsedDays = diffMs / oneDayMs;
     
-    // Phần trăm thanh progress
-    let fillPct = Math.min(100, (diffMs / totalMs) * 100);
-    
-    // Chia tổng thời gian làm 7 chặng đều nhau
-    let currentDayInt = Math.floor((diffMs / totalMs) * 7) + 1;
+    // Xác định đang ở chặng nào (từ 1 đến 7)
+    let currentDayInt = Math.floor(elapsedDays) + 1;
     if (currentDayInt > 7) currentDayInt = 7;
     
     const currentMul = multipliers[currentDayInt - 1];
 
-    // Thời gian đếm ngược đến chặng tiếp theo (hoặc báo Final nếu đã qua EndTime)
+    // Mấu chốt UI: UI có 7 chấm tròn tương ứng với 6 khoảng trống.
+    // Do đó thanh fillPct cần hoàn thành 100% trong đúng 6 ngày đầu tiên.
+    // Sang ngày thứ 7, fillPct = 100% -> Viên thuốc sẽ nằm đè chính xác lên mốc 1.0x cuối cùng.
+    let fillPct = Math.min(100, (elapsedDays / 6) * 100);
+
     let countdownStr = '';
     if (now >= endTime) {
+        countdownStr = 'Ended';
+    } else if (currentDayInt === 7) {
         countdownStr = 'Final';
     } else {
-        const nextBoundaryMs = startTime.getTime() + (currentDayInt / 7) * totalMs;
+        const nextBoundaryMs = startTime.getTime() + (currentDayInt * oneDayMs);
         const msLeft = nextBoundaryMs - now.getTime();
         
         const h = Math.floor(msLeft / 3600000);
