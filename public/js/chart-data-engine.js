@@ -268,20 +268,20 @@
         },
 
         // ============================================================
-// 🚀 LINE BREAK — BẢN FIX CUỐI CÙNG (6 bugs patched)
+// 🚀 LINE BREAK — BẢN FIX CUỐI CÙNG CHÍNH XÁC (5 bugs patched)
 // ============================================================
 
 _toLineBreak: function(data, config) {
     let lbData = [];
 
     // ✅ [BUG-1 CRITICAL] Reset rawHistory khi chart vẽ lại từ đầu.
-    // Nếu thiếu: _updateLineBreakTick sẽ lấy nến cũ từ session trước
-    // ra xử lý như nến vừa đóng → tạo block sai hoàn toàn.
+    // Thiếu dòng này: đổi timeframe → lastRaw = nến cũ session trước
+    // → _updateLineBreakTick tạo block giả từ dữ liệu hoàn toàn sai.
     this.rawHistory = [];
 
     if (!data || data.length === 0) {
-        // ✅ [BUG-3 MEDIUM] Clear state khi data rỗng.
-        // Nếu thiếu: _updateLineBreakTick vẫn đọc state cũ của biểu đồ khác.
+        // ✅ [BUG-3 MEDIUM] Clear state khi data rỗng, tránh state cũ rò rỉ
+        // sang biểu đồ mới (đổi symbol, đổi timeframe trả về rỗng).
         this._lineBreakState = null;
         return lbData;
     }
@@ -290,12 +290,12 @@ _toLineBreak: function(data, config) {
     let blocks = [];
     const baseTimestamp = data[0].timestamp;
 
-    // ✅ [BUG-6 LOW] Validate candle đầu tiên trước khi dùng.
-    // Nếu open/close là NaN: Math.max(NaN, NaN) = NaN → toàn chart lỗi cascade.
-    const first    = data[0];
+    // ✅ [BUG-6 LOW] Validate candle đầu tiên.
+    // Nếu open/close = NaN: Math.max(NaN,NaN)=NaN → toàn bộ chart lỗi cascade.
+    const first      = data[0];
     const firstOpen  = parseFloat(first.open)  || 0;
     const firstClose = parseFloat(first.close) || firstOpen;
-    const startDir = firstClose >= firstOpen ? 1 : -1;
+    const startDir   = firstClose >= firstOpen ? 1 : -1;
 
     const b0 = {
         ...first,
@@ -305,9 +305,9 @@ _toLineBreak: function(data, config) {
         high:   Math.max(firstOpen, firstClose),
         low:    Math.min(firstOpen, firstClose),
         dir:    startDir,
-        // ✅ [BUG-4 MEDIUM] parseFloat(x) || 0 thay vì parseFloat(x || 0)
+        // ✅ [BUG-4 MEDIUM] parseFloat(x) || 0, KHÔNG phải parseFloat(x || 0)
         // parseFloat("abc" || 0) = parseFloat("abc") = NaN ❌
-        // parseFloat("abc") || 0 = NaN || 0 = 0 ✅
+        // parseFloat("abc") || 0 = NaN || 0 = 0               ✅
         volume: parseFloat(first.volume) || 0
     };
     blocks.push(b0);
@@ -316,13 +316,12 @@ _toLineBreak: function(data, config) {
     for (let i = 1; i < data.length; i++) {
         const curr      = data[i];
         const close     = parseFloat(curr.close);
-        if (isNaN(close)) continue; // skip candle lỗi, tránh NaN cascade
+        if (isNaN(close)) continue; // ✅ [BUG-6] skip nến lỗi, tránh NaN cascade
         const lastBlock = blocks[blocks.length - 1];
         let newBlock    = null;
 
         if (lastBlock.dir === 1) {
             if (close > lastBlock.high) {
-                // Tiếp diễn tăng
                 newBlock = { open: lastBlock.high, close, dir: 1, high: close, low: lastBlock.high };
             } else {
                 let minLow = Infinity;
@@ -330,13 +329,11 @@ _toLineBreak: function(data, config) {
                     minLow = Math.min(minLow, blocks[blocks.length - b].low);
                 }
                 if (close < minLow) {
-                    // Đảo chiều xuống — neo vào đỉnh block cũ
                     newBlock = { open: lastBlock.high, close, dir: -1, high: lastBlock.high, low: close };
                 }
             }
         } else {
             if (close < lastBlock.low) {
-                // Tiếp diễn giảm
                 newBlock = { open: lastBlock.low, close, dir: -1, high: lastBlock.low, low: close };
             } else {
                 let maxHigh = -Infinity;
@@ -344,7 +341,6 @@ _toLineBreak: function(data, config) {
                     maxHigh = Math.max(maxHigh, blocks[blocks.length - b].high);
                 }
                 if (close > maxHigh) {
-                    // Đảo chiều lên — neo vào đáy block cũ
                     newBlock = { open: lastBlock.low, close, dir: 1, high: close, low: lastBlock.low };
                 }
             }
@@ -375,21 +371,19 @@ _toLineBreak: function(data, config) {
 },
 
 // ============================================================
-// 🚀 REALTIME UPDATE — BẢN FIX CUỐI CÙNG
+// 🚀 REALTIME UPDATE — BẢN FIX CUỐI CÙNG CHÍNH XÁC
 // ============================================================
 
 _updateLineBreakTick: function(curr, chartData, config) {
     if (parseInt(config.chartType) !== 15) return curr;
 
     // ✅ [BUG-2 HIGH] Guard khởi tạo rawHistory.
-    // Nếu hàm này bị gọi trước _toLineBreak (race condition, hot-reload...),
-    // this.rawHistory là undefined → TypeError crash toàn bộ chart.
+    // Race condition / hot-reload → this.rawHistory = undefined → TypeError crash.
     if (!this.rawHistory) this.rawHistory = [];
 
     const state = this._lineBreakState;
     if (!state || state.blocks.length === 0) return curr;
 
-    // --- Quản lý lịch sử nến gốc ---
     let lastRaw       = this.rawHistory[this.rawHistory.length - 1];
     const isNewCandle = !lastRaw || lastRaw.timestamp !== curr.timestamp;
 
@@ -444,57 +438,19 @@ _updateLineBreakTick: function(curr, chartData, config) {
         this.rawHistory.push({ ...curr });
         if (this.rawHistory.length > 2000) this.rawHistory.shift();
     } else {
-        // Cập nhật nến đang chạy
         lastRaw.close  = curr.close;
         lastRaw.high   = Math.max(lastRaw.high, curr.high);
         lastRaw.low    = Math.min(lastRaw.low, curr.low);
         lastRaw.volume = curr.volume;
     }
 
-    // 2. GHOST BLOCK — chỉ để hiển thị, chưa đóng cửa chưa tính
+    // 2. GHOST BLOCK — visual only, chưa đóng cửa chưa tính
+    // ghostOpen = lastBlock.close (= high cho upblock, = low cho downblock)
+    // Đây là điểm MỞ CỦA BRICK TIẾP THEO — đúng cho cả Line Break lẫn Renko.
+    // KHÔNG thay đổi logic này vì nó là bản chất chung của mọi loại chart dạng brick.
     const close     = curr.close;
     const lastBlock = state.blocks[state.blocks.length - 1];
-    let ghostOpen;
-
-    if (lastBlock.dir === 1) {
-        if (close > lastBlock.high) {
-            // Ghost continuation UP → nến XANH
-            ghostOpen = lastBlock.high;
-        } else {
-            let minLow = Infinity;
-            for (let b = 1; b <= Math.min(state.LINE_COUNT, state.blocks.length); b++) {
-                minLow = Math.min(minLow, state.blocks[state.blocks.length - b].low);
-            }
-            if (close < minLow) {
-                // Ghost potential reversal DOWN → nến ĐỎ (cảnh báo đảo chiều)
-                ghostOpen = lastBlock.high;
-            } else {
-                // ✅ [BUG-5 MEDIUM] Neutral zone: dùng lastBlock.LOW làm anchor
-                // → open < close → nến XANH, cùng chiều xu hướng TĂNG hiện tại
-                // Code cũ: ghostOpen = lastBlock.HIGH → nến ĐỎ GIẢM trong uptrend ❌
-                ghostOpen = lastBlock.low;
-            }
-        }
-    } else {
-        if (close < lastBlock.low) {
-            // Ghost continuation DOWN → nến ĐỎ
-            ghostOpen = lastBlock.low;
-        } else {
-            let maxHigh = -Infinity;
-            for (let b = 1; b <= Math.min(state.LINE_COUNT, state.blocks.length); b++) {
-                maxHigh = Math.max(maxHigh, state.blocks[state.blocks.length - b].high);
-            }
-            if (close > maxHigh) {
-                // Ghost potential reversal UP → nến XANH (cảnh báo đảo chiều)
-                ghostOpen = lastBlock.low;
-            } else {
-                // ✅ [BUG-5 MEDIUM] Neutral zone: dùng lastBlock.HIGH làm anchor
-                // → open > close → nến ĐỎ, cùng chiều xu hướng GIẢM hiện tại
-                // Code cũ: ghostOpen = lastBlock.LOW → nến XANH TĂNG trong downtrend ❌
-                ghostOpen = lastBlock.high;
-            }
-        }
-    }
+    const ghostOpen = lastBlock.dir === 1 ? lastBlock.high : lastBlock.low;
 
     return {
         ...curr,
