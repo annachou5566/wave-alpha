@@ -1,6 +1,6 @@
 // ==========================================
 // 🚀 FILE: public/js/wa-chart-core.js
-// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - BẢN FULL CHÍNH XÁC 100%
+// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - NATIVE SUB-PANE TOOLTIP PRO
 // ==========================================
 
 (function() {
@@ -21,16 +21,13 @@
             .wa-chart-cell { position: relative; width: 100%; height: 100%; background: #131722; border: 1px solid transparent; }
             .wa-chart-cell.active-cell { border-color: #00F0FF; z-index: 5; }
 
-            /* CSS PURE CHO DANH SÁCH CHỈ BÁO GỘP CHUNG - ĐỨNG IM KHÔNG GIẬT LAG */
+            /* CSS PURE CHO DANH SÁCH CHỈ BÁO NẾN CHÍNH */
             .wa-leg-item { display:inline-flex; align-self:flex-start; max-width:100%; align-items:center; gap:8px; font-size:11.5px; font-weight:500; color:#848e9c; pointer-events:auto; padding:2px 6px; border-radius:4px; background: transparent; cursor: default; margin-bottom: 2px; transition: background 0.15s ease;}
             .wa-leg-item:hover { background: rgba(255,255,255,0.04); }
-            
             .wa-leg-name { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; transition:color 0.15s ease; }
             .wa-leg-val { font-family:var(--font-num); flex-shrink: 0; font-size:11px; transition:color 0.15s ease; }
-            
             .wa-leg-icons { display:flex; gap:2px; margin-left:4px; flex-shrink:0; align-items:center; opacity:0; pointer-events:none; transition:opacity 0.15s ease; }
             .wa-leg-item:hover .wa-leg-icons, .wa-leg-icons.force-show { opacity:1; pointer-events:auto; }
-            
             .wa-leg-btn { display:flex; padding:5px; border-radius:4px; color:#848e9c; transition:all 0.15s ease; cursor:pointer; align-items:center; justify-content:center; }
             .wa-leg-btn:hover { background: rgba(255,255,255,0.1); color: #EAECEF; }
             .wa-leg-btn.toggle.is-off { color: #F6465D; }
@@ -81,13 +78,12 @@
                     cell.addEventListener('mousedown', () => this.setActiveChart(cellId));
                     gridWrapper.appendChild(cell);
                     
-                    // UI CỐT LÕI: OHLC MẶC ĐỊNH
                     const uiLayer = document.createElement('div');
                     uiLayer.className = 'wa-custom-ui-layer';
                     uiLayer.style.cssText = 'position: absolute; top: 0; left: 0; width: calc(100% - 65px); height: 100%; pointer-events: none; z-index: 50; display: flex; flex-direction: column; justify-content: space-between; padding: 6px 10px; overflow: hidden;';
                     
                     uiLayer.innerHTML = `
-                        <div style="font-family: Arial, sans-serif; font-size: 11.5px; font-weight: 600; display: flex; gap: 8px; flex-wrap: nowrap; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); pointer-events: auto; overflow: hidden; align-items: center; line-height: 1;">
+                        <div style="font-family: Arial, sans-serif; font-size: 11px; font-weight: 600; display: flex; gap: 8px; flex-wrap: nowrap; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); pointer-events: auto; overflow: hidden; align-items: center;">
                             <div id="wa-toggle-${cellId}" title="Ẩn/Hiện Danh sách Chỉ báo" style="cursor:pointer; color:#848e9c; padding: 2px 6px; margin-left: -4px; border-radius: 4px; display:inline-flex; align-items:center; transition:0.2s;">▼</div>
                             <span id="wa-sym-${cellId}" style="color: #EAECEF; margin-right: 4px; white-space: nowrap;">---</span>
                             <span style="white-space: nowrap;"><span style="color: #848e9c;">O</span> <span id="wa-o-${cellId}" style="color: #848e9c;">---</span></span>
@@ -100,13 +96,12 @@
                     `;
                     cell.appendChild(uiLayer);
 
-                    // BẢNG CHỨA DANH SÁCH CHỈ BÁO GỘP CHUNG (CHÍNH + PHỤ)
+                    // THẺ GÓC TRÁI DÀNH RIÊNG CHO NẾN CHÍNH
                     const legendHtml = document.createElement('div');
                     legendHtml.id = `wa-ind-legend-${cellId}`;
-                    legendHtml.style.cssText = 'position: absolute; top: 28px; left: 10px; z-index: 51; display: flex; flex-direction: column; gap: 2px; pointer-events: none; max-width: calc(100% - 65px); max-height: calc(100% - 40px); overflow-y: auto;';
+                    legendHtml.style.cssText = 'position: absolute; top: 28px; left: 10px; z-index: 51; display: flex; flex-direction: column; pointer-events: none; max-width: calc(100% - 65px); overflow: hidden;';
                     cell.appendChild(legendHtml);
 
-                    // ẨN / HIỆN DANH SÁCH CHỈ BÁO
                     setTimeout(() => {
                         const toggleBtn = document.getElementById(`wa-toggle-${cellId}`);
                         if (toggleBtn) {
@@ -133,6 +128,24 @@
                         _instances[cellId] = chart;
                         if (i === 0) _activeId = cellId; 
                         chart._waIsHovering = false; 
+
+                        // 🚀 KẾT NỐI CLICK CỦA TOOLTIP GỐC Ở NẾN PHỤ (MACD, RSI...)
+                        chart.subscribeAction('onTooltipIconClick', (data) => {
+                            if (!data.indicatorName) return;
+                            const name = data.indicatorName;
+                            const paneId = data.paneId;
+
+                            if (data.iconId === 'visible' || data.iconId === 'invisible') {
+                                let currentVis = true;
+                                if (window.scActiveIndicators) {
+                                    let ind = window.scActiveIndicators.find(x => x.name === name && x.cellId === cellId);
+                                    if (ind) currentVis = ind.visible !== false;
+                                }
+                                window.WA_Chart.toggleInd(cellId, name, currentVis, paneId);
+                            } 
+                            else if (data.iconId === 'setting') { window.WA_Chart.settingInd(cellId, name, paneId); }
+                            else if (data.iconId === 'close') { window.WA_Chart.removeInd(cellId, name, paneId); }
+                        });
 
                         chart.subscribeAction('onCrosshairChange', (param) => {
                             let dataIndex = (param && param.dataIndex !== undefined) ? param.dataIndex : -1;
@@ -188,26 +201,14 @@
             let sign = pct >= 0 ? '+' : '';
             setTxt('sym', `${sym} ${tfStr} (${sign}${pct.toFixed(2)}%)`, barColor);
 
-            const wmEl = document.getElementById(`wa-wm-${cellId}`);
-            if (wmEl) {
-                wmEl.innerText = `${sym} • ${tfStr}`;
-                if (window.WaveChartEngine) {
-                    const cfg = window.WaveChartEngine.getConfig();
-                    wmEl.style.display = cfg.showWatermark === false ? 'none' : 'block';
-                    wmEl.style.color = `rgba(255,255,255, ${cfg.watermarkOpacity || 0.05})`;
-                    const ohlcWrap = document.getElementById(`wa-sym-${cellId}`)?.parentNode;
-                    if (ohlcWrap) ohlcWrap.style.display = cfg.showOHLC === false ? 'none' : 'flex';
-                }
-            }
-
             if (dataIndex >= 0) {
                 const chart = _instances[cellId];
                 if (!chart) return;
                 
-                // 🚀 QUÉT REALTIME DATA CHO TẤT CẢ CHỈ BÁO THUỘC Ô NÀY (BẤT KỂ Ở ĐÂU)
+                // CHỈ UPDATE CHO CHỈ BÁO NẾN CHÍNH TRONG BẢNG HTML
                 if (window.scActiveIndicators) {
-                    let cellInds = window.scActiveIndicators.filter(x => x.cellId === cellId);
-                    cellInds.forEach(ind => {
+                    let mainInds = window.scActiveIndicators.filter(x => x.cellId === cellId && x.paneId === 'candle_pane');
+                    mainInds.forEach(ind => {
                         const valEl = document.getElementById(`wa-val-${cellId}-${ind.name}`);
                         if (valEl) {
                             try {
@@ -227,24 +228,24 @@
             }
         },
 
-        // 🚀 CỖ MÁY GỘP TOÀN BỘ CHỈ BÁO VÀO 1 DANH SÁCH HTML DUY NHẤT
+        // 🚀 CỖ MÁY HTML CHỈ RENDER CHỈ BÁO CỦA PANE CHÍNH (CANDLE_PANE)
         renderHtmlLegend: function(cellId) {
             const container = document.getElementById(`wa-ind-legend-${cellId}`);
             if (!container) return;
 
-            let cellInds = [];
+            let mainInds = [];
             if (window.scActiveIndicators) {
-                cellInds = window.scActiveIndicators.filter(x => x.cellId === cellId);
+                // CHỈ LỌC CÁC CHỈ BÁO THUỘC NẾN CHÍNH
+                mainInds = window.scActiveIndicators.filter(x => x.cellId === cellId && x.paneId === 'candle_pane');
             }
 
             const hidden = ['WA_COL_CHART', 'WA_HL_CHART', 'WA_STEP_LINE', 'WA_LINE_MARKER', 'WA_HLC_AREA', 'WA_BASELINE', 'WA_VOL_CANDLE', 'WA_LINE_BREAK'];
-            cellInds = cellInds.filter(i => !hidden.includes(i.name));
+            mainInds = mainInds.filter(i => !hidden.includes(i.name));
 
             let html = '';
-            cellInds.forEach(ind => {
+            mainInds.forEach(ind => {
                 const params = ind.params ? ind.params.join(', ') : '';
                 const isVis = ind.visible !== false;
-                const eyeColor = isVis ? '#848e9c' : '#F6465D'; 
                 const eyeIcon = isVis ? this.SVGS.eye : this.SVGS.eyeOff;
                 const nameColor = isVis ? '#EAECEF' : '#5e6673';
                 
@@ -253,19 +254,18 @@
                     <span class="wa-leg-name" style="color:${nameColor};">${ind.name} <span style="font-size:10px; font-weight:400; opacity:0.7;">(${params})</span></span>
                     <span id="wa-val-${cellId}-${ind.name}" class="wa-leg-val" style="color:${nameColor};"></span>
                     <div class="wa-leg-icons ${!isVis ? 'force-show' : ''}">
-                        <div class="wa-leg-btn toggle ${!isVis ? 'is-off' : ''}" title="Ẩn/Hiện" onclick="window.WA_Chart.toggleInd('${cellId}', '${ind.name}', ${isVis})">${eyeIcon}</div>
-                        <div class="wa-leg-btn gear" title="Cài đặt" onclick="window.WA_Chart.settingInd('${cellId}', '${ind.name}')">${this.SVGS.gear}</div>
-                        <div class="wa-leg-btn delete" title="Xóa" onclick="window.WA_Chart.removeInd('${cellId}', '${ind.name}')">${this.SVGS.close}</div>
+                        <div class="wa-leg-btn toggle ${!isVis ? 'is-off' : ''}" title="Ẩn/Hiện" onclick="window.WA_Chart.toggleInd('${cellId}', '${ind.name}', ${isVis}, 'candle_pane')">${eyeIcon}</div>
+                        <div class="wa-leg-btn gear" title="Cài đặt" onclick="window.WA_Chart.settingInd('${cellId}', '${ind.name}', 'candle_pane')">${this.SVGS.gear}</div>
+                        <div class="wa-leg-btn delete" title="Xóa" onclick="window.WA_Chart.removeInd('${cellId}', '${ind.name}', 'candle_pane')">${this.SVGS.close}</div>
                     </div>
                 </div>`;
             });
             container.innerHTML = html;
         },
 
-        // CÁC HÀM XỬ LÝ SỰ KIỆN TỪ NÚT BẤM HTML
-        toggleInd: function(cellId, name, currentVis) { 
+        toggleInd: function(cellId, name, currentVis, paneId) { 
             const isNowVis = !currentVis;
-            let targetPane = 'candle_pane';
+            let targetPane = paneId || 'candle_pane';
             
             if (window.scActiveIndicators) {
                 let ind = window.scActiveIndicators.find(x => x.name === name && x.cellId === cellId);
@@ -277,17 +277,20 @@
             
             _instances[cellId].overrideIndicator({ name: name, visible: isNowVis }, targetPane); 
             
-            const item = document.getElementById(`wa-leg-item-${cellId}-${name}`);
-            if (item) {
-                const nameEl = item.querySelector('.wa-leg-name'); const valEl = document.getElementById(`wa-val-${cellId}-${name}`);
-                const iconsWrap = item.querySelector('.wa-leg-icons'); const toggleBtn = item.querySelector('.wa-leg-btn.toggle');
-                if (nameEl) nameEl.style.color = isNowVis ? '#EAECEF' : '#5e6673';
-                if (valEl) valEl.style.color = isNowVis ? '#EAECEF' : '#5e6673';
-                if (iconsWrap) { if (!isNowVis) iconsWrap.classList.add('force-show'); else iconsWrap.classList.remove('force-show'); }
-                if (toggleBtn) {
-                    toggleBtn.innerHTML = isNowVis ? this.SVGS.eye : this.SVGS.eyeOff;
-                    if (!isNowVis) toggleBtn.classList.add('is-off'); else toggleBtn.classList.remove('is-off');
-                    toggleBtn.setAttribute('onclick', `window.WA_Chart.toggleInd('${cellId}', '${name}', ${isNowVis})`);
+            // Nếu là nến chính thì update HTML
+            if (targetPane === 'candle_pane') {
+                const item = document.getElementById(`wa-leg-item-${cellId}-${name}`);
+                if (item) {
+                    const nameEl = item.querySelector('.wa-leg-name'); const valEl = document.getElementById(`wa-val-${cellId}-${name}`);
+                    const iconsWrap = item.querySelector('.wa-leg-icons'); const toggleBtn = item.querySelector('.wa-leg-btn.toggle');
+                    if (nameEl) nameEl.style.color = isNowVis ? '#EAECEF' : '#5e6673';
+                    if (valEl) valEl.style.color = isNowVis ? '#EAECEF' : '#5e6673';
+                    if (iconsWrap) { if (!isNowVis) iconsWrap.classList.add('force-show'); else iconsWrap.classList.remove('force-show'); }
+                    if (toggleBtn) {
+                        toggleBtn.innerHTML = isNowVis ? this.SVGS.eye : this.SVGS.eyeOff;
+                        if (!isNowVis) toggleBtn.classList.add('is-off'); else toggleBtn.classList.remove('is-off');
+                        toggleBtn.setAttribute('onclick', `window.WA_Chart.toggleInd('${cellId}', '${name}', ${isNowVis}, '${targetPane}')`);
+                    }
                 }
             }
             
@@ -298,8 +301,8 @@
             }
         },
 
-        settingInd: function(cellId, name) {
-            let targetPane = 'candle_pane';
+        settingInd: function(cellId, name, paneId) {
+            let targetPane = paneId || 'candle_pane';
             if (window.scActiveIndicators) {
                 let ind = window.scActiveIndicators.find(x => x.name === name && x.cellId === cellId);
                 if (ind && ind.paneId) targetPane = ind.paneId;
@@ -309,17 +312,17 @@
             if (typeof window.openIndicatorSettings === 'function') window.openIndicatorSettings({ name: name, shortName: name, calcParams: calcParams }, targetPane);
         },
 
-        removeInd: function(cellId, name) { 
+        removeInd: function(cellId, name, paneId) { 
             if (typeof window.removeIndicatorFromChart === 'function') {
                 window.removeIndicatorFromChart(name, cellId);
             } else {
-                let targetPane = 'candle_pane';
+                let targetPane = paneId || 'candle_pane';
                 if (window.scActiveIndicators) {
                     let ind = window.scActiveIndicators.find(x => x.name === name && x.cellId === cellId);
                     if (ind && ind.paneId) targetPane = ind.paneId;
                 }
                 _instances[cellId].removeIndicator(targetPane, name); 
-                this.renderHtmlLegend(cellId); 
+                if (targetPane === 'candle_pane') this.renderHtmlLegend(cellId); 
             }
         },
 
@@ -331,7 +334,7 @@
             window.dispatchEvent(new CustomEvent('WA_ACTIVE_CHART_CHANGED', { detail: { cellId: cellId } }));
         },
 
-        // 🚀 TẮT HOÀN TOÀN CÁC NATIVE TOOLTIP TRÊN MỌI MẶT TRẬN (CHÍNH + PHỤ)
+        // 🚀 CẤU HÌNH TOOLTIP: MÙ KỊT NẾN CHÍNH - NHƯNG MỞ SÁNG ĐẸP Ở NẾN PHỤ (RSI, MACD)
         _applyDefaultStyles: function(chart) {
             chart.setStyles({
                 layout: { backgroundColor: 'transparent' },
@@ -342,7 +345,17 @@
                     tooltip: { showRule: 'none', custom: function() { return []; }, text: { size: 0, color: 'transparent' } } 
                 },
                 indicator: { 
-                    tooltip: { showRule: 'none', showType: 'standard', text: { size: 0, color: 'transparent' }, icons: [] } 
+                    tooltip: { 
+                        showRule: 'always', 
+                        showType: 'standard',
+                        text: { size: 11.5, family: 'Inter, Arial, sans-serif', weight: 600, color: '#848e9c', marginLeft: 8, marginTop: 6 },
+                        icons: [
+                            { id: 'visible', position: 'middle', marginLeft: 8, marginTop: 6, paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3, icon: '\uf06e', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', size: 12, color: '#848e9c', activeColor: '#EAECEF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(255,255,255,0.08)' },
+                            { id: 'invisible', position: 'middle', marginLeft: 8, marginTop: 6, paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3, icon: '\uf070', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', size: 12, color: '#5e6673', activeColor: '#F6465D', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(246,70,93,0.1)' },
+                            { id: 'setting', position: 'middle', marginLeft: 4, marginTop: 6, paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3, icon: '\uf013', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', size: 12, color: '#848e9c', activeColor: '#F0B90B', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(240,185,11,0.1)' },
+                            { id: 'close', position: 'middle', marginLeft: 4, marginTop: 6, paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3, icon: '\uf00d', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', size: 13, color: '#848e9c', activeColor: '#F6465D', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(246,70,93,0.1)' }
+                        ]
+                    } 
                 }
             });
         },
@@ -361,7 +374,6 @@
         removeIndicator: function(paneId, name) { try { if(this.active) { this.active.removeIndicator(paneId, name); this.renderHtmlLegend(this.activeId); } } catch(e){} },
         overrideIndicator: function(override, paneId) { try { if(this.active) { this.active.overrideIndicator(override, paneId); this.renderHtmlLegend(this.activeId); } } catch(e){} },
         
-        // 🚀 THEO DÕI MỌI LỆNH TẠO CHỈ BÁO VÀ GHI VÀO DANH SÁCH TỔNG
         createIndicator: function(name, isStack, options) { 
             try { 
                 if(this.active) { 
@@ -438,6 +450,7 @@
 
                     const areaBgColor = (isLine || hideCandle) ? 'transparent' : [{offset: 0, color: areaTopColor}, {offset: 1, color: 'transparent'}];
                     
+                    // CHẶN BỊT MỒM LẠI TOOLTIP KHI ĐỔI CHART
                     chart.setStyles({
                         candle: {
                             zLevel: 1, type: kcChartType,
@@ -445,7 +458,6 @@
                             area: { lineSize: 2, lineColor: hideCandle ? 'transparent' : config.upColor, backgroundColor: areaBgColor },
                             tooltip: { showRule: 'none', custom: function() { return []; }, text: { size: 0, color: 'transparent' } }
                         },
-                        indicator: { tooltip: { showRule: 'none' } },
                         yAxis: { type: config.yAxisMode || 'normal' }
                     });
                     chart.setPaneOptions({ id: 'candle_pane', axisOptions: { type: config.yAxisMode } });
