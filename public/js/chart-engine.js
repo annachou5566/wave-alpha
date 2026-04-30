@@ -1893,21 +1893,62 @@ window.addEventListener('WA_TIMEFRAME_CHANGED', function(e) {
 // 🚀 LẮNG NGHE SỰ KIỆN CLICK ĐỂ "CHUYỂN NHÀ" ĐỘNG CƠ QUANT SANG Ô MỚI
 window.addEventListener('WA_ACTIVE_CHART_CHANGED', function(e) {
     const cellId = e.detail.cellId;
-    const t = window.waCellTokens[cellId];
+    const t = window.waCellTokens ? window.waCellTokens[cellId] : null;
     
     if (t && typeof window.connectRealtimeChart === 'function') {
         console.log(`🔄 [Shift] Chuyển đổi Quant Engine sang ô: ${cellId} (${t.symbol})`);
         
-        // Cập nhật lại UI Header của Chart
-        window.currentChartToken = t;
-        window.currentChartInterval = window.waCellIntervals[cellId] || '15m';
-        
-        document.getElementById('sc-coin-symbol').innerText = (t.symbol || 'UNKNOWN') + '/USDT';
-        let nameEl = document.getElementById('sc-coin-name'); if (nameEl) nameEl.innerText = t.name || t.symbol; 
-        document.getElementById('sc-coin-logo').src = t.icon || 'assets/tokens/default.png';
+        // 1. DỌN RÁC BỘ NHỚ VÀ NGẮT LUỒNG CŨ (Chống đơ Tape)
+        if (window.chartWs) { window.chartWs.close(); window.chartWs = null; }
+        if (window.liquidationWs) { window.liquidationWs.close(); window.liquidationWs = null; }
+        if (window.scCalcInterval) { clearInterval(window.scCalcInterval); window.scCalcInterval = null; }
 
-        // Tái khởi động động cơ nặng cho Coin vừa chọn
-        window.connectRealtimeChart(t, false);
-        if (typeof window.startFuturesEngine === 'function') window.startFuturesEngine(t.symbol);
+        window._tapeBuffer = [];
+        window._tradesBuffer = [];
+        window._highlightQueue = [];
+        window.scCurrentCluster = null;
+        window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
+        window.scCWhale = 0; window.scCShark = 0; window.scCDolphin = 0; window.scCSweep = 0;
+        
+        if (document.getElementById('sc-stat-whale')) document.getElementById('sc-stat-whale').innerText = '0';
+        if (document.getElementById('sc-stat-shark')) document.getElementById('sc-stat-shark').innerText = '0';
+        if (document.getElementById('sc-stat-dolphin')) document.getElementById('sc-stat-dolphin').innerText = '0';
+        if (document.getElementById('sc-stat-sweep')) document.getElementById('sc-stat-sweep').innerText = '0';
+
+        // 2. CẬP NHẬT GIAO DIỆN HEADER CHO ĐÚNG COIN ĐANG CHỌN
+        window.currentChartToken = t;
+        window.currentChartInterval = window.waCellIntervals ? (window.waCellIntervals[cellId] || '15m') : '15m';
+        
+        let symEl = document.getElementById('sc-coin-symbol'); if(symEl) symEl.innerText = (t.symbol || 'UNKNOWN') + '/USDT';
+        let nameEl = document.getElementById('sc-coin-name'); if(nameEl) nameEl.innerText = t.name || t.symbol; 
+        let logoEl = document.getElementById('sc-coin-logo'); if(logoEl) logoEl.src = t.icon || 'assets/tokens/default.png';
+        let priceEl = document.getElementById('sc-live-price'); if(priceEl) priceEl.innerText = '$' + window.formatPrice(t.price);
+        
+        let chg = parseFloat(t.change_24h) || 0; let chgEl = document.getElementById('sc-change-24h');
+        if (chgEl) { chgEl.innerText = `(${(chg >= 0 ? '+' : '')}${chg.toFixed(2)}%)`; chgEl.style.color = chg >= 0 ? '#00F0FF' : '#FF007F'; }
+
+        let mcEl = document.getElementById('sc-top-mc'); if(mcEl) mcEl.innerText = '$' + window.formatCompactNum(t.market_cap || 0);
+        let liqEl = document.getElementById('sc-top-liq'); if(liqEl) liqEl.innerText = '$' + window.formatCompactNum(t.liquidity || 0);
+        let volEl = document.getElementById('sc-top-vol'); if(volEl) volEl.innerText = '$' + window.formatCompactNum(t.volume?.daily_total || 0);
+
+        // 3. XÓA BẢNG TAPE CŨ CHUẨN BỊ ĐÓN DATA MỚI
+        let tape = document.getElementById('cc-sniper-tape');
+        if(tape) tape.innerHTML = '<div style="font-size: 11px; color: #527c82; text-align: center; margin-top: 50px; font-style:italic;">Đang phân luồng dữ liệu...</div>';
+        
+        let liqTape = document.getElementById('fut-liq-tape');
+        if(liqTape) liqTape.innerHTML = '<div style="font-size: 10px; color: #527c82; text-align: center; margin-top: 45px; font-style:italic;">Đang rình cá mập...</div>';
+
+        let tradesBox = document.getElementById('sc-live-trades');
+        if (tradesBox) tradesBox.innerHTML = '<div style="text-align:center; margin-top:20px; color:#5e6673; font-style:italic;">Đang kết nối...</div>';
+
+        // 4. KHỞI ĐỘNG LẠI ĐỘNG CƠ (QUANT ENGINE)
+        setTimeout(() => {
+            if (typeof window.fetchSmartMoneyData === 'function') window.fetchSmartMoneyData(t.contract, t.chainId || 56);
+            if (typeof window.fetchFuturesSentiment === 'function') window.fetchFuturesSentiment(t.symbol);
+            if (typeof window.fetchCommandCenterFutures === 'function') window.fetchCommandCenterFutures(t.symbol);
+
+            window.connectRealtimeChart(t, false);
+            if (typeof window.startFuturesEngine === 'function') window.startFuturesEngine(t.symbol);
+        }, 100);
     }
 });
