@@ -923,19 +923,9 @@ window.openProChart = function(t, isTimeSwitch = false) {
     const overlay = document.getElementById('super-chart-overlay');
     if (!overlay) return;
 
-    // 🛡️ PHÁO HIỆU ƯU TIÊN CAO: Báo cho Drawing Engine lưu nét vẽ TRƯỚC KHI bị đè mất
-    if (!isTimeSwitch) {
-        window.dispatchEvent(new CustomEvent('WA_BEFORE_TOKEN_SWITCH'));
-    }
-
-    // ✅ FIX 3: Hủy API fetch cũ nếu còn đang chạy — tránh race condition (chồng chéo dữ liệu)
-    if (window._fetchAbortCtrl) {
-        window._fetchAbortCtrl.abort();
-    }
+    if (!isTimeSwitch) window.dispatchEvent(new CustomEvent('WA_BEFORE_TOKEN_SWITCH'));
+    if (window._fetchAbortCtrl) window._fetchAbortCtrl.abort();
     window._fetchAbortCtrl = new AbortController();
-    const _abortSignal = window._fetchAbortCtrl.signal;
-
-    
 
     window.currentChartToken = t; 
     overlay.classList.add('active');
@@ -948,61 +938,23 @@ window.openProChart = function(t, isTimeSwitch = false) {
         document.getElementById('sc-live-price').innerText = '$' + window.formatPrice(t.price);
         
         let limitEl = document.getElementById('sc-algo-limit');
-        if (limitEl) { limitEl.innerHTML = `ALGO LIMIT: ⏳ TÍNH TOÁN...`; limitEl.style.color = '#F0B90B'; limitEl.style.background = 'rgba(240,185,11,0.1)'; limitEl.style.borderColor = 'rgba(240,185,11,0.3)'; }
+        if (limitEl) { limitEl.innerHTML = `ALGO LIMIT: ⏳...`; limitEl.style.color = '#F0B90B'; }
         
         let chg = parseFloat(t.change_24h) || 0; let chgEl = document.getElementById('sc-change-24h');
         if (chgEl) { chgEl.innerText = `(${(chg >= 0 ? '+' : '')}${chg.toFixed(2)}%)`; chgEl.style.color = chg >= 0 ? '#00F0FF' : '#FF007F'; }
 
-        document.getElementById('sc-top-mc').innerText = '$' + window.formatCompactNum(t.market_cap);
-        document.getElementById('sc-top-liq').innerText = '$' + window.formatCompactNum(t.liquidity);
-        document.getElementById('sc-top-vol').innerText = '$' + window.formatCompactNum(t.volume?.daily_total || 0);
-        
-        let el24hVol = document.getElementById('sc-top-vol-24h');
-        if (el24hVol) el24hVol.innerText = '$' + window.formatCompactNum(t.volume?.rolling_24h || 0);
-        document.getElementById('sc-top-hold').innerText = window.formatInt(t.holders);
-        document.getElementById('sc-top-tx').innerText = window.formatInt(t.tx_count);
-    }
+        let mcEl = document.getElementById('sc-top-mc'); if(mcEl) mcEl.innerText = '$' + window.formatCompactNum(t.market_cap);
+        let liqEl = document.getElementById('sc-top-liq'); if(liqEl) liqEl.innerText = '$' + window.formatCompactNum(t.liquidity);
+        let volEl = document.getElementById('sc-top-vol'); if(volEl) volEl.innerText = '$' + window.formatCompactNum(t.volume?.daily_total || 0);
 
-        const container = document.getElementById('sc-chart-container');
-
-    
-    // [WA-DRAWING] Lưu drawings của timeframe CŨ trước khi destroy chart
-    if (window.__wa_onBeforeChartInit) {
-        window.__wa_onBeforeChartInit(
-            (window.currentChartToken && window.currentChartToken.symbol) || '',
-            window.oldChartInterval || window.currentChartInterval || '1d'
-        );
-    }
-    
-    if (window.WA_Chart) { window.WA_Chart.destroy(); }
-    window.scActivePriceLines = [];
-    
-    // XÓA SẠCH CONTAINER (KHÔNG DÙNG WRAPPER ĐỂ TRÁNH VỠ LAYOUT)
-    container.innerHTML = ''; 
-
-    if (!isTimeSwitch) {
         let tradesBox = document.getElementById('sc-live-trades');
         if (tradesBox) tradesBox.innerHTML = '<div style="text-align:center; margin-top:20px; color:#5e6673; font-style:italic;">Connecting to Dex...</div>';
-        window.scCurrentCluster = null; 
+        
         window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
-        
-        let fStatus = document.getElementById('fut-live-status'); if(fStatus) { fStatus.innerText = '⏳ ĐANG TẢI...'; fStatus.style.color = 'var(--term-warn)'; }
-        let oiElUI = document.getElementById('fut-oi-val'); if(oiElUI) oiElUI.innerText = '$--';
-        let fundVal = document.getElementById('fut-funding-val'); if(fundVal) fundVal.innerText = '--%';
-        let liqLEl = document.getElementById('fut-liq-long'); if(liqLEl) liqLEl.innerText = '$0';
-        let liqSEl = document.getElementById('fut-liq-short'); if(liqSEl) liqSEl.innerText = '$0';
-        let fVerdict = document.getElementById('fut-ai-verdict'); if(fVerdict) { fVerdict.innerText = '⚖️ ĐANG PHÂN TÍCH...'; fVerdict.style.cssText = 'font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); color: #848e9c;'; }
-        
         let tape = document.getElementById('cc-sniper-tape');
         if(tape) tape.innerHTML = '<div style="font-size: 11px; color: #527c82; text-align: center; margin-top: 50px; font-style:italic;">Đang quét...</div>';
         
-        let liqTape = document.getElementById('fut-liq-tape');
-        if(liqTape) liqTape.innerHTML = '<div style="font-size: 10px; color: #527c82; text-align: center; margin-top: 45px; font-style:italic;">Đang rình cá mập bị luộc...</div>';
-        window.lastLiqEvent = null; 
-        
         setTimeout(() => {
-            if (typeof window.injectSmartMoneyTab === 'function') window.injectSmartMoneyTab();
-            if (typeof window.injectFuturesTab === 'function') window.injectFuturesTab();
             if (typeof window.fetchSmartMoneyData === 'function') window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
             if (typeof window.fetchFuturesSentiment === 'function') window.fetchFuturesSentiment(t.symbol);
             if (typeof window.fetchCommandCenterFutures === 'function') window.fetchCommandCenterFutures(t.symbol);
@@ -1014,247 +966,51 @@ window.openProChart = function(t, isTimeSwitch = false) {
         let prec = 4;
         if (priceVal < 1) prec = 6; if (priceVal < 0.1) prec = 8; if (priceVal < 0.0001) prec = 10;
 
-        let isTrad = window.currentTheme === 'trad';
-        let t_text = isTrad ? '#848e9c' : '#527c82'; let t_line = isTrad ? '#00F0FF' : '#41e6e7'; let t_up = isTrad ? '#0ECB81' : '#2af592'; let t_down = isTrad ? '#F6465D' : '#cb55e3';
-        
-        let overlayElem = document.getElementById('super-chart-overlay');
-        if(overlayElem) { overlayElem.classList.remove('theme-cyber', 'theme-trad'); overlayElem.classList.add('theme-' + window.currentTheme); }
-        let themeSel = document.getElementById('sc-theme-select'); if(themeSel) themeSel.value = window.currentTheme;
-
-        if (window.WaveIndicatorAPI) window.WaveIndicatorAPI.register();
-
-        // 1. KHỞI TẠO CHART BẰNG BỨC TƯỜNG LỬA (WA_Chart)
-        container.style.position = 'relative'; 
-        if (!window.WA_Chart.init('sc-chart-container')) return;
-
-        // 🚀 KÍCH HOẠT WAVE CHART ENGINE ĐỂ TỰ ĐỒNG BỘ STYLE NẾN VÀ LƯỚI
-        if (window.WaveChartEngine) {
-            window.WaveChartEngine.init();
+        // 🚀 BƯỚC 1: NẾU CHƯA CÓ LƯỚI NÀO THÌ KHỞI TẠO MẶC ĐỊNH
+        if (!window.WA_Chart.instances || Object.keys(window.WA_Chart.instances).length === 0) {
+            window.WA_Chart.init('sc-chart-container');
+            
+            window.WA_Chart.subscribeAction('onTooltipIconClick', function(data) {
+                if (!data.indicatorName) return;
+                const indName = data.indicatorName; const paneId = data.paneId;
+                if (data.iconId === 'visible') { window.WA_Chart.overrideIndicator({ name: indName, visible: true }, paneId); } 
+                else if (data.iconId === 'invisible') { window.WA_Chart.overrideIndicator({ name: indName, visible: false }, paneId); } 
+                else if (data.iconId === 'setting') { if (typeof window.openIndicatorSettings === 'function') window.openIndicatorSettings({ name: indName }, paneId); }
+                else if (data.iconId === 'close') { try { window.WA_Chart.removeIndicator(paneId, indName); } catch(e){} }
+            });
         }
 
-        // ĐĂNG KÝ CLICK ICON (Xử lý mượt cả VOL mặc định)
-        window.WA_Chart.subscribeAction('onTooltipIconClick', function(data) {
-            if (!data.indicatorName) return;
-            const indName = data.indicatorName;
-            const paneId = data.paneId;
-
-            if (data.iconId === 'visible') {
-                window.WA_Chart.overrideIndicator({ name: indName, visible: true }, paneId);
-                let ind = window.scActiveIndicators?.find(x => x.name === indName);
-                if (ind) ind.visible = true;
-            } 
-            else if (data.iconId === 'invisible') {
-                window.WA_Chart.overrideIndicator({ name: indName, visible: false }, paneId);
-                let ind = window.scActiveIndicators?.find(x => x.name === indName);
-                if (ind) ind.visible = false;
-            } 
-            else if (data.iconId === 'setting') {
-                if (typeof window.openIndicatorSettings === 'function') {
-                    let calcParams;
-                    // Bước 1: Thử lấy trực tiếp từ canvas
-                    try {
-                        const instances = window.WA_Chart.getIndicators({ name: indName, paneId: paneId });
-                        if (instances && instances.length > 0) calcParams = instances[0].calcParams;
-                    } catch(e) {}
-                    
-                    // Bước 2: Fallback -> lấy từ state scActiveIndicators
-                    if (!calcParams || calcParams.length === 0) {
-                        const stateEntry = (window.scActiveIndicators || []).find(x => x.name === indName);
-                        if (stateEntry && stateEntry.params && stateEntry.params.length > 0) {
-                            calcParams = stateEntry.params;
-                        }
-                    }
-                    
-                    // Bước 3: Truyền vào modal (openIndicatorSettings tự fallback về defaults nếu vẫn rỗng)
-                    window.openIndicatorSettings({ name: indName, shortName: indName, calcParams: calcParams }, paneId);
-                }
-            }
-            else if (data.iconId === 'close') {
-                if (typeof window.removeIndicatorFromChart === 'function') {
-                    window.removeIndicatorFromChart(indName);
-                } 
-                // Fallback chuẩn qua Tường Lửa
-                try { window.WA_Chart.removeIndicator(paneId, indName); } catch(e){}
-            }
-        });
-
-        // 2. CHỈ TẠO LỚP KÍNH HTML CHỨA ĐÚNG LOGO WATERMARK (ĐÃ XÓA SẠCH HTML LEGEND RÁC)
-        // 🛡️ TẠO LỚP UI HTML NỔI (CHỨA OHLC LEGEND VÀ WATERMARK)
+        // 🚀 BƯỚC 2: TÁI TẠO THANH OHLC LEGEND (Tránh vỡ UI khi chia màn hình)
         let customUI = document.getElementById('wa-custom-ui-layer');
         if (!customUI) {
             customUI = document.createElement('div');
             customUI.id = 'wa-custom-ui-layer';
             customUI.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;';
-            
-            customUI.innerHTML = `
-                <div style="position: absolute; top: 6px; left: 10px; font-family: Arial, sans-serif; font-size: 12px; font-weight: 600; display: flex; gap: 8px; flex-wrap: wrap; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">
+            customUI.innerHTML = `<div style="position: absolute; top: 6px; left: 10px; font-family: Arial, sans-serif; font-size: 12px; font-weight: 600; display: flex; gap: 8px; flex-wrap: wrap; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">
                     <span id="tp-symbol" style="color: #EAECEF; margin-right: 4px;">---</span>
                     <span><span style="color: #848e9c;">O</span> <span id="tp-o" style="color: #848e9c;">---</span></span>
                     <span><span style="color: #848e9c;">H</span> <span id="tp-h" style="color: #0ECB81;">---</span></span>
                     <span><span style="color: #848e9c;">L</span> <span id="tp-l" style="color: #F6465D;">---</span></span>
                     <span><span style="color: #848e9c;">C</span> <span id="tp-c" style="color: #848e9c;">---</span></span>
                     <span><span style="color: #848e9c;">V</span> <span id="tp-v" style="color: #848e9c;">---</span></span>
-                </div>
-                <div style="position: absolute; bottom: 25px; left: 15px; font-family: var(--font-main, Arial); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px;">WAVE ALPHA</div>
-            `;
-            container.appendChild(customUI);
+                </div>`;
+            document.getElementById('sc-chart-container').appendChild(customUI);
         }
 
-        window.WA_Chart.setPriceVolumePrecision(prec, 2);
-        window.WA_Chart.createIndicator('VOL', false, { height: 80 });
-
-        // --- BẮT ĐẦU PATCH: TỐI ƯU RESIZE OBSERVER & CLEAR CACHE ---
-        const chartArea = document.querySelector('.sc-chart-area');
-        if (chartArea) delete chartArea.dataset.mobileExpanded;
-        
-        const oldBackdrop = document.getElementById('sc-panel-backdrop');
-        if (oldBackdrop) oldBackdrop.classList.remove('visible');
-
-        if (window._chartResizeObserver) window._chartResizeObserver.disconnect();
-        
-        let _resizeRafId = null;
-        const isMobile = () => window.innerWidth <= 991;
-        
-        let _lastChartW = 0, _lastChartH = 0; // Lưu lại kích thước cũ
-        window._chartResizeObserver = new ResizeObserver(function(entries) {
-            if (!window.WA_Chart || !entries || entries.length === 0) return;
-            
-            // 🚀 KHÓA INFINITE LOOP: Chỉ vẽ lại nếu chiều rộng/cao thực sự thay đổi lớn hơn 1px
-            const rect = entries[0].contentRect;
-            if (Math.abs(rect.width - _lastChartW) < 1 && Math.abs(rect.height - _lastChartH) < 1) return;
-            _lastChartW = rect.width; 
-            _lastChartH = rect.height;
-
-            if (_resizeRafId) cancelAnimationFrame(_resizeRafId);
-            
-            // Giới hạn call stack vẽ lại chart ở tốc độ 60fps của thiết bị
-            _resizeRafId = requestAnimationFrame(function() {
-                if (window.WA_Chart) window.WA_Chart.resize();
-                _resizeRafId = null;
-            });
-        });
-        
-        window._chartResizeObserver.observe(container);
-        
-        // Trên mobile, Canvas đôi khi không bắt được sự thay đổi của class cha, 
-        // cần observe thêm lớp Wrapper để chắc chắn kích hoạt resize khi Sidebar thụt thò.
-        if (isMobile() && chartArea) {
-            window._chartResizeObserver.observe(chartArea);
+        // 🚀 BƯỚC 3: CẬP NHẬT PRECISION CHO ĐÚNG Ô ĐANG ACTIVE
+        if (window.WA_Chart && window.WA_Chart.active) {
+            window.WA_Chart.active.setPriceVolumePrecision(prec, 2);
         }
-        // --- KẾT THÚC PATCH ---
-
-        // [FIX 1.2] Áp dụng màu Chart, Grid VÀ Viền Nến từ LocalStorage khi khởi tạo
-        const ws = JSON.parse(localStorage.getItem('wa_chart_settings') || '{}');
         
-        const chartContainer = document.getElementById('sc-chart-container');
-        
+        if (window.WaveChartEngine) window.WaveChartEngine.applyNow();
 
-        if (ws.colUp || ws.showGrid === false || ws.colBg || !ws.colUp) {
-            const ub = ws.colUp || '#2af592';
-            const ubd = ws.colUpBd || ub;
-            const db = ws.colDown || '#cb55e3';
-            const dbd = ws.colDownBd || db;
+        // 🚀 BƯỚC 4: BẮN PHÁO HIỆU CHO DATA ROUTER HOẠT ĐỘNG
+        let dataInterval = window.getOptimalDataInterval(window.currentChartInterval);
+        window.dispatchEvent(new CustomEvent('WA_TOKEN_SWITCHED', {
+            detail: { token: t, interval: dataInterval, uiInterval: window.currentChartInterval }
+        }));
 
-            // Tự động chuyển mode Hollow (nến rỗng) nếu màu thân nến là transparent
-            const cType = (ub === 'transparent' || ub === 'rgba(0,0,0,0)') ? 'candle_up_stroke' : 'candle_solid';
-
-            window.WA_Chart.setStyles({
-                grid: {
-                    // 🚀 FIX: Tắt lưới mặc định để không bị chớp trước khi chart-engine kịp chạy
-                    horizontal: { show: false, color: 'rgba(255,255,255,0.05)', style: 'dashed' },
-                    vertical:   { show: false, color: 'rgba(255,255,255,0.05)', style: 'dashed' }
-                },
-                    candle: { 
-                        type: window.currentChartInterval === 'tick' ? 'area' : cType,
-                        bar: {
-                            upColor: ub, downColor: db, noChangeColor: '#848e9c',
-                            upBorderColor: ubd, downBorderColor: dbd,
-                            upWickColor: ubd, downWickColor: dbd
-                        }
-                    },
-                    watermark: {
-                        show: true, text: 'WAVE ALPHA', color: 'rgba(255, 255, 255, 0.05)', size: 48, weight: '800'
-                    }
-                });
-        }
-
-        // 3. SỰ KIỆN RÊ CHUỘT
-        // 🛡️ HỆ THỐNG LEGEND HTML (HOẠT ĐỘNG 2 CHẾ ĐỘ: CROSSHAIR & REALTIME)
-        window._isCrosshairActive = false;
-        
-        window._lastLegendUpdateMs = 0;
-        window._lastLegendSig = null;
-
-        window.updateLegendUI = function(ohlc, dataIndex = -1) {
-            if (!ohlc || typeof ohlc.open === 'undefined') return;
-            
-            // 🚀 BỘ TIẾT LƯU 1: Nếu là Realtime tự nhảy (chuột đang nghỉ), ép giảm xuống 10 FPS
-            const now = Date.now();
-            if (dataIndex === -1) {
-                if (now - window._lastLegendUpdateMs < 100) return;
-                window._lastLegendUpdateMs = now;
-            }
-
-            // 🚀 BỘ TIẾT LƯU 2: Tạo chữ ký, nếu giá và volume không đổi thì TUYỆT ĐỐI KHÔNG VẼ LẠI
-            const sig = `${dataIndex}_${ohlc.close}_${ohlc.volume}`;
-            if (window._lastLegendSig === sig) return;
-            window._lastLegendSig = sig;
-
-            const fmt = (v) => v >= 1 ? v.toFixed(2) : v.toFixed(6);
-            const fmtVol = (v) => v >= 1e9 ? (v/1e9).toFixed(2)+'B' : v >= 1e6 ? (v/1e6).toFixed(2)+'M' : v >= 1e3 ? (v/1e3).toFixed(2)+'K' : (v || 0).toFixed(0);
-            const setEl = (id, val, color) => { const el = document.getElementById(id); if (el) { el.textContent = val; if (color) el.style.color = color; } };
-
-            const barColor = ohlc.close >= ohlc.open ? '#0ECB81' : '#F6465D';
-            setEl('tp-o', fmt(ohlc.open), '#848e9c'); setEl('tp-h', fmt(ohlc.high), '#0ECB81');
-            setEl('tp-l', fmt(ohlc.low), '#F6465D'); setEl('tp-c', fmt(ohlc.close), barColor);
-            setEl('tp-v', fmtVol(ohlc.volume || 0), '#848e9c');
-            
-            // Tính % thay đổi của nến hiện tại
-            let pct = ohlc.open > 0 ? ((ohlc.close - ohlc.open) / ohlc.open) * 100 : 0;
-            let sign = pct >= 0 ? '+' : '';
-            let symStr = (window.currentChartToken ? window.currentChartToken.symbol : 'UNKNOWN').toUpperCase();
-            
-            // 🚀 ĐỔI KHUNG GIỜ THÀNH CHỮ RENKO Ở GÓC TRÁI
-            let tfStr = (window.currentChartInterval || '').toUpperCase();
-            if (window.WaveChartEngine && parseInt(window.WaveChartEngine.getConfig().chartType) === 14) {
-                tfStr = 'RENKO';
-            }
-            
-            setEl('tp-symbol', `${symStr} ${tfStr} (${sign}${pct.toFixed(2)}%)`, barColor);
-
-            // Báo cho file indicator biết index hiện tại (Giữ nguyên logic của bạn)
-            if (dataIndex >= 0 && window.WaveIndicatorAPI && typeof window.WaveIndicatorAPI.updateLegendValues === 'function') {
-                window.WaveIndicatorAPI.updateLegendValues(dataIndex);
-            }
-        };
-
-        window.WA_Chart.subscribeAction('onCrosshairChange', function(param) {
-            const dataList = window.WA_Chart.getDataList();
-            if (!dataList || dataList.length === 0) return;
-
-            if (param && param.dataIndex !== undefined && param.dataIndex >= 0) {
-                window._isCrosshairActive = true;
-                window.updateLegendUI(dataList[param.dataIndex], param.dataIndex);
-            } else {
-                window._isCrosshairActive = false;
-                let lastIndex = dataList.length - 1;
-                window.updateLegendUI(dataList[lastIndex], lastIndex); // Chuột rời khỏi chart -> Cập nhật nến mới nhất
-            }
-        });
-
-        
-// 🛡️ BẮN PHÁO HIỆU: ĐÃ ĐỔI TOKEN MỚI
-let dataInterval = window.getOptimalDataInterval(window.currentChartInterval);
-        
-window.dispatchEvent(new CustomEvent('WA_TOKEN_SWITCHED', {
-    detail: { 
-        token: t, 
-        interval: dataInterval, 
-        uiInterval: window.currentChartInterval 
-    }
-}));
-
-}, 100); 
+    }, 50); 
 };
 
 // chart-ui.js — hàm changeChartInterval
