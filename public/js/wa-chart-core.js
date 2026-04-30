@@ -1,6 +1,6 @@
 // ==========================================
 // 🚀 FILE: public/js/wa-chart-core.js
-// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - NATIVE TOOLTIP PRO
+// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - BẢN FULL CHÍNH XÁC 100%
 // ==========================================
 
 (function() {
@@ -20,6 +20,23 @@
             .wa-layout-9 { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); }
             .wa-chart-cell { position: relative; width: 100%; height: 100%; background: #131722; border: 1px solid transparent; }
             .wa-chart-cell.active-cell { border-color: #00F0FF; z-index: 5; }
+
+            /* CSS PURE CHO DANH SÁCH CHỈ BÁO GỘP CHUNG - ĐỨNG IM KHÔNG GIẬT LAG */
+            .wa-leg-item { display:inline-flex; align-self:flex-start; max-width:100%; align-items:center; gap:8px; font-size:11.5px; font-weight:500; color:#848e9c; pointer-events:auto; padding:2px 6px; border-radius:4px; background: transparent; cursor: default; margin-bottom: 2px; transition: background 0.15s ease;}
+            .wa-leg-item:hover { background: rgba(255,255,255,0.04); }
+            
+            .wa-leg-name { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; transition:color 0.15s ease; }
+            .wa-leg-val { font-family:var(--font-num); flex-shrink: 0; font-size:11px; transition:color 0.15s ease; }
+            
+            .wa-leg-icons { display:flex; gap:2px; margin-left:4px; flex-shrink:0; align-items:center; opacity:0; pointer-events:none; transition:opacity 0.15s ease; }
+            .wa-leg-item:hover .wa-leg-icons, .wa-leg-icons.force-show { opacity:1; pointer-events:auto; }
+            
+            .wa-leg-btn { display:flex; padding:5px; border-radius:4px; color:#848e9c; transition:all 0.15s ease; cursor:pointer; align-items:center; justify-content:center; }
+            .wa-leg-btn:hover { background: rgba(255,255,255,0.1); color: #EAECEF; }
+            .wa-leg-btn.toggle.is-off { color: #F6465D; }
+            .wa-leg-btn.toggle.is-off:hover { background: rgba(246,70,93,0.15); color: #F6465D; }
+            .wa-leg-btn.gear:hover { background: rgba(240,185,11,0.15); color: #F0B90B; }
+            .wa-leg-btn.delete:hover { background: rgba(246,70,93,0.15); color: #F6465D; }
         `;
         document.head.appendChild(style);
     }
@@ -30,6 +47,13 @@
         get active() { return _instances[_activeId] || Object.values(_instances)[0] || null; },
         get instances() { return _instances; }, 
         get activeId() { return _activeId; },
+
+        SVGS: {
+            eye: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`,
+            eyeOff: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`,
+            gear: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`,
+            close: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`
+        },
 
         init: function(containerId) { return this.initMultiLayout(containerId, '1', 1); },
 
@@ -57,7 +81,7 @@
                     cell.addEventListener('mousedown', () => this.setActiveChart(cellId));
                     gridWrapper.appendChild(cell);
                     
-                    // LỚP HTML CHỈ CHỨA DUY NHẤT THANH GIÁ OHLC (BỎ CHỈ BÁO RA)
+                    // UI CỐT LÕI: OHLC MẶC ĐỊNH
                     const uiLayer = document.createElement('div');
                     uiLayer.className = 'wa-custom-ui-layer';
                     uiLayer.style.cssText = 'position: absolute; top: 0; left: 0; width: calc(100% - 65px); height: 100%; pointer-events: none; z-index: 50; display: flex; flex-direction: column; justify-content: space-between; padding: 6px 10px; overflow: hidden;';
@@ -76,21 +100,29 @@
                     `;
                     cell.appendChild(uiLayer);
 
-                    // 🚀 NÚT ▼ GIỜ SẼ BẬT/TẮT TRỰC TIẾP NATIVE TOOLTIP TỪNG Ô
+                    // BẢNG CHỨA DANH SÁCH CHỈ BÁO GỘP CHUNG (CHÍNH + PHỤ)
+                    const legendHtml = document.createElement('div');
+                    legendHtml.id = `wa-ind-legend-${cellId}`;
+                    legendHtml.style.cssText = 'position: absolute; top: 28px; left: 10px; z-index: 51; display: flex; flex-direction: column; gap: 2px; pointer-events: none; max-width: calc(100% - 65px); max-height: calc(100% - 40px); overflow-y: auto;';
+                    cell.appendChild(legendHtml);
+
+                    // ẨN / HIỆN DANH SÁCH CHỈ BÁO
                     setTimeout(() => {
                         const toggleBtn = document.getElementById(`wa-toggle-${cellId}`);
-                        if (toggleBtn && _instances[cellId]) {
+                        if (toggleBtn) {
                             toggleBtn.onmouseover = () => { toggleBtn.style.color = '#EAECEF'; toggleBtn.style.background = 'rgba(255,255,255,0.1)'; };
                             toggleBtn.onmouseout = () => { toggleBtn.style.color = '#848e9c'; toggleBtn.style.background = 'transparent'; };
                             toggleBtn.onmousedown = (e) => e.stopPropagation(); 
                             toggleBtn.ontouchstart = (e) => e.stopPropagation();
 
-                            let isHidden = false;
                             toggleBtn.onclick = (e) => {
                                 e.stopPropagation();
-                                isHidden = !isHidden;
-                                toggleBtn.style.transform = isHidden ? 'rotate(-90deg)' : 'rotate(0deg)';
-                                _instances[cellId].setStyles({ indicator: { tooltip: { showRule: isHidden ? 'none' : 'always' } } });
+                                const leg = document.getElementById(`wa-ind-legend-${cellId}`);
+                                if (leg) {
+                                    const isHidden = leg.style.display === 'none';
+                                    leg.style.display = isHidden ? 'flex' : 'none';
+                                    toggleBtn.style.transform = isHidden ? 'rotate(-90deg)' : 'rotate(0deg)';
+                                }
                             };
                         }
                     }, 50);
@@ -102,37 +134,16 @@
                         if (i === 0) _activeId = cellId; 
                         chart._waIsHovering = false; 
 
-                        // 🚀 KẾT NỐI SỰ KIỆN CLICK TỪ TOOLTIP NATIVE VÀO HỆ THỐNG QUẢN LÝ
-                        chart.subscribeAction('onTooltipIconClick', function(data) {
-                            if (!data.indicatorName) return;
-                            const name = data.indicatorName;
-                            const paneId = data.paneId;
-
-                            // Nút Mắt (Ẩn/Hiện)
-                            if (data.iconId === 'visible' || data.iconId === 'invisible') {
-                                const targetVis = (data.iconId === 'invisible'); // Bấm tàng hình thì ép nó hiện lại
-                                window.WA_Chart.toggleInd(cellId, name, !targetVis);
-                            } 
-                            // Nút Bánh Răng (Cài đặt)
-                            else if (data.iconId === 'setting') { 
-                                window.WA_Chart.settingInd(cellId, name, paneId); 
-                            }
-                            // Nút X (Xóa)
-                            else if (data.iconId === 'close') { 
-                                window.WA_Chart.removeInd(cellId, name, paneId); 
-                            }
-                        });
-
                         chart.subscribeAction('onCrosshairChange', (param) => {
                             let dataIndex = (param && param.dataIndex !== undefined) ? param.dataIndex : -1;
                             if (dataIndex < 0) {
                                 chart._waIsHovering = false;
                                 const dataList = chart.getDataList();
-                                if (dataList && dataList.length > 0) this.updateLegendSpecific(cellId, dataList[dataList.length - 1]);
+                                if (dataList && dataList.length > 0) this.updateLegendSpecific(cellId, dataList[dataList.length - 1], dataList.length - 1);
                             } else {
                                 chart._waIsHovering = true;
                                 const dataList = chart.getDataList();
-                                this.updateLegendSpecific(cellId, dataList[dataIndex]);
+                                this.updateLegendSpecific(cellId, dataList[dataIndex], dataIndex);
                             }
 
                             if (_isSyncingCrosshair) return; 
@@ -156,7 +167,7 @@
             } catch(e) { console.error('[WA_Chart] Init Multi Error', e); return false; }
         },
 
-        updateLegendSpecific: function(cellId, ohlc) {
+        updateLegendSpecific: function(cellId, ohlc, dataIndex = -1) {
             if (!ohlc) return;
             const fmt = (v) => v >= 1 ? v.toFixed(2) : v.toFixed(6);
             const fmtVol = (v) => v >= 1e9 ? (v/1e9).toFixed(2)+'B' : v >= 1e6 ? (v/1e6).toFixed(2)+'M' : v >= 1e3 ? (v/1e3).toFixed(2)+'K' : (v || 0).toFixed(0);
@@ -188,9 +199,70 @@
                     if (ohlcWrap) ohlcWrap.style.display = cfg.showOHLC === false ? 'none' : 'flex';
                 }
             }
+
+            if (dataIndex >= 0) {
+                const chart = _instances[cellId];
+                if (!chart) return;
+                
+                // 🚀 QUÉT REALTIME DATA CHO TẤT CẢ CHỈ BÁO THUỘC Ô NÀY (BẤT KỂ Ở ĐÂU)
+                if (window.scActiveIndicators) {
+                    let cellInds = window.scActiveIndicators.filter(x => x.cellId === cellId);
+                    cellInds.forEach(ind => {
+                        const valEl = document.getElementById(`wa-val-${cellId}-${ind.name}`);
+                        if (valEl) {
+                            try {
+                                const chartInds = chart.getIndicators({ name: ind.name, paneId: ind.paneId });
+                                if (chartInds && chartInds.length > 0 && chartInds[0].result && chartInds[0].result[dataIndex]) {
+                                    const res = chartInds[0].result[dataIndex];
+                                    let valStr = '';
+                                    Object.keys(res).forEach(k => {
+                                        if (typeof res[k] === 'number') valStr += '  ' + (Math.abs(res[k]) > 1000 ? res[k].toFixed(2) : res[k].toFixed(4));
+                                    });
+                                    valEl.innerText = valStr;
+                                }
+                            } catch(e) {}
+                        }
+                    });
+                }
+            }
         },
 
-        // API Cầu nối gọi từ Bảng Settings bên ngoài vào
+        // 🚀 CỖ MÁY GỘP TOÀN BỘ CHỈ BÁO VÀO 1 DANH SÁCH HTML DUY NHẤT
+        renderHtmlLegend: function(cellId) {
+            const container = document.getElementById(`wa-ind-legend-${cellId}`);
+            if (!container) return;
+
+            let cellInds = [];
+            if (window.scActiveIndicators) {
+                cellInds = window.scActiveIndicators.filter(x => x.cellId === cellId);
+            }
+
+            const hidden = ['WA_COL_CHART', 'WA_HL_CHART', 'WA_STEP_LINE', 'WA_LINE_MARKER', 'WA_HLC_AREA', 'WA_BASELINE', 'WA_VOL_CANDLE', 'WA_LINE_BREAK'];
+            cellInds = cellInds.filter(i => !hidden.includes(i.name));
+
+            let html = '';
+            cellInds.forEach(ind => {
+                const params = ind.params ? ind.params.join(', ') : '';
+                const isVis = ind.visible !== false;
+                const eyeColor = isVis ? '#848e9c' : '#F6465D'; 
+                const eyeIcon = isVis ? this.SVGS.eye : this.SVGS.eyeOff;
+                const nameColor = isVis ? '#EAECEF' : '#5e6673';
+                
+                html += `
+                <div id="wa-leg-item-${cellId}-${ind.name}" class="wa-leg-item" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">
+                    <span class="wa-leg-name" style="color:${nameColor};">${ind.name} <span style="font-size:10px; font-weight:400; opacity:0.7;">(${params})</span></span>
+                    <span id="wa-val-${cellId}-${ind.name}" class="wa-leg-val" style="color:${nameColor};"></span>
+                    <div class="wa-leg-icons ${!isVis ? 'force-show' : ''}">
+                        <div class="wa-leg-btn toggle ${!isVis ? 'is-off' : ''}" title="Ẩn/Hiện" onclick="window.WA_Chart.toggleInd('${cellId}', '${ind.name}', ${isVis})">${eyeIcon}</div>
+                        <div class="wa-leg-btn gear" title="Cài đặt" onclick="window.WA_Chart.settingInd('${cellId}', '${ind.name}')">${this.SVGS.gear}</div>
+                        <div class="wa-leg-btn delete" title="Xóa" onclick="window.WA_Chart.removeInd('${cellId}', '${ind.name}')">${this.SVGS.close}</div>
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        },
+
+        // CÁC HÀM XỬ LÝ SỰ KIỆN TỪ NÚT BẤM HTML
         toggleInd: function(cellId, name, currentVis) { 
             const isNowVis = !currentVis;
             let targetPane = 'candle_pane';
@@ -204,17 +276,31 @@
             }
             
             _instances[cellId].overrideIndicator({ name: name, visible: isNowVis }, targetPane); 
-            if(typeof window.saveIndicatorState === 'function') window.saveIndicatorState();
             
+            const item = document.getElementById(`wa-leg-item-${cellId}-${name}`);
+            if (item) {
+                const nameEl = item.querySelector('.wa-leg-name'); const valEl = document.getElementById(`wa-val-${cellId}-${name}`);
+                const iconsWrap = item.querySelector('.wa-leg-icons'); const toggleBtn = item.querySelector('.wa-leg-btn.toggle');
+                if (nameEl) nameEl.style.color = isNowVis ? '#EAECEF' : '#5e6673';
+                if (valEl) valEl.style.color = isNowVis ? '#EAECEF' : '#5e6673';
+                if (iconsWrap) { if (!isNowVis) iconsWrap.classList.add('force-show'); else iconsWrap.classList.remove('force-show'); }
+                if (toggleBtn) {
+                    toggleBtn.innerHTML = isNowVis ? this.SVGS.eye : this.SVGS.eyeOff;
+                    if (!isNowVis) toggleBtn.classList.add('is-off'); else toggleBtn.classList.remove('is-off');
+                    toggleBtn.setAttribute('onclick', `window.WA_Chart.toggleInd('${cellId}', '${name}', ${isNowVis})`);
+                }
+            }
+            
+            if(typeof window.saveIndicatorState === 'function') window.saveIndicatorState();
             const modal = document.getElementById('sc-indicator-modal');
             if (modal && modal.style.display !== 'none' && typeof window.renderIndicatorList === 'function') {
                 window.renderIndicatorList(document.getElementById('wa-ind-search')?.value);
             }
         },
 
-        settingInd: function(cellId, name, directPaneId) {
-            let targetPane = directPaneId || 'candle_pane';
-            if (!directPaneId && window.scActiveIndicators) {
+        settingInd: function(cellId, name) {
+            let targetPane = 'candle_pane';
+            if (window.scActiveIndicators) {
                 let ind = window.scActiveIndicators.find(x => x.name === name && x.cellId === cellId);
                 if (ind && ind.paneId) targetPane = ind.paneId;
             }
@@ -223,16 +309,17 @@
             if (typeof window.openIndicatorSettings === 'function') window.openIndicatorSettings({ name: name, shortName: name, calcParams: calcParams }, targetPane);
         },
 
-        removeInd: function(cellId, name, directPaneId) { 
+        removeInd: function(cellId, name) { 
             if (typeof window.removeIndicatorFromChart === 'function') {
                 window.removeIndicatorFromChart(name, cellId);
             } else {
-                let targetPane = directPaneId || 'candle_pane';
-                if (!directPaneId && window.scActiveIndicators) {
+                let targetPane = 'candle_pane';
+                if (window.scActiveIndicators) {
                     let ind = window.scActiveIndicators.find(x => x.name === name && x.cellId === cellId);
                     if (ind && ind.paneId) targetPane = ind.paneId;
                 }
                 _instances[cellId].removeIndicator(targetPane, name); 
+                this.renderHtmlLegend(cellId); 
             }
         },
 
@@ -244,35 +331,18 @@
             window.dispatchEvent(new CustomEvent('WA_ACTIVE_CHART_CHANGED', { detail: { cellId: cellId } }));
         },
 
-        // 🚀 ĐỘ LẠI TOOLTIP GỐC: TRẮNG ĐEN MINIMALIST CHUẨN TRADINGVIEW
+        // 🚀 TẮT HOÀN TOÀN CÁC NATIVE TOOLTIP TRÊN MỌI MẶT TRẬN (CHÍNH + PHỤ)
         _applyDefaultStyles: function(chart) {
             chart.setStyles({
                 layout: { backgroundColor: 'transparent' },
                 grid: { show: false, horizontal: { show: false }, vertical: { show: false } },
                 crosshair: { show: true },
-                // Ép tàng hình OHLC mặc định
                 candle: { 
                     type: 'candle_solid', 
                     tooltip: { showRule: 'none', custom: function() { return []; }, text: { size: 0, color: 'transparent' } } 
                 },
                 indicator: { 
-                    tooltip: { 
-                        showRule: 'always', 
-                        showType: 'standard',
-                        // Thông số chữ
-                        text: { 
-                            size: 11.5, family: 'Inter, Arial, sans-serif', weight: 600, color: '#848e9c', 
-                            marginTop: 26, /* Đẩy xuống 26px để KHÔNG đè lên thanh OHLC HTML ở góc trên */
-                            marginLeft: 4, marginRight: 8, marginBottom: 0 
-                        },
-                        // Khung Icon siêu tối giản
-                        icons: [
-                            { id: 'visible', position: 'middle', marginLeft: 6, marginTop: 26, paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3, icon: '\uf06e', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', size: 12, color: '#848e9c', activeColor: '#EAECEF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(255,255,255,0.08)' },
-                            { id: 'invisible', position: 'middle', marginLeft: 6, marginTop: 26, paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3, icon: '\uf070', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', size: 12, color: '#5e6673', activeColor: '#F6465D', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(246,70,93,0.1)' },
-                            { id: 'setting', position: 'middle', marginLeft: 4, marginTop: 26, paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3, icon: '\uf013', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', size: 12, color: '#848e9c', activeColor: '#F0B90B', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(240,185,11,0.1)' },
-                            { id: 'close', position: 'middle', marginLeft: 4, marginTop: 26, paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3, icon: '\uf00d', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', size: 13, color: '#848e9c', activeColor: '#F6465D', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(246,70,93,0.1)' }
-                        ]
-                    } 
+                    tooltip: { showRule: 'none', showType: 'standard', text: { size: 0, color: 'transparent' }, icons: [] } 
                 }
             });
         },
@@ -283,20 +353,20 @@
             _instances = {}; _activeId = null;
         },
 
-        applyNewData: function(data) { try { if(this.active) { this.active.applyNewData(data); this.updateLegendSpecific(this.activeId, data[data.length-1]); } } catch(e){} },
-        updateData: function(data) { try { if(this.active) { this.active.updateData(data); if (!this.active._waIsHovering) { this.updateLegendSpecific(this.activeId, data); } } } catch(e){} }, 
+        applyNewData: function(data) { try { if(this.active) { this.active.applyNewData(data); this.updateLegendSpecific(this.activeId, data[data.length-1], data.length-1); } } catch(e){} },
+        updateData: function(data) { try { if(this.active) { this.active.updateData(data); if (!this.active._waIsHovering) { const dl = this.active.getDataList(); this.updateLegendSpecific(this.activeId, data, dl.length-1); } } } catch(e){} }, 
         getDataList: function() { try { return this.active ? this.active.getDataList() : []; } catch(e){ return []; } },
         setStyles: function(styles) { try { Object.values(_instances).forEach(chart => chart.setStyles(styles)); } catch(e){} },
         subscribeAction: function(type, cb) { try { if(this.active) this.active.subscribeAction(type, cb); } catch(e){} },
+        removeIndicator: function(paneId, name) { try { if(this.active) { this.active.removeIndicator(paneId, name); this.renderHtmlLegend(this.activeId); } } catch(e){} },
+        overrideIndicator: function(override, paneId) { try { if(this.active) { this.active.overrideIndicator(override, paneId); this.renderHtmlLegend(this.activeId); } } catch(e){} },
         
-        // Remove HTML triggers here
-        removeIndicator: function(paneId, name) { try { if(this.active) this.active.removeIndicator(paneId, name); } catch(e){} },
-        overrideIndicator: function(override, paneId) { try { if(this.active) this.active.overrideIndicator(override, paneId); } catch(e){} },
-        
+        // 🚀 THEO DÕI MỌI LỆNH TẠO CHỈ BÁO VÀ GHI VÀO DANH SÁCH TỔNG
         createIndicator: function(name, isStack, options) { 
             try { 
                 if(this.active) { 
                     this.active.createIndicator(name, isStack, options); 
+                    
                     const activeId = this.activeId;
                     if (!window.scActiveIndicators) window.scActiveIndicators = [];
                     if (!window.scActiveIndicators.find(x => x.name === name && x.cellId === activeId)) {
@@ -308,6 +378,7 @@
                         }
                         window.scActiveIndicators.push({ cellId: activeId, name: name, isStack: isStack, paneId: paneId, params: defParams, visible: true });
                     }
+                    this.renderHtmlLegend(activeId); 
                 } 
             } catch(e){} 
         },
@@ -327,8 +398,8 @@
         setOffsetRightDistance: function(distance) { try { Object.values(_instances).forEach(chart => chart.setOffsetRightDistance(distance)); } catch(e){} },
         setTimezone: function(tz) { try { Object.values(_instances).forEach(chart => chart.setTimezone(tz)); } catch(e){} },
 
-        applyNewDataSpecific: function(cellId, data) { try { if(_instances[cellId]) { _instances[cellId].applyNewData(data); this.updateLegendSpecific(cellId, data[data.length-1]); } } catch(e){} },
-        updateDataSpecific: function(cellId, data) { try { if(_instances[cellId]) { _instances[cellId].updateData(data); if (!_instances[cellId]._waIsHovering) { this.updateLegendSpecific(cellId, data); } } } catch(e){} },
+        applyNewDataSpecific: function(cellId, data) { try { if(_instances[cellId]) { _instances[cellId].applyNewData(data); this.updateLegendSpecific(cellId, data[data.length-1], data.length-1); } } catch(e){} },
+        updateDataSpecific: function(cellId, data) { try { if(_instances[cellId]) { _instances[cellId].updateData(data); if (!_instances[cellId]._waIsHovering) { const dl = _instances[cellId].getDataList(); this.updateLegendSpecific(cellId, data, dl.length-1); } } } catch(e){} },
         getChartSpecific: function(cellId) { return _instances[cellId] || null; },
 
         setMainSeries: function(config) {
@@ -367,7 +438,6 @@
 
                     const areaBgColor = (isLine || hideCandle) ? 'transparent' : [{offset: 0, color: areaTopColor}, {offset: 1, color: 'transparent'}];
                     
-                    // Giữ lại cấu hình bịt mồm OHLC
                     chart.setStyles({
                         candle: {
                             zLevel: 1, type: kcChartType,
@@ -375,6 +445,7 @@
                             area: { lineSize: 2, lineColor: hideCandle ? 'transparent' : config.upColor, backgroundColor: areaBgColor },
                             tooltip: { showRule: 'none', custom: function() { return []; }, text: { size: 0, color: 'transparent' } }
                         },
+                        indicator: { tooltip: { showRule: 'none' } },
                         yAxis: { type: config.yAxisMode || 'normal' }
                     });
                     chart.setPaneOptions({ id: 'candle_pane', axisOptions: { type: config.yAxisMode } });
