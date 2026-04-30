@@ -3912,103 +3912,65 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     } 
 
     // =========================================================================
-    // NÚT TAM GIÁC ẨN/HIỆN TEXT CHỈ BÁO (AUTO-TRACKING V5 - ZERO LAG)
+    // NÚT TAM GIÁC ẨN/HIỆN TEXT CHỈ BÁO (AUTO-TRACKING V6 - ĐA MÀN HÌNH)
     // =========================================================================
     setTimeout(() => {
-        const chartDom = document.getElementById('sc-chart-container') || 
-                         document.getElementById('tv-chart-container') || 
-                         document.querySelector('.klinecharts-pro');
-                         
-        if (chartDom && !document.getElementById('wa-legend-toggle')) {
-            if (window.getComputedStyle(chartDom).position === 'static') {
-                chartDom.style.position = 'relative';
-            }
+      if (!window.WA_Chart || !window.WA_Chart.instances) return;
+      
+      Object.keys(window.WA_Chart.instances).forEach(cellId => {
+          const chartCell = document.getElementById(cellId);
+          if (!chartCell || chartCell.querySelector('.wa-legend-toggle')) return;
 
-            if (window.WA_Chart) {
-                window.WA_Chart.setStyles({
-                    indicator: { tooltip: { text: { marginLeft: 8 } } }
-                });
-            }
+          const toggleBtn = document.createElement('div');
+          toggleBtn.className = 'wa-legend-toggle';
+          toggleBtn.title = "Thu gọn/Mở rộng danh sách chỉ báo";
+          toggleBtn.dataset.hidden = "false"; 
+          
+          toggleBtn.style.cssText = `
+              position: absolute; left: 12px; top: 46px; z-index: 999;
+              width: 20px; height: 20px; background: rgba(30, 35, 41, 0.4);
+              border: 1px solid rgba(255,255,255,0.05); color: #848e9c;
+              display: flex; align-items: center; justify-content: center;
+              cursor: pointer; border-radius: 4px; backdrop-filter: blur(4px);
+              transition: top 0.25s, background 0.2s;
+          `;
+          
+          toggleBtn.innerHTML = `
+              <svg class="wa-legend-icon" style="transition: transform 0.25s ease;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="18 15 12 9 6 15"></polyline>
+              </svg>
+          `;
 
-            const toggleBtn = document.createElement('div');
-            toggleBtn.id = 'wa-legend-toggle';
-            toggleBtn.title = "Thu gọn/Mở rộng danh sách chỉ báo";
-            toggleBtn.dataset.hidden = "false"; 
-            
-            toggleBtn.style.cssText = `
-                position: absolute;
-                left: 12px;
-                top: 36px;
-                z-index: 999;
-                width: 20px;
-                height: 20px;
-                background: rgba(30, 35, 41, 0.4);
-                border: 1px solid rgba(255,255,255,0.05);
-                color: #848e9c;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                border-radius: 4px;
-                backdrop-filter: blur(4px);
-                transition: top 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.2s, transform 0.2s;
-            `;
-            
-            toggleBtn.innerHTML = `
-                <svg id="wa-legend-icon" style="transition: transform 0.25s ease;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="18 15 12 9 6 15"></polyline>
-                </svg>
-            `;
+          toggleBtn.onmouseover = () => { toggleBtn.style.background = 'rgba(255,255,255,0.1)'; toggleBtn.style.color = '#fff'; };
+          toggleBtn.onmouseout = () => { toggleBtn.style.background = 'rgba(30, 35, 41, 0.4)'; toggleBtn.style.color = '#848e9c'; };
 
-            toggleBtn.onmouseover = () => { toggleBtn.style.background = 'rgba(255,255,255,0.1)'; toggleBtn.style.color = '#fff'; };
-            toggleBtn.onmouseout = () => { toggleBtn.style.background = 'rgba(30, 35, 41, 0.4)'; toggleBtn.style.color = '#848e9c'; };
+          let isLegendVisible = true;
+          toggleBtn.onclick = (e) => {
+              e.stopPropagation();
+              isLegendVisible = !isLegendVisible;
+              toggleBtn.dataset.hidden = (!isLegendVisible).toString(); 
+              toggleBtn.querySelector('.wa-legend-icon').style.transform = isLegendVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+              
+              const instance = window.WA_Chart.instances[cellId];
+              if (instance) instance.setStyles({ indicator: { tooltip: { showRule: isLegendVisible ? 'always' : 'none' } } });
+          };
 
-            let isLegendVisible = true;
-            toggleBtn.onclick = (e) => {
-                e.stopPropagation();
-                isLegendVisible = !isLegendVisible;
-                toggleBtn.dataset.hidden = (!isLegendVisible).toString(); 
-                
-                document.getElementById('wa-legend-icon').style.transform = isLegendVisible ? 'rotate(0deg)' : 'rotate(180deg)';
-                
-                if (window.WA_Chart) {
-                    window.WA_Chart.setStyles({
-                        indicator: { tooltip: { showRule: isLegendVisible ? 'always' : 'none' } }
-                    });
-                }
-            };
+          chartCell.appendChild(toggleBtn);
 
-            chartDom.appendChild(toggleBtn);
-
-            let lastState = null; 
-            setInterval(() => {
-                if (!window.WA_Chart || !document.getElementById('wa-legend-toggle')) return;
-                let count = 0;
-                try {
-                    const inds = window.WA_Chart.getIndicatorByPaneId('candle_pane');
-                    if (inds) {
-                        if (inds instanceof Map) count = inds.size;
-                        else count = Object.keys(inds).length;
-                    }
-                } catch(e) {}
-
-                if (count === 0 && global.scActiveIndicators) {
-                    count = global.scActiveIndicators.filter(i => i.isStack).length;
-                }
-
-                const isHidden = toggleBtn.dataset.hidden === 'true';
-                const currentState = count + "_" + isHidden;
-                
-                if (lastState !== currentState) {
-                    const baseTop = 34; 
-                    const lineHeight = 24; 
-                    const targetTop = isHidden ? baseTop : baseTop + (count * lineHeight);
-                    toggleBtn.style.top = targetTop + 'px';
-                    lastState = currentState; 
-                }
-            }, 150); 
-        }
-    }, 800);
+          // Tự kéo nút xuống nếu có quá nhiều chỉ báo
+          setInterval(() => {
+              let count = 0;
+              try {
+                  const inds = window.WA_Chart.instances[cellId].getIndicatorByPaneId('candle_pane');
+                  if (inds) count = (inds instanceof Map) ? inds.size : Object.keys(inds).length;
+              } catch(e) {}
+              
+              const isHidden = toggleBtn.dataset.hidden === 'true';
+              const targetTop = isHidden ? 46 : 46 + (count * 24);
+              toggleBtn.style.top = targetTop + 'px';
+          }, 500);
+      });
+  }, 1000);
   };
 
     

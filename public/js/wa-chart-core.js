@@ -200,11 +200,12 @@
                 layout: { backgroundColor: 'transparent' },
                 grid: { show: false, horizontal: { show: false }, vertical: { show: false } },
                 crosshair: { show: true },
-                // Ẩn các text mặc định xấu xí của thư viện để nhường chỗ cho UI của WAVE ALPHA
                 candle: { type: 'candle_solid', tooltip: { showRule: 'always', showType: 'standard', custom: function() { return [{ title: { text: ' ', color: 'transparent' }, value: { text: ' ', color: 'transparent' } }]; }, text: { size: 12, color: 'transparent' } } },
                 indicator: {
                     tooltip: { 
-                        showRule: 'always', showType: 'standard',
+                        showRule: 'always', 
+                        showType: 'standard',
+                        // 🚀 BẮT BUỘC ĐỂ NHIỀU CHỈ BÁO: Text phải xếp thành danh sách thay vì nối đuôi
                         text: { size: 12, family: 'Arial, sans-serif', weight: 600, color: '#848e9c', marginLeft: 8, marginTop: 8 },
                         icons: [
                             { id: 'visible', position: 'middle', marginLeft: 8, marginTop: 8, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf070', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 11, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
