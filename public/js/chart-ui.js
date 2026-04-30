@@ -2405,43 +2405,45 @@ window.closeProChart = function() {
 })();
 
 // =========================================================================
-// ⏱️ BƯỚC 5: CHART OVERLAYS (NATIVE COUNTDOWN & WATERMARK)
+// ⏱️ BƯỚC 5: CHART OVERLAYS (XỬ LÝ WATERMARK & COUNTDOWN ĐA MÀN HÌNH)
 // =========================================================================
 (function initChartOverlays() {
     'use strict';
-
     let countdownInterval = null;
     let countdownRafId = null;
 
-    // 🚀 MASTER LISTENER: Xử lý Giao diện Tức thời (Trị dứt điểm 4 lỗi)
     const handleConfigUpdate = (e) => {
         const config = e.detail || {};
         const container = document.getElementById('sc-chart-container');
         
-        // 1. CHỮ CHÌM (WATERMARK)
-        let wm = document.getElementById('wa-overlay-watermark');
-        if (config.showWatermark !== false) {
-            if (!wm && container) {
-                wm = document.createElement('div');
-                wm.id = 'wa-overlay-watermark';
-                wm.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: "Inter", sans-serif; font-weight: 800; font-size: clamp(40px, 8vw, 120px); letter-spacing: 2px; pointer-events: none; z-index: 1; white-space: nowrap; transition: opacity 0.2s;';
-                container.appendChild(wm);
-            }
-            if (wm) {
-                const sym = window.currentChartToken ? window.currentChartToken.symbol : 'WAVE ALPHA';
-                let tf = (window.currentChartInterval || '1D').toUpperCase();
+        // 🚀 1. SỬA LỖI WATERMARK (Sử dụng Watermark nội bộ của thư viện, vẽ vào từng ô)
+        if (window.WA_Chart && window.WA_Chart.instances) {
+            Object.keys(window.WA_Chart.instances).forEach(cellId => {
+                let isShow = config.showWatermark !== false;
+                let opacity = config.watermarkOpacity || 0.05;
                 
-                // 🚀 TRỊ DỨT ĐIỂM CHỮ 1M: Ép chữ thành RENKO nếu đang bật Renko
-                if (parseInt(config.chartType) === 14) {
-                    tf = 'RENKO';
-                }
+                // Lấy thông tin token/timeframe từ kho Đa luồng (nếu có) hoặc mặc định
+                let tObj = (window.waCellTokens && window.waCellTokens[cellId]) ? window.waCellTokens[cellId] : window.currentChartToken;
+                let tf = (window.waCellIntervals && window.waCellIntervals[cellId]) ? window.waCellIntervals[cellId] : window.currentChartInterval;
                 
-                wm.innerText = `${sym} • ${tf}`;
-                wm.style.color = `rgba(255,255,255, ${config.watermarkOpacity || 0.05})`;
-            }
-        } else if (wm) { wm.remove(); }
+                let sym = tObj ? tObj.symbol : 'WAVE ALPHA';
+                let tfStr = (tf || '1D').toUpperCase();
+                if (parseInt(config.chartType) === 14) tfStr = 'RENKO';
 
-        // 2. ĐẾM NGƯỢC (COUNTDOWN)
+                // Bắn trực tiếp vào Style của từng ô
+                window.WA_Chart.instances[cellId].setStyles({
+                    watermark: {
+                        show: isShow,
+                        text: `${sym} • ${tfStr}`,
+                        color: `rgba(255, 255, 255, ${opacity})`,
+                        size: 48,
+                        weight: '800'
+                    }
+                });
+            });
+        }
+
+        // 2. ĐẾM NGƯỢC (COUNTDOWN) - Cứ ghim tạm cho ô Active
         let cd = document.getElementById('wa-overlay-countdown');
         if (config.showCountdown !== false) {
             if (!cd && container) {
@@ -2462,87 +2464,73 @@ window.closeProChart = function() {
         // 3. TẮT/MỞ OHLC LEGEND
         const uiLayer = document.getElementById('wa-custom-ui-layer');
         if (uiLayer && uiLayer.children.length > 0) {
-            // Thẻ div đầu tiên trong uiLayer chính là dải OHLC
             uiLayer.children[0].style.display = config.showOHLC === false ? 'none' : 'flex';
         }
 
         // 4. TẮT/MỞ TÂM NGẮM (CROSSHAIR)
         if (window.WA_Chart) {
-            window.WA_Chart.setStyles({
-                crosshair: { show: config.crosshairMode !== 'hidden' }
-            });
+            window.WA_Chart.setStyles({ crosshair: { show: config.crosshairMode !== 'hidden' } });
         }
     };
 
-    // Lắng nghe cả chữ Hoa lẫn chữ Thường để không bao giờ bị trượt lệnh
     window.addEventListener('wa_chart_config_updated', handleConfigUpdate);
     window.addEventListener('WA_CHART_CONFIG_UPDATED', handleConfigUpdate);
+
+    // 🚀 Lắng nghe thêm sự kiện đổi Token để Cập nhật lại Watermark lập tức
+    window.addEventListener('WA_TOKEN_SWITCHED', function() {
+        if (window.WaveChartEngine) {
+            const config = window.WaveChartEngine.getConfig();
+            handleConfigUpdate({ detail: config });
+        }
+    });
 
     function updateCountdownText() {
         const cd = document.getElementById('wa-overlay-countdown');
         if (!cd) return;
-
         const interval = window.currentChartInterval || '1d';
         const now = new Date();
         let nextTime = new Date(now.getTime());
 
-        // 🚀 FIX LỖI ĐỨNG HÌNH: Dùng thuật toán Floor + Chu kỳ để luôn tính nến Tương lai
         if (interval.includes('m')) {
             const m = parseInt(interval);
             nextTime.setMinutes(Math.floor(now.getMinutes() / m) * m + m);
-            nextTime.setSeconds(0);
-            nextTime.setMilliseconds(0);
+            nextTime.setSeconds(0); nextTime.setMilliseconds(0);
         } else if (interval.includes('h')) {
             const h = parseInt(interval);
             nextTime.setHours(Math.floor(now.getHours() / h) * h + h);
-            nextTime.setMinutes(0); 
-            nextTime.setSeconds(0);
-            nextTime.setMilliseconds(0);
+            nextTime.setMinutes(0); nextTime.setSeconds(0); nextTime.setMilliseconds(0);
         } else if (interval === '1d') {
             nextTime.setUTCDate(now.getUTCDate() + 1); 
             nextTime.setUTCHours(0, 0, 0, 0); 
-        } else {
-            cd.style.display = 'none'; return; 
-        }
+        } else { cd.style.display = 'none'; return; }
 
         let diff = nextTime.getTime() - now.getTime();
         if (diff < 0) diff = 0;
-
         const h = Math.floor(diff / (1000 * 60 * 60));
         const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const s = Math.floor((diff % (1000 * 60)) / 1000);
-
         let timeStr = '';
         if (h > 0) timeStr += String(h).padStart(2, '0') + ':';
         timeStr += String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
 
         cd.innerText = timeStr;
         cd.style.display = 'block';
-
-        // Đổi màu Đỏ khi sắp đóng nến (< 10s)
         cd.style.color = (diff <= 10000) ? '#F6465D' : '#b7bdc6';
     }
 
-    // 🚀 PHÉP MÀU 60 FPS: Luôn neo Countdown ngay dưới nhãn giá cuối cùng
     function syncPosition60FPS() {
         const cd = document.getElementById('wa-overlay-countdown');
-        if (cd && window.WA_Chart) {
+        if (cd && window.WA_Chart && window.WA_Chart.active) {
             try {
-                const dataList = window.WA_Chart.getDataList();
+                const dataList = window.WA_Chart.active.getDataList();
                 if (dataList && dataList.length > 0) {
                     const lastPrice = dataList[dataList.length - 1].close;
-                    const pixel = window.WA_Chart.convertToPixel({ value: lastPrice }, { paneId: 'candle_pane' });
+                    const pixel = window.WA_Chart.active.convertToPixel({ value: lastPrice }, { paneId: 'candle_pane' });
                     const y = typeof pixel === 'number' ? pixel : (pixel ? pixel.y : null);
-                    
-                    if (y !== null && !isNaN(y)) {
-                        // Y là tâm của đường Last Price Line.
-                        // Ta đẩy hộp đếm ngược tụt xuống 12px để nó nằm ngoan ngoãn ngay dưới nhãn giá
-                        cd.style.top = (y + 12) + 'px'; 
-                    }
+                    if (y !== null && !isNaN(y)) cd.style.top = (y + 12) + 'px'; 
                 }
             } catch(e) {}
         }
-        // Gọi lại liên tục để bám dính siêu mượt khi cuộn/zoom biểu đồ
         countdownRafId = requestAnimationFrame(syncPosition60FPS);
     }
 })();

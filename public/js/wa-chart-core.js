@@ -3,8 +3,12 @@
 // 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - PRO MULTI-CHART EDITION
 // ==========================================
 
+// ==========================================
+// 🚀 FILE: public/js/wa-chart-core.js
+// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - MULTI-CHART PRO
+// ==========================================
+
 (function() {
-    // 🚀 BƠM CSS CỨNG VÀO TRÌNH DUYỆT ĐỂ CHỐNG LỖI CACHE FILE CSS
     if (!document.getElementById('wa-multi-grid-css')) {
         const style = document.createElement('style');
         style.id = 'wa-multi-grid-css';
@@ -35,9 +39,7 @@
         get instances() { return _instances; }, 
         get activeId() { return _activeId; },
 
-        init: function(containerId) {
-            return this.initMultiLayout(containerId, '1', 1);
-        },
+        init: function(containerId) { return this.initMultiLayout(containerId, '1', 1); },
 
         initMultiLayout: function(mainContainerId, layoutType = '1', cellCount = 1) {
             try {
@@ -66,22 +68,37 @@
                     cell.addEventListener('mousedown', () => this.setActiveChart(cellId));
                     gridWrapper.appendChild(cell);
                     
-                    // 🚀 Ép KLineCharts khởi tạo bằng Node Vật Lý, trị dứt điểm lỗi Canvas 0x0
                     const chart = window.klinecharts.init(cell);
                     if (chart) {
                         this._applyDefaultStyles(chart); 
                         _instances[cellId] = chart;
                         if (i === 0) _activeId = cellId; 
+
+                        // 🚀 FIX VẤN ĐỀ 2: GÀI SỰ KIỆN NÚT CHỈ BÁO VÀO TỪNG Ô CHART!
+                        chart.subscribeAction('onTooltipIconClick', function(data) {
+                            if (!data.indicatorName) return;
+                            const indName = data.indicatorName; const paneId = data.paneId;
+                            
+                            if (data.iconId === 'visible') chart.overrideIndicator({ name: indName, visible: true }, paneId);
+                            else if (data.iconId === 'invisible') chart.overrideIndicator({ name: indName, visible: false }, paneId);
+                            else if (data.iconId === 'close') chart.removeIndicator(paneId, indName);
+                            else if (data.iconId === 'setting') {
+                                if (typeof window.openIndicatorSettings === 'function') {
+                                    let calcParams;
+                                    try {
+                                        const inds = chart.getIndicators({ name: indName, paneId: paneId });
+                                        if (inds && inds.length > 0) calcParams = inds[0].calcParams;
+                                    } catch(e) {}
+                                    window.openIndicatorSettings({ name: indName, shortName: indName, calcParams: calcParams }, paneId);
+                                }
+                            }
+                        });
                     }
                 }
 
                 if (cellCount > 1) this._enableCrosshairSync();
-                console.log(`[WA_Chart] Pro Multi-Layout [${layoutType}] Active. Rendered ${cellCount} charts.`);
                 return true;
-            } catch(e) {
-                console.error('[WA_Chart] Init Multi Error', e);
-                return false;
-            }
+            } catch(e) { console.error('[WA_Chart] Init Multi Error', e); return false; }
         },
 
         setActiveChart: function(cellId) {
@@ -97,35 +114,40 @@
                 layout: { backgroundColor: 'transparent' },
                 grid: { show: false, horizontal: { show: false }, vertical: { show: false } },
                 crosshair: { show: true },
+                watermark: { show: true, text: 'WAVE ALPHA', color: 'rgba(255, 255, 255, 0.05)', size: 48, weight: '800' },
                 indicator: {
                     tooltip: { 
                         showRule: 'always', showType: 'standard',
                         text: { size: 12, family: 'Arial, sans-serif', weight: 600, color: '#848e9c', marginLeft: 8, marginTop: 8, marginRight: 0, marginBottom: 0 },
                         icons: [
-                            { id: 'visible', position: 'middle', marginLeft: 8, marginTop: 8, marginRight: 0, marginBottom: 0, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf070', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 11, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
-                            { id: 'invisible', position: 'middle', marginLeft: 8, marginTop: 8, marginRight: 0, marginBottom: 0, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf06e', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 11, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
-                            { id: 'setting', position: 'middle', marginLeft: 6, marginTop: 8, marginRight: 0, marginBottom: 0, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf013', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 11, color: '#848e9c', activeColor: '#F0B90B', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(240,185,11,0.1)' },
-                            { id: 'close', position: 'middle', marginLeft: 6, marginTop: 8, marginRight: 0, marginBottom: 0, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf00d', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 12, color: '#848e9c', activeColor: '#F6465D', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(246,70,93,0.1)' }
+                            { id: 'visible', position: 'middle', marginLeft: 8, marginTop: 8, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf070', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 11, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
+                            { id: 'invisible', position: 'middle', marginLeft: 8, marginTop: 8, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf06e', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 11, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
+                            { id: 'setting', position: 'middle', marginLeft: 6, marginTop: 8, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf013', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 11, color: '#848e9c', activeColor: '#F0B90B', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(240,185,11,0.1)' },
+                            { id: 'close', position: 'middle', marginLeft: 6, marginTop: 8, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf00d', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 12, color: '#848e9c', activeColor: '#F6465D', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(246,70,93,0.1)' }
                         ]
                     } 
                 },
-                candle: { type: 'candle_solid', tooltip: { showRule: 'always', showType: 'standard', custom: function() { return [{ title: { text: ' ', color: 'transparent' }, value: { text: ' ', color: 'transparent' } }]; }, text: { size: 12, family: 'Arial, sans-serif', weight: 600, color: 'transparent', marginLeft: 10, marginTop: 8, marginRight: 0, marginBottom: 0 } } }
+                candle: { type: 'candle_solid', tooltip: { showRule: 'always', showType: 'standard', custom: function() { return [{ title: { text: ' ', color: 'transparent' }, value: { text: ' ', color: 'transparent' } }]; }, text: { size: 12, family: 'Arial, sans-serif', weight: 600, color: 'transparent', marginLeft: 10, marginTop: 8 } } }
             });
+        },
+
+        // 🚀 API MỚI: CẬP NHẬT TÊN CHÌM THEO TỪNG Ô ĐỘC LẬP
+        updateWatermarkSpecific: function(cellId, symbolStr, tfStr) {
+            if (_instances[cellId]) {
+                _instances[cellId].setStyles({ watermark: { text: `${symbolStr} • ${tfStr}` } });
+            }
         },
 
         _enableCrosshairSync: function() {
             const chartIds = Object.keys(_instances);
             chartIds.forEach(sourceId => {
                 const sourceChart = _instances[sourceId];
-                
                 sourceChart.subscribeAction('onCrosshairChange', (param) => {
                     if (_isSyncingCrosshair) return; 
                     
                     if (!param || param.dataIndex === undefined || param.dataIndex < 0) {
                         _isSyncingCrosshair = true;
-                        chartIds.forEach(targetId => {
-                            if (sourceId !== targetId) _instances[targetId].setCrosshair(undefined);
-                        });
+                        chartIds.forEach(targetId => { if (sourceId !== targetId) _instances[targetId].setCrosshair(undefined); });
                         _isSyncingCrosshair = false;
                         return;
                     }
@@ -139,11 +161,8 @@
                         if (sourceId === targetId) return;
                         const targetChart = _instances[targetId];
                         const targetDataList = targetChart.getDataList();
-                        
                         const targetIndex = targetDataList.findIndex(d => d.timestamp === targetTs);
-                        if (targetIndex !== -1) {
-                            targetChart.setCrosshair({ paneId: param.paneId, dataIndex: targetIndex });
-                        }
+                        if (targetIndex !== -1) targetChart.setCrosshair({ paneId: param.paneId, dataIndex: targetIndex });
                     });
                     _isSyncingCrosshair = false;
                 });
@@ -153,19 +172,13 @@
         destroy: function() {
             if (_resizeObserver) { _resizeObserver.disconnect(); _resizeObserver = null; }
             Object.values(_instances).forEach(chart => { window.klinecharts.dispose(chart); });
-            _instances = {};
-            _activeId = null;
+            _instances = {}; _activeId = null;
         },
 
-        // ========================================================
-        // 🛡️ CÁC CỔNG GIAO TIẾP ĐÃ ĐƯỢC KIỂM SOÁT (SAFE API)
-        // ========================================================
         applyNewData: function(data) { try { if(this.active) this.active.applyNewData(data); } catch(e){} },
         updateData: function(data) { try { if(this.active) this.active.updateData(data); } catch(e){} }, 
         getDataList: function() { try { return this.active ? this.active.getDataList() : []; } catch(e){ return []; } },
-        
         setStyles: function(styles) { try { Object.values(_instances).forEach(chart => chart.setStyles(styles)); } catch(e){} },
-        
         subscribeAction: function(type, cb) { try { if(this.active) this.active.subscribeAction(type, cb); } catch(e){} },
         createIndicator: function(name, isStack, options) { try { if(this.active) this.active.createIndicator(name, isStack, options); } catch(e){} },
         removeIndicator: function(paneId, name) { try { if(this.active) this.active.removeIndicator(paneId, name); } catch(e){} },
@@ -189,20 +202,14 @@
         updateDataSpecific: function(cellId, data) { try { if(_instances[cellId]) _instances[cellId].updateData(data); } catch(e){} },
         getChartSpecific: function(cellId) { return _instances[cellId] || null; },
 
-        // ========================================================
-        // 🛡️ LÕI KIỂM SOÁT GIAO DIỆN NẾN
-        // ========================================================
         setMainSeries: function(config) {
             try {
                 if (Object.keys(_instances).length === 0) return;
-                
                 const CUSTOM_CHART_IDS = ['WA_COL_CHART', 'WA_HL_CHART', 'WA_STEP_LINE', 'WA_LINE_MARKER', 'WA_HLC_AREA', 'WA_BASELINE', 'WA_VOL_CANDLE', 'WA_LINE_BREAK'];
-                
                 Object.values(_instances).forEach(chart => {
                     CUSTOM_CHART_IDS.forEach(id => { try { chart.removeIndicator('candle_pane', id); } catch(e){} });
 
                     let kcChartType = 'candle_solid', isLine = false, hideCandle = false;
-
                     if (config.chartType === 2) kcChartType = 'candle_stroke';
                     else if (config.chartType === 3) kcChartType = 'ohlc';
                     else if (config.chartType === 6 || config.chartType === 9) { kcChartType = 'area'; isLine = (config.chartType === 6); }
@@ -216,32 +223,20 @@
                     else if (config.chartType === 11) { chart.createIndicator('WA_BASELINE', true, {id: 'candle_pane'}); hideCandle = true; }
                     else if (config.chartType === 13) { chart.createIndicator('WA_VOL_CANDLE', true, {id: 'candle_pane'}); hideCandle = true; }
                     
-                    const isHollow = (config.chartType === 2);
-                    const isRenko = (config.chartType === 14);
-
-                    const rUp = config.renkoUpColor || '#FFFFFF';
-                    const rDn = config.renkoDownColor || '#B250FF'; 
-                    const rBd = config.renkoBorderColor || '#787B86';
-
+                    const isHollow = (config.chartType === 2); const isRenko = (config.chartType === 14);
+                    const rUp = config.renkoUpColor || '#FFFFFF'; const rDn = config.renkoDownColor || '#B250FF'; const rBd = config.renkoBorderColor || '#787B86';
                     const fUp = hideCandle ? 'transparent' : (isRenko ? rUp : config.upColor);
                     const fDown = hideCandle ? 'transparent' : (isRenko ? rDn : config.downColor);
                     const fNo = hideCandle ? 'transparent' : '#787b86';
-
                     const fUpBd = hideCandle ? 'transparent' : (isRenko ? rBd : (config.showBorder ? (config.borderIndependent ? config.borderUpColor : config.upColor) : (isHollow ? config.upColor : 'transparent')));
                     const fDnBd = hideCandle ? 'transparent' : (isRenko ? rBd : (config.showBorder ? (config.borderIndependent ? config.borderDownColor : config.downColor) : (isHollow ? config.downColor : 'transparent')));
-                    
                     const fUpW = hideCandle ? 'transparent' : (isRenko ? rBd : (config.showWick ? (config.wickIndependent ? config.wickUpColor : config.upColor) : 'transparent'));
                     const fDnW = hideCandle ? 'transparent' : (isRenko ? rBd : (config.showWick ? (config.wickIndependent ? config.wickDownColor : config.downColor) : 'transparent'));
 
                     let areaTopColor = 'rgba(0, 240, 255, 0.25)';
-                    if (window.WaveChartEngine && typeof window.WaveChartEngine._dimColor === 'function') {
-                        areaTopColor = window.WaveChartEngine._dimColor(config.upColor, 0.25); 
-                    }
+                    if (window.WaveChartEngine && typeof window.WaveChartEngine._dimColor === 'function') areaTopColor = window.WaveChartEngine._dimColor(config.upColor, 0.25); 
 
-                    const areaBgColor = (isLine || hideCandle) 
-                        ? 'transparent' 
-                        : [{offset: 0, color: areaTopColor}, {offset: 1, color: 'transparent'}];
-
+                    const areaBgColor = (isLine || hideCandle) ? 'transparent' : [{offset: 0, color: areaTopColor}, {offset: 1, color: 'transparent'}];
                     chart.setStyles({
                         candle: {
                             zLevel: 1, type: kcChartType,
