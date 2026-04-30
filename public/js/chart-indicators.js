@@ -4218,17 +4218,20 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
       const newParams = indState.params.map((val, idx) => {
           const inp = document.getElementById('wa-param-' + idx);
           if (inp) {
-              // [SỬA LỖI MÀU SẮC]: Lấy từ data-color (chứa mã HEX gốc) thay vì style.backgroundColor
               if (inp.classList.contains('wa-ism-swatch')) return inp.dataset.color || val;
-              
-              // [SỬA LỖI SỐ]: Dùng isNaN để check thay vì || 0 để an toàn tuyệt đối với số 0
               let parsed = parseFloat(inp.value);
               return isNaN(parsed) ? 0 : parsed;
           }
           return val;
       });
       indState.params = newParams;
-      try { window.WA_Chart.overrideIndicator({ name: currentActiveIndName, calcParams: newParams }, indState.paneId); } catch (e) {}
+      
+      // 🚀 Áp dụng mượt thông số cho TẤT CẢ các ô lưới đang chạy
+      if (window.WA_Chart && window.WA_Chart.instances) {
+          Object.values(window.WA_Chart.instances).forEach(chartInstance => {
+              try { chartInstance.overrideIndicator({ name: currentActiveIndName, calcParams: newParams }, indState.paneId); } catch (e) {}
+          });
+      }
   };
 
     function renderSidebar() {
