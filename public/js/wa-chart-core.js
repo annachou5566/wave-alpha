@@ -202,7 +202,7 @@
             }
         },
 
-        // 🚀 CỖ MÁY DỰNG DANH SÁCH CHỈ BÁO - GIAO DIỆN SVG MINIMALIST SANG TRỌNG
+        // 🚀 CỖ MÁY DỰNG DANH SÁCH CHỈ BÁO - TONE TRẮNG ĐEN & FIX LỖI KHOẢNG CÁCH ICON
         renderHtmlLegend: function(cellId) {
             const chart = _instances[cellId];
             if (!chart) return;
@@ -218,7 +218,6 @@
             const hidden = ['WA_COL_CHART', 'WA_HL_CHART', 'WA_STEP_LINE', 'WA_LINE_MARKER', 'WA_HLC_AREA', 'WA_BASELINE', 'WA_VOL_CANDLE', 'WA_LINE_BREAK'];
             inds = inds.filter(i => !hidden.includes(i.name));
 
-            // BỘ ICON SVG MẢNH (ĐƠN GIẢN & SANG TRỌNG)
             const SVG = {
                 eye: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`,
                 eyeOff: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`,
@@ -233,11 +232,13 @@
                 const eyeColor = isVis ? '#848e9c' : '#F6465D'; 
                 const eyeIcon = isVis ? SVG.eye : SVG.eyeOff;
                 
+                // 🚀 Đã đổi '#00F0FF' thành '#EAECEF' (Trắng)
+                // 🚀 Đã thêm align-self: flex-start và sửa margin-left của icon thành 4px
                 html += `
-                <div class="wa-leg-item" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" style="display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:500; color:#848e9c; pointer-events:auto; padding:3px 6px; border-radius:4px; transition:0.2s; background: transparent; width: 100%;">
-                    <span style="color:${isVis?'#00F0FF':'#5e6673'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight:600;">${ind.name} <span style="font-size:10px; font-weight:400; opacity:0.7;">(${params})</span></span>
+                <div class="wa-leg-item" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" style="display:inline-flex; align-self:flex-start; max-width:100%; align-items:center; gap:8px; font-size:11.5px; font-weight:500; color:#848e9c; pointer-events:auto; padding:3px 6px; border-radius:4px; transition:0.2s; background: transparent;">
+                    <span style="color:${isVis?'#EAECEF':'#5e6673'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight:600;">${ind.name} <span style="font-size:10px; font-weight:400; opacity:0.7;">(${params})</span></span>
                     <span id="wa-val-${cellId}-${ind.name}" style="color:#EAECEF; font-family:var(--font-num); flex-shrink: 0; font-size:11px;"></span>
-                    <div class="wa-leg-icons" style="display:none; gap:2px; cursor:pointer; margin-left: auto; flex-shrink: 0; align-items: center;">
+                    <div class="wa-leg-icons" style="display:none; gap:2px; cursor:pointer; margin-left: 4px; flex-shrink: 0; align-items: center;">
                         <div title="Ẩn/Hiện" style="display:flex; padding:5px; border-radius:4px; color:${eyeColor}; transition:0.2s" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.color='#EAECEF'" onmouseout="this.style.background='transparent'; this.style.color='${eyeColor}'" onclick="window.WA_Chart.toggleInd('${cellId}', '${ind.name}', ${isVis})">${eyeIcon}</div>
                         <div title="Cài đặt" style="display:flex; padding:5px; border-radius:4px; color:#848e9c; transition:0.2s" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.color='#F0B90B'" onmouseout="this.style.background='transparent'; this.style.color='#848e9c'" onclick="window.WA_Chart.settingInd('${cellId}', '${ind.name}')">${SVG.gear}</div>
                         <div title="Xóa" style="display:flex; padding:5px; border-radius:4px; color:#848e9c; transition:0.2s" onmouseover="this.style.background='rgba(246,70,93,0.15)'; this.style.color='#F6465D'" onmouseout="this.style.background='transparent'; this.style.color='#848e9c'" onclick="window.WA_Chart.removeInd('${cellId}', '${ind.name}')">${SVG.close}</div>
