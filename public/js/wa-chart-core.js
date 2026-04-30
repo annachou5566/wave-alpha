@@ -1,11 +1,6 @@
 // ==========================================
 // 🚀 FILE: public/js/wa-chart-core.js
-// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - PRO MULTI-CHART EDITION
-// ==========================================
-
-// ==========================================
-// 🚀 FILE: public/js/wa-chart-core.js
-// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - MULTI-CHART PRO
+// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - GIAI ĐOẠN 2
 // ==========================================
 
 (function() {
@@ -68,17 +63,36 @@
                     cell.addEventListener('mousedown', () => this.setActiveChart(cellId));
                     gridWrapper.appendChild(cell);
                     
+                    // 🚀 PHÉP MÀU NẰM Ở ĐÂY: BƠM OHLC & WATERMARK VÀO TỪNG Ô ĐỘC LẬP
+                    const uiLayer = document.createElement('div');
+                    uiLayer.className = 'wa-custom-ui-layer';
+                    uiLayer.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; padding: 6px 10px;';
+                    
+                    uiLayer.innerHTML = `
+                        <div style="font-family: Arial, sans-serif; font-size: 12px; font-weight: 600; display: flex; gap: 8px; flex-wrap: wrap; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">
+                            <span id="wa-sym-${cellId}" style="color: #EAECEF; margin-right: 4px;">---</span>
+                            <span><span style="color: #848e9c;">O</span> <span id="wa-o-${cellId}" style="color: #848e9c;">---</span></span>
+                            <span><span style="color: #848e9c;">H</span> <span id="wa-h-${cellId}" style="color: #0ECB81;">---</span></span>
+                            <span><span style="color: #848e9c;">L</span> <span id="wa-l-${cellId}" style="color: #F6465D;">---</span></span>
+                            <span><span style="color: #848e9c;">C</span> <span id="wa-c-${cellId}" style="color: #848e9c;">---</span></span>
+                            <span><span style="color: #848e9c;">V</span> <span id="wa-v-${cellId}" style="color: #848e9c;">---</span></span>
+                        </div>
+                        <div id="wa-wm-${cellId}" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Inter', sans-serif; font-weight: 800; font-size: clamp(20px, 4vw, 60px); color: rgba(255,255,255,0.05); letter-spacing: 2px; white-space: nowrap;">WAVE ALPHA</div>
+                    `;
+                    cell.appendChild(uiLayer);
+
                     const chart = window.klinecharts.init(cell);
                     if (chart) {
                         this._applyDefaultStyles(chart); 
                         _instances[cellId] = chart;
                         if (i === 0) _activeId = cellId; 
+                        
+                        chart._waIsHovering = false; // Phân biệt rê chuột độc lập
 
-                        // 🚀 FIX VẤN ĐỀ 2: GÀI SỰ KIỆN NÚT CHỈ BÁO VÀO TỪNG Ô CHART!
+                        // 🚀 FIX LỖI LIỆT NÚT CHỈ BÁO TRÊN TỪNG Ô
                         chart.subscribeAction('onTooltipIconClick', function(data) {
                             if (!data.indicatorName) return;
                             const indName = data.indicatorName; const paneId = data.paneId;
-                            
                             if (data.iconId === 'visible') chart.overrideIndicator({ name: indName, visible: true }, paneId);
                             else if (data.iconId === 'invisible') chart.overrideIndicator({ name: indName, visible: false }, paneId);
                             else if (data.iconId === 'close') chart.removeIndicator(paneId, indName);
@@ -93,12 +107,84 @@
                                 }
                             }
                         });
+
+                        // 🚀 ĐỒNG BỘ CROSSHAIR LÊN ĐÚNG Ô CỦA NÓ
+                        chart.subscribeAction('onCrosshairChange', (param) => {
+                            if (!param || param.dataIndex === undefined || param.dataIndex < 0) {
+                                chart._waIsHovering = false;
+                                const dataList = chart.getDataList();
+                                if (dataList && dataList.length > 0) {
+                                    window.WA_Chart.updateLegendSpecific(cellId, dataList[dataList.length - 1]);
+                                }
+                            } else {
+                                chart._waIsHovering = true;
+                                const dataList = chart.getDataList();
+                                window.WA_Chart.updateLegendSpecific(cellId, dataList[param.dataIndex]);
+                            }
+
+                            // Đồng bộ cái tâm ngắm chạy theo sang các ô khác (Crosshair Sync)
+                            if (_isSyncingCrosshair) return; 
+                            _isSyncingCrosshair = true;
+                            const targetTs = (param && param.dataIndex >= 0) ? chart.getDataList()[param.dataIndex]?.timestamp : null;
+                            
+                            Object.keys(_instances).forEach(targetId => {
+                                if (cellId === targetId) return;
+                                if (!targetTs) {
+                                    _instances[targetId].setCrosshair(undefined);
+                                } else {
+                                    const tData = _instances[targetId].getDataList();
+                                    const tIndex = tData.findIndex(d => d.timestamp === targetTs);
+                                    if (tIndex !== -1) _instances[targetId].setCrosshair({ paneId: param.paneId, dataIndex: tIndex });
+                                }
+                            });
+                            _isSyncingCrosshair = false;
+                        });
                     }
                 }
-
-                if (cellCount > 1) this._enableCrosshairSync();
                 return true;
             } catch(e) { console.error('[WA_Chart] Init Multi Error', e); return false; }
+        },
+
+        // 🚀 CỖ MÁY IN VĂN BẢN LÊN TỪNG Ô ĐỘC LẬP
+        updateLegendSpecific: function(cellId, ohlc) {
+            if (!ohlc) return;
+            const fmt = (v) => v >= 1 ? v.toFixed(2) : v.toFixed(6);
+            const fmtVol = (v) => v >= 1e9 ? (v/1e9).toFixed(2)+'B' : v >= 1e6 ? (v/1e6).toFixed(2)+'M' : v >= 1e3 ? (v/1e3).toFixed(2)+'K' : (v || 0).toFixed(0);
+            
+            const barColor = ohlc.close >= ohlc.open ? '#0ECB81' : '#F6465D';
+            const setTxt = (idSuffix, txt, color) => {
+                const el = document.getElementById(`wa-${idSuffix}-${cellId}`);
+                if (el) { el.innerText = txt; if (color) el.style.color = color; }
+            };
+
+            setTxt('o', fmt(ohlc.open), '#848e9c'); setTxt('h', fmt(ohlc.high), '#0ECB81');
+            setTxt('l', fmt(ohlc.low), '#F6465D'); setTxt('c', fmt(ohlc.close), barColor);
+            setTxt('v', fmtVol(ohlc.volume || 0), '#848e9c');
+
+            // Lấy thông tin Tên Token từ Data Router
+            let tObj = (window.waCellTokens && window.waCellTokens[cellId]) ? window.waCellTokens[cellId] : window.currentChartToken;
+            let tf = (window.waCellIntervals && window.waCellIntervals[cellId]) ? window.waCellIntervals[cellId] : window.currentChartInterval;
+            
+            let sym = tObj ? tObj.symbol : 'WAVE';
+            let tfStr = (tf || '1D').toUpperCase();
+            if (window.WaveChartEngine && parseInt(window.WaveChartEngine.getConfig().chartType) === 14) tfStr = 'RENKO';
+
+            let pct = ohlc.open > 0 ? ((ohlc.close - ohlc.open) / ohlc.open) * 100 : 0;
+            let sign = pct >= 0 ? '+' : '';
+            setTxt('sym', `${sym} ${tfStr} (${sign}${pct.toFixed(2)}%)`, barColor);
+
+            const wmEl = document.getElementById(`wa-wm-${cellId}`);
+            if (wmEl) {
+                wmEl.innerText = `${sym} • ${tfStr}`;
+                // Liên kết với Settings tắt mở của người dùng
+                if (window.WaveChartEngine) {
+                    const cfg = window.WaveChartEngine.getConfig();
+                    wmEl.style.display = cfg.showWatermark === false ? 'none' : 'block';
+                    wmEl.style.color = `rgba(255,255,255, ${cfg.watermarkOpacity || 0.05})`;
+                    const ohlcWrap = document.getElementById(`wa-sym-${cellId}`)?.parentNode;
+                    if (ohlcWrap) ohlcWrap.style.display = cfg.showOHLC === false ? 'none' : 'flex';
+                }
+            }
         },
 
         setActiveChart: function(cellId) {
@@ -114,11 +200,12 @@
                 layout: { backgroundColor: 'transparent' },
                 grid: { show: false, horizontal: { show: false }, vertical: { show: false } },
                 crosshair: { show: true },
-                watermark: { show: true, text: 'WAVE ALPHA', color: 'rgba(255, 255, 255, 0.05)', size: 48, weight: '800' },
+                // Ẩn các text mặc định xấu xí của thư viện để nhường chỗ cho UI của WAVE ALPHA
+                candle: { type: 'candle_solid', tooltip: { showRule: 'always', showType: 'standard', custom: function() { return [{ title: { text: ' ', color: 'transparent' }, value: { text: ' ', color: 'transparent' } }]; }, text: { size: 12, color: 'transparent' } } },
                 indicator: {
                     tooltip: { 
                         showRule: 'always', showType: 'standard',
-                        text: { size: 12, family: 'Arial, sans-serif', weight: 600, color: '#848e9c', marginLeft: 8, marginTop: 8, marginRight: 0, marginBottom: 0 },
+                        text: { size: 12, family: 'Arial, sans-serif', weight: 600, color: '#848e9c', marginLeft: 8, marginTop: 8 },
                         icons: [
                             { id: 'visible', position: 'middle', marginLeft: 8, marginTop: 8, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf070', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 11, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
                             { id: 'invisible', position: 'middle', marginLeft: 8, marginTop: 8, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf06e', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 11, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
@@ -126,57 +213,19 @@
                             { id: 'close', position: 'middle', marginLeft: 6, marginTop: 8, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf00d', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 12, color: '#848e9c', activeColor: '#F6465D', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(246,70,93,0.1)' }
                         ]
                     } 
-                },
-                candle: { type: 'candle_solid', tooltip: { showRule: 'always', showType: 'standard', custom: function() { return [{ title: { text: ' ', color: 'transparent' }, value: { text: ' ', color: 'transparent' } }]; }, text: { size: 12, family: 'Arial, sans-serif', weight: 600, color: 'transparent', marginLeft: 10, marginTop: 8 } } }
+                }
             });
         },
-
-        // 🚀 API MỚI: CẬP NHẬT TÊN CHÌM THEO TỪNG Ô ĐỘC LẬP
-        updateWatermarkSpecific: function(cellId, symbolStr, tfStr) {
-            if (_instances[cellId]) {
-                _instances[cellId].setStyles({ watermark: { text: `${symbolStr} • ${tfStr}` } });
-            }
-        },
-
-        _enableCrosshairSync: function() {
-            const chartIds = Object.keys(_instances);
-            chartIds.forEach(sourceId => {
-                const sourceChart = _instances[sourceId];
-                sourceChart.subscribeAction('onCrosshairChange', (param) => {
-                    if (_isSyncingCrosshair) return; 
-                    
-                    if (!param || param.dataIndex === undefined || param.dataIndex < 0) {
-                        _isSyncingCrosshair = true;
-                        chartIds.forEach(targetId => { if (sourceId !== targetId) _instances[targetId].setCrosshair(undefined); });
-                        _isSyncingCrosshair = false;
-                        return;
-                    }
-
-                    const sourceData = sourceChart.getDataList()[param.dataIndex];
-                    if (!sourceData) return;
-                    const targetTs = sourceData.timestamp;
-
-                    _isSyncingCrosshair = true;
-                    chartIds.forEach(targetId => {
-                        if (sourceId === targetId) return;
-                        const targetChart = _instances[targetId];
-                        const targetDataList = targetChart.getDataList();
-                        const targetIndex = targetDataList.findIndex(d => d.timestamp === targetTs);
-                        if (targetIndex !== -1) targetChart.setCrosshair({ paneId: param.paneId, dataIndex: targetIndex });
-                    });
-                    _isSyncingCrosshair = false;
-                });
-            });
-        },
-
+        
         destroy: function() {
             if (_resizeObserver) { _resizeObserver.disconnect(); _resizeObserver = null; }
             Object.values(_instances).forEach(chart => { window.klinecharts.dispose(chart); });
             _instances = {}; _activeId = null;
         },
 
-        applyNewData: function(data) { try { if(this.active) this.active.applyNewData(data); } catch(e){} },
-        updateData: function(data) { try { if(this.active) this.active.updateData(data); } catch(e){} }, 
+        // 🚀 CÁC CỔNG GIAO TIẾP ĐÃ ĐƯỢC ĐỊNH TUYẾN ĐỂ VỪA VẼ NẾN, VỪA NHẢY GIÁ TRÊN OHLC
+        applyNewData: function(data) { try { if(this.active) { this.active.applyNewData(data); this.updateLegendSpecific(this.activeId, data[data.length-1]); } } catch(e){} },
+        updateData: function(data) { try { if(this.active) { this.active.updateData(data); if (!this.active._waIsHovering) this.updateLegendSpecific(this.activeId, data); } } catch(e){} }, 
         getDataList: function() { try { return this.active ? this.active.getDataList() : []; } catch(e){ return []; } },
         setStyles: function(styles) { try { Object.values(_instances).forEach(chart => chart.setStyles(styles)); } catch(e){} },
         subscribeAction: function(type, cb) { try { if(this.active) this.active.subscribeAction(type, cb); } catch(e){} },
@@ -198,8 +247,8 @@
         setOffsetRightDistance: function(distance) { try { Object.values(_instances).forEach(chart => chart.setOffsetRightDistance(distance)); } catch(e){} },
         setTimezone: function(tz) { try { Object.values(_instances).forEach(chart => chart.setTimezone(tz)); } catch(e){} },
 
-        applyNewDataSpecific: function(cellId, data) { try { if(_instances[cellId]) _instances[cellId].applyNewData(data); } catch(e){} },
-        updateDataSpecific: function(cellId, data) { try { if(_instances[cellId]) _instances[cellId].updateData(data); } catch(e){} },
+        applyNewDataSpecific: function(cellId, data) { try { if(_instances[cellId]) { _instances[cellId].applyNewData(data); this.updateLegendSpecific(cellId, data[data.length-1]); } } catch(e){} },
+        updateDataSpecific: function(cellId, data) { try { if(_instances[cellId]) { _instances[cellId].updateData(data); if (!_instances[cellId]._waIsHovering) this.updateLegendSpecific(cellId, data); } } catch(e){} },
         getChartSpecific: function(cellId) { return _instances[cellId] || null; },
 
         setMainSeries: function(config) {

@@ -1026,65 +1026,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                 window.WaveChartEngine.init();
             }
 
-            window.WA_Chart.subscribeAction('onTooltipIconClick', function(data) {
-                if (!data.indicatorName) return;
-                const indName = data.indicatorName;
-                const paneId = data.paneId;
-
-                if (data.iconId === 'visible') {
-                    window.WA_Chart.overrideIndicator({ name: indName, visible: true }, paneId);
-                    let ind = window.scActiveIndicators?.find(x => x.name === indName);
-                    if (ind) ind.visible = true;
-                } 
-                else if (data.iconId === 'invisible') {
-                    window.WA_Chart.overrideIndicator({ name: indName, visible: false }, paneId);
-                    let ind = window.scActiveIndicators?.find(x => x.name === indName);
-                    if (ind) ind.visible = false;
-                } 
-                else if (data.iconId === 'setting') {
-                    if (typeof window.openIndicatorSettings === 'function') {
-                        let calcParams;
-                        try {
-                            const instances = window.WA_Chart.getIndicators({ name: indName, paneId: paneId });
-                            if (instances && instances.length > 0) calcParams = instances[0].calcParams;
-                        } catch(e) {}
-                        
-                        if (!calcParams || calcParams.length === 0) {
-                            const stateEntry = (window.scActiveIndicators || []).find(x => x.name === indName);
-                            if (stateEntry && stateEntry.params && stateEntry.params.length > 0) {
-                                calcParams = stateEntry.params;
-                            }
-                        }
-                        window.openIndicatorSettings({ name: indName, shortName: indName, calcParams: calcParams }, paneId);
-                    }
-                }
-                else if (data.iconId === 'close') {
-                    if (typeof window.removeIndicatorFromChart === 'function') {
-                        window.removeIndicatorFromChart(indName);
-                    } 
-                    try { window.WA_Chart.removeIndicator(paneId, indName); } catch(e){}
-                }
-            });
-
-            let customUI = document.getElementById('wa-custom-ui-layer');
-            if (!customUI) {
-                customUI = document.createElement('div');
-                customUI.id = 'wa-custom-ui-layer';
-                customUI.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;';
-                
-                customUI.innerHTML = `
-                    <div style="position: absolute; top: 6px; left: 10px; font-family: Arial, sans-serif; font-size: 12px; font-weight: 600; display: flex; gap: 8px; flex-wrap: wrap; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">
-                        <span id="tp-symbol" style="color: #EAECEF; margin-right: 4px;">---</span>
-                        <span><span style="color: #848e9c;">O</span> <span id="tp-o" style="color: #848e9c;">---</span></span>
-                        <span><span style="color: #848e9c;">H</span> <span id="tp-h" style="color: #0ECB81;">---</span></span>
-                        <span><span style="color: #848e9c;">L</span> <span id="tp-l" style="color: #F6465D;">---</span></span>
-                        <span><span style="color: #848e9c;">C</span> <span id="tp-c" style="color: #848e9c;">---</span></span>
-                        <span><span style="color: #848e9c;">V</span> <span id="tp-v" style="color: #848e9c;">---</span></span>
-                    </div>
-                    <div style="position: absolute; bottom: 25px; left: 15px; font-family: var(--font-main, Arial); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px;">WAVE ALPHA</div>
-                `;
-                container.appendChild(customUI);
-            }
+            
 
             window.WA_Chart.setPriceVolumePrecision(prec, 2);
             window.WA_Chart.createIndicator('VOL', false, { height: 80 });
@@ -1148,62 +1090,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                 });
             }
 
-            window._isCrosshairActive = false;
-            window._lastLegendUpdateMs = 0;
-            window._lastLegendSig = null;
-
-            window.updateLegendUI = function(ohlc, dataIndex = -1) {
-                if (!ohlc || typeof ohlc.open === 'undefined') return;
-                
-                const now = Date.now();
-                if (dataIndex === -1) {
-                    if (now - window._lastLegendUpdateMs < 100) return;
-                    window._lastLegendUpdateMs = now;
-                }
-
-                const sig = `${dataIndex}_${ohlc.close}_${ohlc.volume}`;
-                if (window._lastLegendSig === sig) return;
-                window._lastLegendSig = sig;
-
-                const fmt = (v) => v >= 1 ? v.toFixed(2) : v.toFixed(6);
-                const fmtVol = (v) => v >= 1e9 ? (v/1e9).toFixed(2)+'B' : v >= 1e6 ? (v/1e6).toFixed(2)+'M' : v >= 1e3 ? (v/1e3).toFixed(2)+'K' : (v || 0).toFixed(0);
-                const setEl = (id, val, color) => { const el = document.getElementById(id); if (el) { el.textContent = val; if (color) el.style.color = color; } };
-
-                const barColor = ohlc.close >= ohlc.open ? '#0ECB81' : '#F6465D';
-                setEl('tp-o', fmt(ohlc.open), '#848e9c'); setEl('tp-h', fmt(ohlc.high), '#0ECB81');
-                setEl('tp-l', fmt(ohlc.low), '#F6465D'); setEl('tp-c', fmt(ohlc.close), barColor);
-                setEl('tp-v', fmtVol(ohlc.volume || 0), '#848e9c');
-                
-                let pct = ohlc.open > 0 ? ((ohlc.close - ohlc.open) / ohlc.open) * 100 : 0;
-                let sign = pct >= 0 ? '+' : '';
-                let symStr = (window.currentChartToken ? window.currentChartToken.symbol : 'UNKNOWN').toUpperCase();
-                
-                let tfStr = (window.currentChartInterval || '').toUpperCase();
-                if (window.WaveChartEngine && parseInt(window.WaveChartEngine.getConfig().chartType) === 14) {
-                    tfStr = 'RENKO';
-                }
-                
-                setEl('tp-symbol', `${symStr} ${tfStr} (${sign}${pct.toFixed(2)}%)`, barColor);
-
-                if (dataIndex >= 0 && window.WaveIndicatorAPI && typeof window.WaveIndicatorAPI.updateLegendValues === 'function') {
-                    window.WaveIndicatorAPI.updateLegendValues(dataIndex);
-                }
-            };
-
-            window.WA_Chart.subscribeAction('onCrosshairChange', function(param) {
-                const dataList = window.WA_Chart.getDataList();
-                if (!dataList || dataList.length === 0) return;
-
-                if (param && param.dataIndex !== undefined && param.dataIndex >= 0) {
-                    window._isCrosshairActive = true;
-                    window.updateLegendUI(dataList[param.dataIndex], param.dataIndex);
-                } else {
-                    window._isCrosshairActive = false;
-                    let lastIndex = dataList.length - 1;
-                    window.updateLegendUI(dataList[lastIndex], lastIndex); 
-                }
-            });
-            
+                        
         } else {
             // NẾU CHART ĐÃ TỒN TẠI: Chỉ update Precision cho ô Active
             if (window.WA_Chart && window.WA_Chart.active) {
