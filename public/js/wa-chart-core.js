@@ -1,6 +1,6 @@
 // ==========================================
 // 🚀 FILE: public/js/wa-chart-core.js
-// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - TẮT OHLC MẶC ĐỊNH
+// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - TRADINGVIEW LEGEND PRO
 // ==========================================
 
 (function() {
@@ -20,6 +20,21 @@
             .wa-layout-9 { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); }
             .wa-chart-cell { position: relative; width: 100%; height: 100%; background: #131722; border: 1px solid transparent; }
             .wa-chart-cell.active-cell { border-color: #00F0FF; z-index: 5; }
+
+            /* 🚀 CSS THUẦN CHO DANH SÁCH CHỈ BÁO - MƯỢT NHƯ TRADINGVIEW */
+            .wa-leg-item { display:inline-flex; align-self:flex-start; max-width:100%; align-items:center; gap:8px; font-size:11.5px; font-weight:500; color:#848e9c; pointer-events:auto; padding:2px 6px; border-radius:4px; background: transparent; cursor: default; margin-bottom: 2px;}
+            .wa-leg-item:hover { background: rgba(255,255,255,0.04); }
+            
+            .wa-leg-name { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; transition:color 0.15s ease; }
+            .wa-leg-val { font-family:var(--font-num); flex-shrink: 0; font-size:11px; transition:color 0.15s ease; }
+            
+            .wa-leg-icons { display:flex; gap:2px; margin-left:4px; flex-shrink:0; align-items:center; opacity:0; pointer-events:none; transition:opacity 0.15s ease; }
+            /* Hiển thị icon khi hover HOẶC khi bị ép hiển thị (force-show lúc tắt mắt) */
+            .wa-leg-item:hover .wa-leg-icons, .wa-leg-icons.force-show { opacity:1; pointer-events:auto; }
+            
+            .wa-leg-btn { display:flex; padding:4px; border-radius:4px; color:#848e9c; transition:all 0.15s ease; cursor:pointer; align-items:center; justify-content:center; }
+            .wa-leg-btn:hover { background: rgba(255,255,255,0.1); color: #EAECEF; }
+            .wa-leg-btn.delete:hover { background: rgba(246,70,93,0.15); color: #F6465D; }
         `;
         document.head.appendChild(style);
     }
@@ -77,7 +92,7 @@
 
                     const legendHtml = document.createElement('div');
                     legendHtml.id = `wa-ind-legend-${cellId}`;
-                    legendHtml.style.cssText = 'position: absolute; top: 28px; left: 10px; z-index: 51; display: flex; flex-direction: column; gap: 2px; pointer-events: none; max-width: calc(100% - 65px); overflow: hidden;';
+                    legendHtml.style.cssText = 'position: absolute; top: 28px; left: 10px; z-index: 51; display: flex; flex-direction: column; pointer-events: none; max-width: calc(100% - 65px); overflow: hidden;';
                     cell.appendChild(legendHtml);
 
                     setTimeout(() => {
@@ -196,6 +211,7 @@
             }
         },
 
+        // 🚀 CỖ MÁY DỰNG DANH SÁCH CHỈ BÁO - CSS PURE HOVER (KHÔNG GIẬT LAG)
         renderHtmlLegend: function(cellId) {
             const chart = _instances[cellId];
             if (!chart) return;
@@ -222,26 +238,22 @@
             inds.forEach(ind => {
                 const params = ind.calcParams ? ind.calcParams.join(', ') : '';
                 const isVis = ind.visible !== false;
-                const eyeColor = isVis ? '#848e9c' : '#F6465D'; 
                 const eyeIcon = isVis ? SVG.eye : SVG.eyeOff;
+                const nameColor = isVis ? '#EAECEF' : '#5e6673';
                 
+                // Mấu chốt: Thêm class 'force-show' vào .wa-leg-icons nếu chỉ báo đang ẩn (!isVis)
                 html += `
-                <div class="wa-leg-item" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" style="display:inline-flex; align-self:flex-start; max-width:100%; align-items:center; gap:8px; font-size:11.5px; font-weight:500; color:#848e9c; pointer-events:auto; padding:3px 6px; border-radius:4px; transition:0.2s; background: transparent;">
-                    <span style="color:${isVis?'#EAECEF':'#5e6673'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight:600;">${ind.name} <span style="font-size:10px; font-weight:400; opacity:0.7;">(${params})</span></span>
-                    <span id="wa-val-${cellId}-${ind.name}" style="color:#EAECEF; font-family:var(--font-num); flex-shrink: 0; font-size:11px;"></span>
-                    <div class="wa-leg-icons" style="display:none; gap:2px; cursor:pointer; margin-left: 4px; flex-shrink: 0; align-items: center;">
-                        <div title="Ẩn/Hiện" style="display:flex; padding:5px; border-radius:4px; color:${eyeColor}; transition:0.2s" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.color='#EAECEF'" onmouseout="this.style.background='transparent'; this.style.color='${eyeColor}'" onclick="window.WA_Chart.toggleInd('${cellId}', '${ind.name}', ${isVis})">${eyeIcon}</div>
-                        <div title="Cài đặt" style="display:flex; padding:5px; border-radius:4px; color:#848e9c; transition:0.2s" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.color='#F0B90B'" onmouseout="this.style.background='transparent'; this.style.color='#848e9c'" onclick="window.WA_Chart.settingInd('${cellId}', '${ind.name}')">${SVG.gear}</div>
-                        <div title="Xóa" style="display:flex; padding:5px; border-radius:4px; color:#848e9c; transition:0.2s" onmouseover="this.style.background='rgba(246,70,93,0.15)'; this.style.color='#F6465D'" onmouseout="this.style.background='transparent'; this.style.color='#848e9c'" onclick="window.WA_Chart.removeInd('${cellId}', '${ind.name}')">${SVG.close}</div>
+                <div class="wa-leg-item" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">
+                    <span class="wa-leg-name" style="color:${nameColor};">${ind.name} <span style="font-size:10px; font-weight:400; opacity:0.7;">(${params})</span></span>
+                    <span id="wa-val-${cellId}-${ind.name}" class="wa-leg-val" style="color:${nameColor};"></span>
+                    <div class="wa-leg-icons ${!isVis ? 'force-show' : ''}">
+                        <div class="wa-leg-btn toggle" title="Ẩn/Hiện" onclick="window.WA_Chart.toggleInd('${cellId}', '${ind.name}', ${isVis})">${eyeIcon}</div>
+                        <div class="wa-leg-btn gear" title="Cài đặt" onclick="window.WA_Chart.settingInd('${cellId}', '${ind.name}')">${SVG.gear}</div>
+                        <div class="wa-leg-btn delete" title="Xóa" onclick="window.WA_Chart.removeInd('${cellId}', '${ind.name}')">${SVG.close}</div>
                     </div>
                 </div>`;
             });
             container.innerHTML = html;
-
-            container.querySelectorAll('.wa-leg-item').forEach(el => {
-                el.onmouseenter = () => { el.style.background = 'rgba(255,255,255,0.03)'; el.querySelector('.wa-leg-icons').style.display = 'flex'; };
-                el.onmouseleave = () => { el.style.background = 'transparent'; el.querySelector('.wa-leg-icons').style.display = 'none'; };
-            });
         },
 
         toggleInd: function(cellId, name, currentVis) { 
@@ -280,7 +292,6 @@
             window.dispatchEvent(new CustomEvent('WA_ACTIVE_CHART_CHANGED', { detail: { cellId: cellId } }));
         },
 
-        // 🚀 VŨ KHÍ TỐI THƯỢNG ĐỂ BỊT MỒM HOÀN TOÀN OHLC MẶC ĐỊNH CỦA THƯ VIỆN
         _applyDefaultStyles: function(chart) {
             chart.setStyles({
                 layout: { backgroundColor: 'transparent' },
@@ -288,11 +299,7 @@
                 crosshair: { show: true },
                 candle: { 
                     type: 'candle_solid', 
-                    tooltip: { 
-                        showRule: 'none', 
-                        custom: function() { return []; }, 
-                        text: { size: 0, color: 'transparent' } 
-                    } 
+                    tooltip: { showRule: 'none', custom: function() { return []; }, text: { size: 0, color: 'transparent' } } 
                 },
                 indicator: { tooltip: { showRule: 'none' } }
             });
@@ -376,7 +383,6 @@
 
                     const areaBgColor = (isLine || hideCandle) ? 'transparent' : [{offset: 0, color: areaTopColor}, {offset: 1, color: 'transparent'}];
                     
-                    // 🚀 CHẶN LUÔN KHI NÓ ĐỔI LOẠI BIỂU ĐỒ NÓ CŨNG KHÔNG HỒI SINH ĐƯỢC OHLC
                     chart.setStyles({
                         candle: {
                             zLevel: 1, type: kcChartType,
