@@ -4226,11 +4226,15 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
       });
       indState.params = newParams;
       
-      // 🚀 Áp dụng mượt thông số cho TẤT CẢ các ô lưới đang chạy
+      // 🚀 Áp dụng mượt thông số cho TẤT CẢ các ô lưới đang chạy và vẽ lại danh sách
       if (window.WA_Chart && window.WA_Chart.instances) {
           Object.values(window.WA_Chart.instances).forEach(chartInstance => {
-              try { chartInstance.overrideIndicator({ name: currentActiveIndName, calcParams: newParams }, indState.paneId); } catch (e) {}
+              try { 
+                  chartInstance.overrideIndicator({ name: currentActiveIndName, calcParams: newParams }, indState.paneId); 
+              } catch (e) {}
           });
+          // Update lại Menu HTML
+          if (window.WA_Chart.activeId) window.WA_Chart.renderHtmlLegend(window.WA_Chart.activeId);
       }
   };
 

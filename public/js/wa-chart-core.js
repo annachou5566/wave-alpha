@@ -1,6 +1,6 @@
 // ==========================================
 // 🚀 FILE: public/js/wa-chart-core.js
-// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - GIAI ĐOẠN 2
+// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - HTML LEGEND ENGINE
 // ==========================================
 
 (function() {
@@ -24,10 +24,7 @@
         document.head.appendChild(style);
     }
 
-    let _instances = {}; 
-    let _activeId = null; 
-    let _resizeObserver = null;
-    let _isSyncingCrosshair = false; 
+    let _instances = {}; let _activeId = null; let _resizeObserver = null; let _isSyncingCrosshair = false; 
 
     window.WA_Chart = {
         get active() { return _instances[_activeId] || Object.values(_instances)[0] || null; },
@@ -43,33 +40,30 @@
 
                 const mainContainer = document.getElementById(mainContainerId);
                 if (!mainContainer) return false;
-
                 mainContainer.innerHTML = '';
+                
                 const gridWrapper = document.createElement('div');
                 gridWrapper.className = `wa-multi-grid-wrapper wa-layout-${layoutType}`;
                 mainContainer.appendChild(gridWrapper);
 
-                _resizeObserver = new ResizeObserver(() => {
-                    Object.values(_instances).forEach(chart => { try { chart.resize(); } catch(e){} });
-                });
+                _resizeObserver = new ResizeObserver(() => { Object.values(_instances).forEach(chart => { try { chart.resize(); } catch(e){} }); });
                 _resizeObserver.observe(mainContainer);
 
                 for (let i = 0; i < cellCount; i++) {
                     const cellId = `wa-chart-cell-${i}`;
                     const cell = document.createElement('div');
-                    cell.id = cellId;
-                    cell.className = `wa-chart-cell ${i === 0 ? 'active-cell' : ''}`;
-                    
+                    cell.id = cellId; cell.className = `wa-chart-cell ${i === 0 ? 'active-cell' : ''}`;
                     cell.addEventListener('mousedown', () => this.setActiveChart(cellId));
                     gridWrapper.appendChild(cell);
                     
-                    // 🚀 PHÉP MÀU NẰM Ở ĐÂY: BƠM OHLC & WATERMARK VÀO TỪNG Ô ĐỘC LẬP
+                    // 🚀 1. LỚP HTML OHLC TÙY CHỈNH
                     const uiLayer = document.createElement('div');
                     uiLayer.className = 'wa-custom-ui-layer';
                     uiLayer.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; padding: 6px 10px;';
                     
                     uiLayer.innerHTML = `
-                        <div style="font-family: Arial, sans-serif; font-size: 12px; font-weight: 600; display: flex; gap: 8px; flex-wrap: wrap; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">
+                        <div style="font-family: Arial, sans-serif; font-size: 12px; font-weight: 600; display: flex; gap: 8px; flex-wrap: wrap; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); pointer-events: auto;">
+                            <span id="wa-toggle-${cellId}" style="cursor:pointer; color:#848e9c; margin-right:4px;" onclick="document.getElementById('wa-ind-legend-${cellId}').style.display = document.getElementById('wa-ind-legend-${cellId}').style.display === 'none' ? 'flex' : 'none'; this.style.transform = document.getElementById('wa-ind-legend-${cellId}').style.display === 'none' ? 'rotate(-90deg)' : 'rotate(0deg)'; display:inline-block; transition:0.2s;">▼</span>
                             <span id="wa-sym-${cellId}" style="color: #EAECEF; margin-right: 4px;">---</span>
                             <span><span style="color: #848e9c;">O</span> <span id="wa-o-${cellId}" style="color: #848e9c;">---</span></span>
                             <span><span style="color: #848e9c;">H</span> <span id="wa-h-${cellId}" style="color: #0ECB81;">---</span></span>
@@ -81,57 +75,38 @@
                     `;
                     cell.appendChild(uiLayer);
 
+                    // 🚀 2. CONTAINER CHỨA DANH SÁCH CHỈ BÁO XẾP DỌC TRADINGVIEW
+                    const legendHtml = document.createElement('div');
+                    legendHtml.id = `wa-ind-legend-${cellId}`;
+                    legendHtml.style.cssText = 'position: absolute; top: 28px; left: 10px; z-index: 11; display: flex; flex-direction: column; gap: 2px; pointer-events: none;';
+                    cell.appendChild(legendHtml);
+
                     const chart = window.klinecharts.init(cell);
                     if (chart) {
                         this._applyDefaultStyles(chart); 
                         _instances[cellId] = chart;
                         if (i === 0) _activeId = cellId; 
-                        
-                        chart._waIsHovering = false; // Phân biệt rê chuột độc lập
+                        chart._waIsHovering = false; 
 
-                        // 🚀 FIX LỖI LIỆT NÚT CHỈ BÁO TRÊN TỪNG Ô
-                        chart.subscribeAction('onTooltipIconClick', function(data) {
-                            if (!data.indicatorName) return;
-                            const indName = data.indicatorName; const paneId = data.paneId;
-                            if (data.iconId === 'visible') chart.overrideIndicator({ name: indName, visible: true }, paneId);
-                            else if (data.iconId === 'invisible') chart.overrideIndicator({ name: indName, visible: false }, paneId);
-                            else if (data.iconId === 'close') chart.removeIndicator(paneId, indName);
-                            else if (data.iconId === 'setting') {
-                                if (typeof window.openIndicatorSettings === 'function') {
-                                    let calcParams;
-                                    try {
-                                        const inds = chart.getIndicators({ name: indName, paneId: paneId });
-                                        if (inds && inds.length > 0) calcParams = inds[0].calcParams;
-                                    } catch(e) {}
-                                    window.openIndicatorSettings({ name: indName, shortName: indName, calcParams: calcParams }, paneId);
-                                }
-                            }
-                        });
-
-                        // 🚀 ĐỒNG BỘ CROSSHAIR LÊN ĐÚNG Ô CỦA NÓ
                         chart.subscribeAction('onCrosshairChange', (param) => {
-                            if (!param || param.dataIndex === undefined || param.dataIndex < 0) {
+                            let dataIndex = (param && param.dataIndex !== undefined) ? param.dataIndex : -1;
+                            if (dataIndex < 0) {
                                 chart._waIsHovering = false;
                                 const dataList = chart.getDataList();
-                                if (dataList && dataList.length > 0) {
-                                    window.WA_Chart.updateLegendSpecific(cellId, dataList[dataList.length - 1]);
-                                }
+                                if (dataList && dataList.length > 0) this.updateLegendSpecific(cellId, dataList[dataList.length - 1], dataList.length - 1);
                             } else {
                                 chart._waIsHovering = true;
                                 const dataList = chart.getDataList();
-                                window.WA_Chart.updateLegendSpecific(cellId, dataList[param.dataIndex]);
+                                this.updateLegendSpecific(cellId, dataList[dataIndex], dataIndex);
                             }
 
-                            // Đồng bộ cái tâm ngắm chạy theo sang các ô khác (Crosshair Sync)
                             if (_isSyncingCrosshair) return; 
                             _isSyncingCrosshair = true;
-                            const targetTs = (param && param.dataIndex >= 0) ? chart.getDataList()[param.dataIndex]?.timestamp : null;
-                            
+                            const targetTs = (dataIndex >= 0) ? chart.getDataList()[dataIndex]?.timestamp : null;
                             Object.keys(_instances).forEach(targetId => {
                                 if (cellId === targetId) return;
-                                if (!targetTs) {
-                                    _instances[targetId].setCrosshair(undefined);
-                                } else {
+                                if (!targetTs) { _instances[targetId].setCrosshair(undefined); } 
+                                else {
                                     const tData = _instances[targetId].getDataList();
                                     const tIndex = tData.findIndex(d => d.timestamp === targetTs);
                                     if (tIndex !== -1) _instances[targetId].setCrosshair({ paneId: param.paneId, dataIndex: tIndex });
@@ -141,32 +116,27 @@
                         });
                     }
                 }
+                if (cellCount > 1) this._enableCrosshairSync();
                 return true;
             } catch(e) { console.error('[WA_Chart] Init Multi Error', e); return false; }
         },
 
-        // 🚀 CỖ MÁY IN VĂN BẢN LÊN TỪNG Ô ĐỘC LẬP
-        updateLegendSpecific: function(cellId, ohlc) {
+        // 🚀 CỖ MÁY IN VĂN BẢN VÀ CHỈ BÁO LÊN TỪNG Ô ĐỘC LẬP
+        updateLegendSpecific: function(cellId, ohlc, dataIndex = -1) {
             if (!ohlc) return;
             const fmt = (v) => v >= 1 ? v.toFixed(2) : v.toFixed(6);
             const fmtVol = (v) => v >= 1e9 ? (v/1e9).toFixed(2)+'B' : v >= 1e6 ? (v/1e6).toFixed(2)+'M' : v >= 1e3 ? (v/1e3).toFixed(2)+'K' : (v || 0).toFixed(0);
             
             const barColor = ohlc.close >= ohlc.open ? '#0ECB81' : '#F6465D';
-            const setTxt = (idSuffix, txt, color) => {
-                const el = document.getElementById(`wa-${idSuffix}-${cellId}`);
-                if (el) { el.innerText = txt; if (color) el.style.color = color; }
-            };
+            const setTxt = (idSuffix, txt, color) => { const el = document.getElementById(`wa-${idSuffix}-${cellId}`); if (el) { el.innerText = txt; if (color) el.style.color = color; } };
 
             setTxt('o', fmt(ohlc.open), '#848e9c'); setTxt('h', fmt(ohlc.high), '#0ECB81');
             setTxt('l', fmt(ohlc.low), '#F6465D'); setTxt('c', fmt(ohlc.close), barColor);
             setTxt('v', fmtVol(ohlc.volume || 0), '#848e9c');
 
-            // Lấy thông tin Tên Token từ Data Router
             let tObj = (window.waCellTokens && window.waCellTokens[cellId]) ? window.waCellTokens[cellId] : window.currentChartToken;
             let tf = (window.waCellIntervals && window.waCellIntervals[cellId]) ? window.waCellIntervals[cellId] : window.currentChartInterval;
-            
-            let sym = tObj ? tObj.symbol : 'WAVE';
-            let tfStr = (tf || '1D').toUpperCase();
+            let sym = tObj ? tObj.symbol : 'WAVE'; let tfStr = (tf || '1D').toUpperCase();
             if (window.WaveChartEngine && parseInt(window.WaveChartEngine.getConfig().chartType) === 14) tfStr = 'RENKO';
 
             let pct = ohlc.open > 0 ? ((ohlc.close - ohlc.open) / ohlc.open) * 100 : 0;
@@ -176,7 +146,6 @@
             const wmEl = document.getElementById(`wa-wm-${cellId}`);
             if (wmEl) {
                 wmEl.innerText = `${sym} • ${tfStr}`;
-                // Liên kết với Settings tắt mở của người dùng
                 if (window.WaveChartEngine) {
                     const cfg = window.WaveChartEngine.getConfig();
                     wmEl.style.display = cfg.showWatermark === false ? 'none' : 'block';
@@ -185,7 +154,80 @@
                     if (ohlcWrap) ohlcWrap.style.display = cfg.showOHLC === false ? 'none' : 'flex';
                 }
             }
+
+            // 🚀 RENDER THÔNG SỐ CHỈ BÁO REALTIME TỪ CORE CỦA KLINECHARTS
+            if (dataIndex >= 0) {
+                const chart = _instances[cellId];
+                if (!chart) return;
+                try {
+                    const pane = chart.getIndicatorByPaneId('candle_pane');
+                    if (pane) {
+                        let inds = pane instanceof Map ? Array.from(pane.values()) : Object.values(pane);
+                        inds.forEach(ind => {
+                            const valEl = document.getElementById(`wa-val-${cellId}-${ind.name}`);
+                            if (valEl && ind.result && ind.result[dataIndex]) {
+                                const res = ind.result[dataIndex];
+                                let valStr = '';
+                                Object.keys(res).forEach(k => {
+                                    if (typeof res[k] === 'number') valStr += '  ' + (Math.abs(res[k]) > 1000 ? res[k].toFixed(2) : res[k].toFixed(4));
+                                });
+                                valEl.innerText = valStr;
+                            }
+                        });
+                    }
+                } catch(e) {}
+            }
         },
+
+        // 🚀 CỖ MÁY DỰNG DANH SÁCH CHỈ BÁO XẾP DỌC (THAY THẾ TOOLTIP NATIVE CỦA THƯ VIỆN)
+        renderHtmlLegend: function(cellId) {
+            const chart = _instances[cellId];
+            if (!chart) return;
+            const container = document.getElementById(`wa-ind-legend-${cellId}`);
+            if (!container) return;
+
+            let inds = [];
+            try {
+                const pane = chart.getIndicatorByPaneId('candle_pane');
+                if (pane) { if (pane instanceof Map) inds = Array.from(pane.values()); else inds = Object.values(pane); }
+            } catch(e) {}
+
+            const hidden = ['WA_COL_CHART', 'WA_HL_CHART', 'WA_STEP_LINE', 'WA_LINE_MARKER', 'WA_HLC_AREA', 'WA_BASELINE', 'WA_VOL_CANDLE', 'WA_LINE_BREAK'];
+            inds = inds.filter(i => !hidden.includes(i.name));
+
+            let html = '';
+            inds.forEach(ind => {
+                const params = ind.calcParams ? ind.calcParams.join(', ') : '';
+                const isVis = ind.visible !== false;
+                const eyeColor = isVis ? '#848e9c' : '#F6465D'; const eyeClass = isVis ? 'fa-eye' : 'fa-eye-slash';
+                
+                html += `
+                <div class="wa-leg-item" style="display:flex; align-items:center; gap:8px; font-size:11px; font-weight:600; color:#848e9c; pointer-events:auto; padding:2px 6px; border-radius:4px; transition:0.2s; background: transparent;">
+                    <span style="color:${isVis?'#00F0FF':'#5e6673'}">${ind.name} <span style="font-size:9px">(${params})</span></span>
+                    <span id="wa-val-${cellId}-${ind.name}" style="color:#EAECEF; font-family:var(--font-num);"></span>
+                    <div class="wa-leg-icons" style="display:none; gap:10px; cursor:pointer; margin-left: 8px;">
+                        <i class="fas ${eyeClass}" style="color:${eyeColor}; transition:0.2s" onmouseover="this.style.color='#EAECEF'" onmouseout="this.style.color='${eyeColor}'" onclick="window.WA_Chart.toggleInd('${cellId}', '${ind.name}', ${isVis})"></i>
+                        <i class="fas fa-cog" style="color:#F0B90B; transition:0.2s" onmouseover="this.style.color='#FFF'" onmouseout="this.style.color='#F0B90B'" onclick="window.WA_Chart.settingInd('${cellId}', '${ind.name}')"></i>
+                        <i class="fas fa-times" style="color:#F6465D; transition:0.2s" onmouseover="this.style.color='#FFF'" onmouseout="this.style.color='#F6465D'" onclick="window.WA_Chart.removeInd('${cellId}', '${ind.name}')"></i>
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+
+            container.querySelectorAll('.wa-leg-item').forEach(el => {
+                el.onmouseenter = () => { el.style.background = 'rgba(255,255,255,0.1)'; el.querySelector('.wa-leg-icons').style.display = 'flex'; };
+                el.onmouseleave = () => { el.style.background = 'transparent'; el.querySelector('.wa-leg-icons').style.display = 'none'; };
+            });
+        },
+
+        // Các hàm hỗ trợ Click Icon từ HTML Legend
+        toggleInd: function(cellId, name, currentVis) { _instances[cellId].overrideIndicator({ name: name, visible: !currentVis }, 'candle_pane'); this.renderHtmlLegend(cellId); },
+        settingInd: function(cellId, name) {
+            let calcParams;
+            try { const inds = _instances[cellId].getIndicators({ name: name, paneId: 'candle_pane' }); if (inds && inds.length > 0) calcParams = inds[0].calcParams; } catch(e) {}
+            if (typeof window.openIndicatorSettings === 'function') window.openIndicatorSettings({ name: name, shortName: name, calcParams: calcParams }, 'candle_pane');
+        },
+        removeInd: function(cellId, name) { _instances[cellId].removeIndicator('candle_pane', name); this.renderHtmlLegend(cellId); },
 
         setActiveChart: function(cellId) {
             if (!_instances[cellId]) return;
@@ -200,21 +242,9 @@
                 layout: { backgroundColor: 'transparent' },
                 grid: { show: false, horizontal: { show: false }, vertical: { show: false } },
                 crosshair: { show: true },
-                candle: { type: 'candle_solid', tooltip: { showRule: 'always', showType: 'standard', custom: function() { return [{ title: { text: ' ', color: 'transparent' }, value: { text: ' ', color: 'transparent' } }]; }, text: { size: 12, color: 'transparent' } } },
-                indicator: {
-                    tooltip: { 
-                        showRule: 'always', 
-                        showType: 'standard',
-                        // 🚀 BẮT BUỘC ĐỂ NHIỀU CHỈ BÁO: Text phải xếp thành danh sách thay vì nối đuôi
-                        text: { size: 12, family: 'Arial, sans-serif', weight: 600, color: '#848e9c', marginLeft: 8, marginTop: 8 },
-                        icons: [
-                            { id: 'visible', position: 'middle', marginLeft: 8, marginTop: 8, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf070', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 11, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
-                            { id: 'invisible', position: 'middle', marginLeft: 8, marginTop: 8, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf06e', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 11, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
-                            { id: 'setting', position: 'middle', marginLeft: 6, marginTop: 8, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf013', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 11, color: '#848e9c', activeColor: '#F0B90B', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(240,185,11,0.1)' },
-                            { id: 'close', position: 'middle', marginLeft: 6, marginTop: 8, paddingLeft: 3, paddingTop: 2, paddingRight: 3, paddingBottom: 2, icon: '\uf00d', fontFamily: '"Font Awesome 6 Free", FontAwesome, sans-serif', weight: 900, size: 12, color: '#848e9c', activeColor: '#F6465D', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(246,70,93,0.1)' }
-                        ]
-                    } 
-                }
+                // 🚀 TẮT TOÀN BỘ TOOLTIP NATIVE CỦA KLINECHARTS ĐỂ NHƯỜNG CHỖ CHO HTML LEGEND ENGINE CỦA WAVE ALPHA
+                candle: { type: 'candle_solid', tooltip: { showRule: 'none' } },
+                indicator: { tooltip: { showRule: 'none' } }
             });
         },
         
@@ -224,15 +254,24 @@
             _instances = {}; _activeId = null;
         },
 
-        // 🚀 CÁC CỔNG GIAO TIẾP ĐÃ ĐƯỢC ĐỊNH TUYẾN ĐỂ VỪA VẼ NẾN, VỪA NHẢY GIÁ TRÊN OHLC
-        applyNewData: function(data) { try { if(this.active) { this.active.applyNewData(data); this.updateLegendSpecific(this.activeId, data[data.length-1]); } } catch(e){} },
-        updateData: function(data) { try { if(this.active) { this.active.updateData(data); if (!this.active._waIsHovering) this.updateLegendSpecific(this.activeId, data); } } catch(e){} }, 
+        applyNewData: function(data) { try { if(this.active) { this.active.applyNewData(data); this.updateLegendSpecific(this.activeId, data[data.length-1], data.length-1); } } catch(e){} },
+        updateData: function(data) { try { if(this.active) { this.active.updateData(data); if (!this.active._waIsHovering) { const dl = this.active.getDataList(); this.updateLegendSpecific(this.activeId, data, dl.length-1); } } } catch(e){} }, 
         getDataList: function() { try { return this.active ? this.active.getDataList() : []; } catch(e){ return []; } },
         setStyles: function(styles) { try { Object.values(_instances).forEach(chart => chart.setStyles(styles)); } catch(e){} },
         subscribeAction: function(type, cb) { try { if(this.active) this.active.subscribeAction(type, cb); } catch(e){} },
-        createIndicator: function(name, isStack, options) { try { if(this.active) this.active.createIndicator(name, isStack, options); } catch(e){} },
-        removeIndicator: function(paneId, name) { try { if(this.active) this.active.removeIndicator(paneId, name); } catch(e){} },
-        overrideIndicator: function(override, paneId) { try { if(this.active) this.active.overrideIndicator(override, paneId); } catch(e){} },
+        removeIndicator: function(paneId, name) { try { if(this.active) { this.active.removeIndicator(paneId, name); this.renderHtmlLegend(this.activeId); } } catch(e){} },
+        overrideIndicator: function(override, paneId) { try { if(this.active) { this.active.overrideIndicator(override, paneId); this.renderHtmlLegend(this.activeId); } } catch(e){} },
+        
+        // 🚀 Intercept hàm tạo chỉ báo để vẽ lại Menu
+        createIndicator: function(name, isStack, options) { 
+            try { 
+                if(this.active) { 
+                    this.active.createIndicator(name, isStack, options); 
+                    this.renderHtmlLegend(this.activeId); 
+                } 
+            } catch(e){} 
+        },
+
         getIndicators: function(options) { try { return this.active ? this.active.getIndicators(options) : []; } catch(e){ return []; } },
         createOverlay: function(options) { try { if(this.active) return this.active.createOverlay(options); return null; } catch(e){ return null; } },
         removeOverlay: function(id) { try { if(this.active) this.active.removeOverlay(id); } catch(e){} },
@@ -248,8 +287,8 @@
         setOffsetRightDistance: function(distance) { try { Object.values(_instances).forEach(chart => chart.setOffsetRightDistance(distance)); } catch(e){} },
         setTimezone: function(tz) { try { Object.values(_instances).forEach(chart => chart.setTimezone(tz)); } catch(e){} },
 
-        applyNewDataSpecific: function(cellId, data) { try { if(_instances[cellId]) { _instances[cellId].applyNewData(data); this.updateLegendSpecific(cellId, data[data.length-1]); } } catch(e){} },
-        updateDataSpecific: function(cellId, data) { try { if(_instances[cellId]) { _instances[cellId].updateData(data); if (!_instances[cellId]._waIsHovering) this.updateLegendSpecific(cellId, data); } } catch(e){} },
+        applyNewDataSpecific: function(cellId, data) { try { if(_instances[cellId]) { _instances[cellId].applyNewData(data); this.updateLegendSpecific(cellId, data[data.length-1], data.length-1); } } catch(e){} },
+        updateDataSpecific: function(cellId, data) { try { if(_instances[cellId]) { _instances[cellId].updateData(data); if (!_instances[cellId]._waIsHovering) { const dl = _instances[cellId].getDataList(); this.updateLegendSpecific(cellId, data, dl.length-1); } } } catch(e){} },
         getChartSpecific: function(cellId) { return _instances[cellId] || null; },
 
         setMainSeries: function(config) {
