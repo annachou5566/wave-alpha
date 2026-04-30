@@ -1,6 +1,6 @@
 // ==========================================
 // 🚀 FILE: public/js/wa-chart-core.js
-// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - HTML LEGEND ENGINE
+// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - FIX UI CHỈ BÁO & OHLC
 // ==========================================
 
 (function() {
@@ -56,29 +56,29 @@
                     cell.addEventListener('mousedown', () => this.setActiveChart(cellId));
                     gridWrapper.appendChild(cell);
                     
-                    // 🚀 1. LỚP HTML OHLC TÙY CHỈNH
+                    // 🚀 1. LỚP HTML OHLC TÙY CHỈNH (Cắt bớt 65px bề ngang để KHÔNG ĐÈ TRỤC GIÁ)
                     const uiLayer = document.createElement('div');
                     uiLayer.className = 'wa-custom-ui-layer';
-                    uiLayer.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; padding: 6px 10px;';
+                    uiLayer.style.cssText = 'position: absolute; top: 0; left: 0; width: calc(100% - 65px); height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; padding: 6px 10px; overflow: hidden;';
                     
                     uiLayer.innerHTML = `
-                        <div style="font-family: Arial, sans-serif; font-size: 12px; font-weight: 600; display: flex; gap: 8px; flex-wrap: wrap; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); pointer-events: auto;">
+                        <div style="font-family: Arial, sans-serif; font-size: 11px; font-weight: 600; display: flex; gap: 8px; flex-wrap: nowrap; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); pointer-events: auto; overflow: hidden;">
                             <span id="wa-toggle-${cellId}" style="cursor:pointer; color:#848e9c; margin-right:4px;" onclick="document.getElementById('wa-ind-legend-${cellId}').style.display = document.getElementById('wa-ind-legend-${cellId}').style.display === 'none' ? 'flex' : 'none'; this.style.transform = document.getElementById('wa-ind-legend-${cellId}').style.display === 'none' ? 'rotate(-90deg)' : 'rotate(0deg)'; display:inline-block; transition:0.2s;">▼</span>
-                            <span id="wa-sym-${cellId}" style="color: #EAECEF; margin-right: 4px;">---</span>
-                            <span><span style="color: #848e9c;">O</span> <span id="wa-o-${cellId}" style="color: #848e9c;">---</span></span>
-                            <span><span style="color: #848e9c;">H</span> <span id="wa-h-${cellId}" style="color: #0ECB81;">---</span></span>
-                            <span><span style="color: #848e9c;">L</span> <span id="wa-l-${cellId}" style="color: #F6465D;">---</span></span>
-                            <span><span style="color: #848e9c;">C</span> <span id="wa-c-${cellId}" style="color: #848e9c;">---</span></span>
-                            <span><span style="color: #848e9c;">V</span> <span id="wa-v-${cellId}" style="color: #848e9c;">---</span></span>
+                            <span id="wa-sym-${cellId}" style="color: #EAECEF; margin-right: 4px; white-space: nowrap;">---</span>
+                            <span style="white-space: nowrap;"><span style="color: #848e9c;">O</span> <span id="wa-o-${cellId}" style="color: #848e9c;">---</span></span>
+                            <span style="white-space: nowrap;"><span style="color: #848e9c;">H</span> <span id="wa-h-${cellId}" style="color: #0ECB81;">---</span></span>
+                            <span style="white-space: nowrap;"><span style="color: #848e9c;">L</span> <span id="wa-l-${cellId}" style="color: #F6465D;">---</span></span>
+                            <span style="white-space: nowrap;"><span style="color: #848e9c;">C</span> <span id="wa-c-${cellId}" style="color: #848e9c;">---</span></span>
+                            <span style="white-space: nowrap;"><span style="color: #848e9c;">V</span> <span id="wa-v-${cellId}" style="color: #848e9c;">---</span></span>
                         </div>
                         <div id="wa-wm-${cellId}" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Inter', sans-serif; font-weight: 800; font-size: clamp(20px, 4vw, 60px); color: rgba(255,255,255,0.05); letter-spacing: 2px; white-space: nowrap;">WAVE ALPHA</div>
                     `;
                     cell.appendChild(uiLayer);
 
-                    // 🚀 2. CONTAINER CHỨA DANH SÁCH CHỈ BÁO XẾP DỌC TRADINGVIEW
+                    // 🚀 2. CONTAINER CHỨA DANH SÁCH CHỈ BÁO XẾP DỌC TRADINGVIEW (Cũng né trục giá)
                     const legendHtml = document.createElement('div');
                     legendHtml.id = `wa-ind-legend-${cellId}`;
-                    legendHtml.style.cssText = 'position: absolute; top: 28px; left: 10px; z-index: 11; display: flex; flex-direction: column; gap: 2px; pointer-events: none;';
+                    legendHtml.style.cssText = 'position: absolute; top: 28px; left: 10px; z-index: 11; display: flex; flex-direction: column; gap: 2px; pointer-events: none; max-width: calc(100% - 65px); overflow: hidden;';
                     cell.appendChild(legendHtml);
 
                     const chart = window.klinecharts.init(cell);
@@ -155,7 +155,7 @@
                 }
             }
 
-            // 🚀 RENDER THÔNG SỐ CHỈ BÁO REALTIME TỪ CORE CỦA KLINECHARTS
+            // RENDER THÔNG SỐ CHỈ BÁO REALTIME TỪ CORE
             if (dataIndex >= 0) {
                 const chart = _instances[cellId];
                 if (!chart) return;
@@ -179,7 +179,7 @@
             }
         },
 
-        // 🚀 CỖ MÁY DỰNG DANH SÁCH CHỈ BÁO XẾP DỌC (THAY THẾ TOOLTIP NATIVE CỦA THƯ VIỆN)
+        // 🚀 CỖ MÁY DỰNG DANH SÁCH CHỈ BÁO XẾP DỌC (CẮT CHỮ DÀI CHỐNG ĐÈ TRỤC GIÁ)
         renderHtmlLegend: function(cellId) {
             const chart = _instances[cellId];
             if (!chart) return;
@@ -202,10 +202,10 @@
                 const eyeColor = isVis ? '#848e9c' : '#F6465D'; const eyeClass = isVis ? 'fa-eye' : 'fa-eye-slash';
                 
                 html += `
-                <div class="wa-leg-item" style="display:flex; align-items:center; gap:8px; font-size:11px; font-weight:600; color:#848e9c; pointer-events:auto; padding:2px 6px; border-radius:4px; transition:0.2s; background: transparent;">
-                    <span style="color:${isVis?'#00F0FF':'#5e6673'}">${ind.name} <span style="font-size:9px">(${params})</span></span>
-                    <span id="wa-val-${cellId}-${ind.name}" style="color:#EAECEF; font-family:var(--font-num);"></span>
-                    <div class="wa-leg-icons" style="display:none; gap:10px; cursor:pointer; margin-left: 8px;">
+                <div class="wa-leg-item" style="display:flex; align-items:center; gap:8px; font-size:11px; font-weight:600; color:#848e9c; pointer-events:auto; padding:2px 6px; border-radius:4px; transition:0.2s; background: transparent; width: 100%;">
+                    <span style="color:${isVis?'#00F0FF':'#5e6673'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ind.name} <span style="font-size:9px">(${params})</span></span>
+                    <span id="wa-val-${cellId}-${ind.name}" style="color:#EAECEF; font-family:var(--font-num); flex-shrink: 0;"></span>
+                    <div class="wa-leg-icons" style="display:none; gap:10px; cursor:pointer; margin-left: auto; flex-shrink: 0;">
                         <i class="fas ${eyeClass}" style="color:${eyeColor}; transition:0.2s" onmouseover="this.style.color='#EAECEF'" onmouseout="this.style.color='${eyeColor}'" onclick="window.WA_Chart.toggleInd('${cellId}', '${ind.name}', ${isVis})"></i>
                         <i class="fas fa-cog" style="color:#F0B90B; transition:0.2s" onmouseover="this.style.color='#FFF'" onmouseout="this.style.color='#F0B90B'" onclick="window.WA_Chart.settingInd('${cellId}', '${ind.name}')"></i>
                         <i class="fas fa-times" style="color:#F6465D; transition:0.2s" onmouseover="this.style.color='#FFF'" onmouseout="this.style.color='#F6465D'" onclick="window.WA_Chart.removeInd('${cellId}', '${ind.name}')"></i>
@@ -220,14 +220,36 @@
             });
         },
 
-        // Các hàm hỗ trợ Click Icon từ HTML Legend
-        toggleInd: function(cellId, name, currentVis) { _instances[cellId].overrideIndicator({ name: name, visible: !currentVis }, 'candle_pane'); this.renderHtmlLegend(cellId); },
+        // 🚀 ĐỒNG BỘ NÚT ẨN VÀ XÓA VÀO BỘ NHỚ LÕI ĐỂ KHÔNG BỊ "CÒN DÍNH TRONG CÀI ĐẶT"
+        toggleInd: function(cellId, name, currentVis) { 
+            if (window.scActiveIndicators) {
+                let ind = window.scActiveIndicators.find(x => x.name === name && x.cellId === cellId);
+                if (ind) ind.visible = !currentVis;
+            }
+            _instances[cellId].overrideIndicator({ name: name, visible: !currentVis }, 'candle_pane'); 
+            this.renderHtmlLegend(cellId); 
+            if(typeof window.saveIndicatorState === 'function') window.saveIndicatorState();
+            
+            // Ép render lại Modal nếu đang bật
+            const modal = document.getElementById('sc-indicator-modal');
+            if (modal && modal.style.display !== 'none' && typeof window.renderIndicatorList === 'function') {
+                window.renderIndicatorList(document.getElementById('wa-ind-search')?.value);
+            }
+        },
         settingInd: function(cellId, name) {
             let calcParams;
             try { const inds = _instances[cellId].getIndicators({ name: name, paneId: 'candle_pane' }); if (inds && inds.length > 0) calcParams = inds[0].calcParams; } catch(e) {}
             if (typeof window.openIndicatorSettings === 'function') window.openIndicatorSettings({ name: name, shortName: name, calcParams: calcParams }, 'candle_pane');
         },
-        removeInd: function(cellId, name) { _instances[cellId].removeIndicator('candle_pane', name); this.renderHtmlLegend(cellId); },
+        removeInd: function(cellId, name) { 
+            if (typeof window.removeIndicatorFromChart === 'function') {
+                // Xóa thẳng bằng hàm Gốc để dọn dẹp sạch cả Bảng Cài Đặt
+                window.removeIndicatorFromChart(name, cellId);
+            } else {
+                _instances[cellId].removeIndicator('candle_pane', name); 
+                this.renderHtmlLegend(cellId); 
+            }
+        },
 
         setActiveChart: function(cellId) {
             if (!_instances[cellId]) return;
@@ -242,7 +264,6 @@
                 layout: { backgroundColor: 'transparent' },
                 grid: { show: false, horizontal: { show: false }, vertical: { show: false } },
                 crosshair: { show: true },
-                // 🚀 TẮT TOÀN BỘ TOOLTIP NATIVE CỦA KLINECHARTS ĐỂ NHƯỜNG CHỖ CHO HTML LEGEND ENGINE CỦA WAVE ALPHA
                 candle: { type: 'candle_solid', tooltip: { showRule: 'none' } },
                 indicator: { tooltip: { showRule: 'none' } }
             });
@@ -262,7 +283,6 @@
         removeIndicator: function(paneId, name) { try { if(this.active) { this.active.removeIndicator(paneId, name); this.renderHtmlLegend(this.activeId); } } catch(e){} },
         overrideIndicator: function(override, paneId) { try { if(this.active) { this.active.overrideIndicator(override, paneId); this.renderHtmlLegend(this.activeId); } } catch(e){} },
         
-        // 🚀 Intercept hàm tạo chỉ báo để vẽ lại Menu
         createIndicator: function(name, isStack, options) { 
             try { 
                 if(this.active) { 
