@@ -202,6 +202,7 @@
             }
         },
 
+        // 🚀 CỖ MÁY DỰNG DANH SÁCH CHỈ BÁO - GIAO DIỆN SVG MINIMALIST SANG TRỌNG
         renderHtmlLegend: function(cellId) {
             const chart = _instances[cellId];
             if (!chart) return;
@@ -217,28 +218,36 @@
             const hidden = ['WA_COL_CHART', 'WA_HL_CHART', 'WA_STEP_LINE', 'WA_LINE_MARKER', 'WA_HLC_AREA', 'WA_BASELINE', 'WA_VOL_CANDLE', 'WA_LINE_BREAK'];
             inds = inds.filter(i => !hidden.includes(i.name));
 
+            // BỘ ICON SVG MẢNH (ĐƠN GIẢN & SANG TRỌNG)
+            const SVG = {
+                eye: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`,
+                eyeOff: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`,
+                gear: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`,
+                close: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`
+            };
+
             let html = '';
             inds.forEach(ind => {
                 const params = ind.calcParams ? ind.calcParams.join(', ') : '';
                 const isVis = ind.visible !== false;
-                const eyeColor = isVis ? '#848e9c' : '#F6465D'; const eyeClass = isVis ? 'fa-eye' : 'fa-eye-slash';
+                const eyeColor = isVis ? '#848e9c' : '#F6465D'; 
+                const eyeIcon = isVis ? SVG.eye : SVG.eyeOff;
                 
-                // 🛡️ CHẶN TIẾP SỰ KIỆN TẠI TỪNG DÒNG CHỈ BÁO
                 html += `
-                <div class="wa-leg-item" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" style="display:flex; align-items:center; gap:8px; font-size:11px; font-weight:600; color:#848e9c; pointer-events:auto; padding:2px 6px; border-radius:4px; transition:0.2s; background: transparent; width: 100%;">
-                    <span style="color:${isVis?'#00F0FF':'#5e6673'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ind.name} <span style="font-size:9px">(${params})</span></span>
-                    <span id="wa-val-${cellId}-${ind.name}" style="color:#EAECEF; font-family:var(--font-num); flex-shrink: 0;"></span>
-                    <div class="wa-leg-icons" style="display:none; gap:10px; cursor:pointer; margin-left: auto; flex-shrink: 0;">
-                        <i class="fas ${eyeClass}" style="color:${eyeColor}; transition:0.2s" onmouseover="this.style.color='#EAECEF'" onmouseout="this.style.color='${eyeColor}'" onclick="window.WA_Chart.toggleInd('${cellId}', '${ind.name}', ${isVis})"></i>
-                        <i class="fas fa-cog" style="color:#F0B90B; transition:0.2s" onmouseover="this.style.color='#FFF'" onmouseout="this.style.color='#F0B90B'" onclick="window.WA_Chart.settingInd('${cellId}', '${ind.name}')"></i>
-                        <i class="fas fa-times" style="color:#F6465D; transition:0.2s" onmouseover="this.style.color='#FFF'" onmouseout="this.style.color='#F6465D'" onclick="window.WA_Chart.removeInd('${cellId}', '${ind.name}')"></i>
+                <div class="wa-leg-item" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" style="display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:500; color:#848e9c; pointer-events:auto; padding:3px 6px; border-radius:4px; transition:0.2s; background: transparent; width: 100%;">
+                    <span style="color:${isVis?'#00F0FF':'#5e6673'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight:600;">${ind.name} <span style="font-size:10px; font-weight:400; opacity:0.7;">(${params})</span></span>
+                    <span id="wa-val-${cellId}-${ind.name}" style="color:#EAECEF; font-family:var(--font-num); flex-shrink: 0; font-size:11px;"></span>
+                    <div class="wa-leg-icons" style="display:none; gap:2px; cursor:pointer; margin-left: auto; flex-shrink: 0; align-items: center;">
+                        <div title="Ẩn/Hiện" style="display:flex; padding:5px; border-radius:4px; color:${eyeColor}; transition:0.2s" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.color='#EAECEF'" onmouseout="this.style.background='transparent'; this.style.color='${eyeColor}'" onclick="window.WA_Chart.toggleInd('${cellId}', '${ind.name}', ${isVis})">${eyeIcon}</div>
+                        <div title="Cài đặt" style="display:flex; padding:5px; border-radius:4px; color:#848e9c; transition:0.2s" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.color='#F0B90B'" onmouseout="this.style.background='transparent'; this.style.color='#848e9c'" onclick="window.WA_Chart.settingInd('${cellId}', '${ind.name}')">${SVG.gear}</div>
+                        <div title="Xóa" style="display:flex; padding:5px; border-radius:4px; color:#848e9c; transition:0.2s" onmouseover="this.style.background='rgba(246,70,93,0.15)'; this.style.color='#F6465D'" onmouseout="this.style.background='transparent'; this.style.color='#848e9c'" onclick="window.WA_Chart.removeInd('${cellId}', '${ind.name}')">${SVG.close}</div>
                     </div>
                 </div>`;
             });
             container.innerHTML = html;
 
             container.querySelectorAll('.wa-leg-item').forEach(el => {
-                el.onmouseenter = () => { el.style.background = 'rgba(255,255,255,0.1)'; el.querySelector('.wa-leg-icons').style.display = 'flex'; };
+                el.onmouseenter = () => { el.style.background = 'rgba(255,255,255,0.03)'; el.querySelector('.wa-leg-icons').style.display = 'flex'; };
                 el.onmouseleave = () => { el.style.background = 'transparent'; el.querySelector('.wa-leg-icons').style.display = 'none'; };
             });
         },
