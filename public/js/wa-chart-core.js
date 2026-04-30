@@ -1,6 +1,6 @@
 // ==========================================
 // 🚀 FILE: public/js/wa-chart-core.js
-// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - TRADINGVIEW LEGEND PRO
+// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - TRADINGVIEW ZERO-LAG UI
 // ==========================================
 
 (function() {
@@ -21,19 +21,22 @@
             .wa-chart-cell { position: relative; width: 100%; height: 100%; background: #131722; border: 1px solid transparent; }
             .wa-chart-cell.active-cell { border-color: #00F0FF; z-index: 5; }
 
-            /* 🚀 CSS THUẦN CHO DANH SÁCH CHỈ BÁO - MƯỢT NHƯ TRADINGVIEW */
-            .wa-leg-item { display:inline-flex; align-self:flex-start; max-width:100%; align-items:center; gap:8px; font-size:11.5px; font-weight:500; color:#848e9c; pointer-events:auto; padding:2px 6px; border-radius:4px; background: transparent; cursor: default; margin-bottom: 2px;}
+            /* 🚀 CSS PURE CHO DANH SÁCH CHỈ BÁO - ĐỨNG IM KHÔNG GIẬT LAG */
+            .wa-leg-item { display:inline-flex; align-self:flex-start; max-width:100%; align-items:center; gap:8px; font-size:11.5px; font-weight:500; color:#848e9c; pointer-events:auto; padding:2px 6px; border-radius:4px; background: transparent; cursor: default; margin-bottom: 2px; transition: background 0.15s ease;}
             .wa-leg-item:hover { background: rgba(255,255,255,0.04); }
             
             .wa-leg-name { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; transition:color 0.15s ease; }
             .wa-leg-val { font-family:var(--font-num); flex-shrink: 0; font-size:11px; transition:color 0.15s ease; }
             
             .wa-leg-icons { display:flex; gap:2px; margin-left:4px; flex-shrink:0; align-items:center; opacity:0; pointer-events:none; transition:opacity 0.15s ease; }
-            /* Hiển thị icon khi hover HOẶC khi bị ép hiển thị (force-show lúc tắt mắt) */
+            /* Ép hiển thị icon khi rê chuột HOẶC khi chỉ báo đang bị tắt */
             .wa-leg-item:hover .wa-leg-icons, .wa-leg-icons.force-show { opacity:1; pointer-events:auto; }
             
-            .wa-leg-btn { display:flex; padding:4px; border-radius:4px; color:#848e9c; transition:all 0.15s ease; cursor:pointer; align-items:center; justify-content:center; }
+            .wa-leg-btn { display:flex; padding:5px; border-radius:4px; color:#848e9c; transition:all 0.15s ease; cursor:pointer; align-items:center; justify-content:center; }
             .wa-leg-btn:hover { background: rgba(255,255,255,0.1); color: #EAECEF; }
+            .wa-leg-btn.toggle.is-off { color: #F6465D; }
+            .wa-leg-btn.toggle.is-off:hover { background: rgba(246,70,93,0.15); color: #F6465D; }
+            .wa-leg-btn.gear:hover { background: rgba(240,185,11,0.15); color: #F0B90B; }
             .wa-leg-btn.delete:hover { background: rgba(246,70,93,0.15); color: #F6465D; }
         `;
         document.head.appendChild(style);
@@ -45,6 +48,14 @@
         get active() { return _instances[_activeId] || Object.values(_instances)[0] || null; },
         get instances() { return _instances; }, 
         get activeId() { return _activeId; },
+
+        // TỪ ĐIỂN ICON SVG DÙNG CHUNG
+        SVGS: {
+            eye: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`,
+            eyeOff: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`,
+            gear: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`,
+            close: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`
+        },
 
         init: function(containerId) { return this.initMultiLayout(containerId, '1', 1); },
 
@@ -211,7 +222,7 @@
             }
         },
 
-        // 🚀 CỖ MÁY DỰNG DANH SÁCH CHỈ BÁO - CSS PURE HOVER (KHÔNG GIẬT LAG)
+        // 🚀 CỖ MÁY VẼ DANH SÁCH CHỈ BÁO GỐC (Chỉ gọi 1 lần khi Thêm/Xóa)
         renderHtmlLegend: function(cellId) {
             const chart = _instances[cellId];
             if (!chart) return;
@@ -227,54 +238,85 @@
             const hidden = ['WA_COL_CHART', 'WA_HL_CHART', 'WA_STEP_LINE', 'WA_LINE_MARKER', 'WA_HLC_AREA', 'WA_BASELINE', 'WA_VOL_CANDLE', 'WA_LINE_BREAK'];
             inds = inds.filter(i => !hidden.includes(i.name));
 
-            const SVG = {
-                eye: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`,
-                eyeOff: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`,
-                gear: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`,
-                close: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`
-            };
-
             let html = '';
             inds.forEach(ind => {
                 const params = ind.calcParams ? ind.calcParams.join(', ') : '';
                 const isVis = ind.visible !== false;
-                const eyeIcon = isVis ? SVG.eye : SVG.eyeOff;
                 const nameColor = isVis ? '#EAECEF' : '#5e6673';
+                const forceClass = !isVis ? 'force-show' : '';
+                const toggleClass = !isVis ? 'is-off' : '';
                 
-                // Mấu chốt: Thêm class 'force-show' vào .wa-leg-icons nếu chỉ báo đang ẩn (!isVis)
+                // Gắn ID cụ thể cho từng thẻ để JS cập nhật trực tiếp mà không cần vẽ lại
                 html += `
-                <div class="wa-leg-item" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">
+                <div id="wa-leg-item-${cellId}-${ind.name}" class="wa-leg-item" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">
                     <span class="wa-leg-name" style="color:${nameColor};">${ind.name} <span style="font-size:10px; font-weight:400; opacity:0.7;">(${params})</span></span>
                     <span id="wa-val-${cellId}-${ind.name}" class="wa-leg-val" style="color:${nameColor};"></span>
-                    <div class="wa-leg-icons ${!isVis ? 'force-show' : ''}">
-                        <div class="wa-leg-btn toggle" title="Ẩn/Hiện" onclick="window.WA_Chart.toggleInd('${cellId}', '${ind.name}', ${isVis})">${eyeIcon}</div>
-                        <div class="wa-leg-btn gear" title="Cài đặt" onclick="window.WA_Chart.settingInd('${cellId}', '${ind.name}')">${SVG.gear}</div>
-                        <div class="wa-leg-btn delete" title="Xóa" onclick="window.WA_Chart.removeInd('${cellId}', '${ind.name}')">${SVG.close}</div>
+                    <div class="wa-leg-icons ${forceClass}">
+                        <div class="wa-leg-btn toggle ${toggleClass}" title="Ẩn/Hiện" onclick="window.WA_Chart.toggleInd('${cellId}', '${ind.name}', ${isVis})">
+                            ${isVis ? this.SVGS.eye : this.SVGS.eyeOff}
+                        </div>
+                        <div class="wa-leg-btn gear" title="Cài đặt" onclick="window.WA_Chart.settingInd('${cellId}', '${ind.name}')">${this.SVGS.gear}</div>
+                        <div class="wa-leg-btn delete" title="Xóa" onclick="window.WA_Chart.removeInd('${cellId}', '${ind.name}')">${this.SVGS.close}</div>
                     </div>
                 </div>`;
             });
             container.innerHTML = html;
         },
 
+        // 🚀 BÍ QUYẾT ZERO-LAG: THAO TÁC TRỰC TIẾP DOM, TUYỆT ĐỐI KHÔNG GỌI renderHtmlLegend LÀM GIẬT MÀN HÌNH
         toggleInd: function(cellId, name, currentVis) { 
+            const isNowVis = !currentVis;
+
+            // 1. Cập nhật bộ nhớ lõi
             if (window.scActiveIndicators) {
                 let ind = window.scActiveIndicators.find(x => x.name === name && x.cellId === cellId);
-                if (ind) ind.visible = !currentVis;
+                if (ind) ind.visible = isNowVis;
             }
-            _instances[cellId].overrideIndicator({ name: name, visible: !currentVis }, 'candle_pane'); 
-            this.renderHtmlLegend(cellId); 
+            
+            // 2. Tắt/Bật Engine Canvas
+            _instances[cellId].overrideIndicator({ name: name, visible: isNowVis }, 'candle_pane'); 
+            
+            // 3. THAO TÁC THẲNG CSS VÀO GIAO DIỆN MÀ KHÔNG CẦN TẠO LẠI HTML (Chống giật)
+            const item = document.getElementById(`wa-leg-item-${cellId}-${name}`);
+            if (item) {
+                const nameEl = item.querySelector('.wa-leg-name');
+                const valEl = document.getElementById(`wa-val-${cellId}-${name}`);
+                const iconsWrap = item.querySelector('.wa-leg-icons');
+                const toggleBtn = item.querySelector('.wa-leg-btn.toggle');
+
+                if (nameEl) nameEl.style.color = isNowVis ? '#EAECEF' : '#5e6673';
+                if (valEl) valEl.style.color = isNowVis ? '#EAECEF' : '#5e6673';
+                
+                if (iconsWrap) {
+                    if (!isNowVis) iconsWrap.classList.add('force-show');
+                    else iconsWrap.classList.remove('force-show');
+                }
+                
+                if (toggleBtn) {
+                    toggleBtn.innerHTML = isNowVis ? this.SVGS.eye : this.SVGS.eyeOff;
+                    if (!isNowVis) toggleBtn.classList.add('is-off');
+                    else toggleBtn.classList.remove('is-off');
+                    
+                    // Cập nhật lại lệnh click cho lần bấm tiếp theo
+                    toggleBtn.setAttribute('onclick', `window.WA_Chart.toggleInd('${cellId}', '${name}', ${isNowVis})`);
+                }
+            }
+
             if(typeof window.saveIndicatorState === 'function') window.saveIndicatorState();
             
+            // Báo cho Bảng Settings tổng (nếu đang mở) tự update
             const modal = document.getElementById('sc-indicator-modal');
             if (modal && modal.style.display !== 'none' && typeof window.renderIndicatorList === 'function') {
                 window.renderIndicatorList(document.getElementById('wa-ind-search')?.value);
             }
         },
+
         settingInd: function(cellId, name) {
             let calcParams;
             try { const inds = _instances[cellId].getIndicators({ name: name, paneId: 'candle_pane' }); if (inds && inds.length > 0) calcParams = inds[0].calcParams; } catch(e) {}
             if (typeof window.openIndicatorSettings === 'function') window.openIndicatorSettings({ name: name, shortName: name, calcParams: calcParams }, 'candle_pane');
         },
+
         removeInd: function(cellId, name) { 
             if (typeof window.removeIndicatorFromChart === 'function') {
                 window.removeIndicatorFromChart(name, cellId);
@@ -292,6 +334,7 @@
             window.dispatchEvent(new CustomEvent('WA_ACTIVE_CHART_CHANGED', { detail: { cellId: cellId } }));
         },
 
+        // ÉP CHẾT OHLC MẶC ĐỊNH
         _applyDefaultStyles: function(chart) {
             chart.setStyles({
                 layout: { backgroundColor: 'transparent' },
