@@ -1,6 +1,6 @@
 // ==========================================
 // 🚀 FILE: public/js/wa-chart-core.js
-// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - FIX CHUẨN NÚT BẤM
+// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - TẮT OHLC MẶC ĐỊNH
 // ==========================================
 
 (function() {
@@ -54,11 +54,9 @@
                     const cell = document.createElement('div');
                     cell.id = cellId; cell.className = `wa-chart-cell ${i === 0 ? 'active-cell' : ''}`;
                     
-                    // Lắng nghe click để set Active (viền xanh)
                     cell.addEventListener('mousedown', () => this.setActiveChart(cellId));
                     gridWrapper.appendChild(cell);
                     
-                    // 🚀 1. LỚP HTML OHLC TÙY CHỈNH
                     const uiLayer = document.createElement('div');
                     uiLayer.className = 'wa-custom-ui-layer';
                     uiLayer.style.cssText = 'position: absolute; top: 0; left: 0; width: calc(100% - 65px); height: 100%; pointer-events: none; z-index: 50; display: flex; flex-direction: column; justify-content: space-between; padding: 6px 10px; overflow: hidden;';
@@ -77,25 +75,21 @@
                     `;
                     cell.appendChild(uiLayer);
 
-                    // 🚀 2. CONTAINER CHỨA DANH SÁCH CHỈ BÁO XẾP DỌC TRADINGVIEW
                     const legendHtml = document.createElement('div');
                     legendHtml.id = `wa-ind-legend-${cellId}`;
                     legendHtml.style.cssText = 'position: absolute; top: 28px; left: 10px; z-index: 51; display: flex; flex-direction: column; gap: 2px; pointer-events: none; max-width: calc(100% - 65px); overflow: hidden;';
                     cell.appendChild(legendHtml);
 
-                    // 🛡️ FIX CỐT LÕI: DÙNG JAVASCRIPT GẮN SỰ KIỆN CHỐNG ĂN CẮP CLICK
                     setTimeout(() => {
                         const toggleBtn = document.getElementById(`wa-toggle-${cellId}`);
                         if (toggleBtn) {
                             toggleBtn.onmouseover = () => { toggleBtn.style.color = '#EAECEF'; toggleBtn.style.background = 'rgba(255,255,255,0.1)'; };
                             toggleBtn.onmouseout = () => { toggleBtn.style.color = '#848e9c'; toggleBtn.style.background = 'transparent'; };
-                            
-                            // CHẶN CHART ĂN CẮP EVENT MOUSEDOWN
                             toggleBtn.onmousedown = (e) => e.stopPropagation(); 
                             toggleBtn.ontouchstart = (e) => e.stopPropagation();
 
                             toggleBtn.onclick = (e) => {
-                                e.stopPropagation(); // CHẶN CLICK
+                                e.stopPropagation();
                                 const leg = document.getElementById(`wa-ind-legend-${cellId}`);
                                 if (leg) {
                                     const isHidden = leg.style.display === 'none';
@@ -202,7 +196,6 @@
             }
         },
 
-        // 🚀 CỖ MÁY DỰNG DANH SÁCH CHỈ BÁO - TONE TRẮNG ĐEN & FIX LỖI KHOẢNG CÁCH ICON
         renderHtmlLegend: function(cellId) {
             const chart = _instances[cellId];
             if (!chart) return;
@@ -232,8 +225,6 @@
                 const eyeColor = isVis ? '#848e9c' : '#F6465D'; 
                 const eyeIcon = isVis ? SVG.eye : SVG.eyeOff;
                 
-                // 🚀 Đã đổi '#00F0FF' thành '#EAECEF' (Trắng)
-                // 🚀 Đã thêm align-self: flex-start và sửa margin-left của icon thành 4px
                 html += `
                 <div class="wa-leg-item" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" style="display:inline-flex; align-self:flex-start; max-width:100%; align-items:center; gap:8px; font-size:11.5px; font-weight:500; color:#848e9c; pointer-events:auto; padding:3px 6px; border-radius:4px; transition:0.2s; background: transparent;">
                     <span style="color:${isVis?'#EAECEF':'#5e6673'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight:600;">${ind.name} <span style="font-size:10px; font-weight:400; opacity:0.7;">(${params})</span></span>
@@ -289,12 +280,20 @@
             window.dispatchEvent(new CustomEvent('WA_ACTIVE_CHART_CHANGED', { detail: { cellId: cellId } }));
         },
 
+        // 🚀 VŨ KHÍ TỐI THƯỢNG ĐỂ BỊT MỒM HOÀN TOÀN OHLC MẶC ĐỊNH CỦA THƯ VIỆN
         _applyDefaultStyles: function(chart) {
             chart.setStyles({
                 layout: { backgroundColor: 'transparent' },
                 grid: { show: false, horizontal: { show: false }, vertical: { show: false } },
                 crosshair: { show: true },
-                candle: { type: 'candle_solid', tooltip: { showRule: 'none' } },
+                candle: { 
+                    type: 'candle_solid', 
+                    tooltip: { 
+                        showRule: 'none', 
+                        custom: function() { return []; }, 
+                        text: { size: 0, color: 'transparent' } 
+                    } 
+                },
                 indicator: { tooltip: { showRule: 'none' } }
             });
         },
@@ -376,11 +375,14 @@
                     if (window.WaveChartEngine && typeof window.WaveChartEngine._dimColor === 'function') areaTopColor = window.WaveChartEngine._dimColor(config.upColor, 0.25); 
 
                     const areaBgColor = (isLine || hideCandle) ? 'transparent' : [{offset: 0, color: areaTopColor}, {offset: 1, color: 'transparent'}];
+                    
+                    // 🚀 CHẶN LUÔN KHI NÓ ĐỔI LOẠI BIỂU ĐỒ NÓ CŨNG KHÔNG HỒI SINH ĐƯỢC OHLC
                     chart.setStyles({
                         candle: {
                             zLevel: 1, type: kcChartType,
                             bar: { upColor: fUp, downColor: fDown, noChangeColor: fNo, upBorderColor: fUpBd, downBorderColor: fDnBd, upWickColor: fUpW, downWickColor: fDnW },
-                            area: { lineSize: 2, lineColor: hideCandle ? 'transparent' : config.upColor, backgroundColor: areaBgColor }
+                            area: { lineSize: 2, lineColor: hideCandle ? 'transparent' : config.upColor, backgroundColor: areaBgColor },
+                            tooltip: { showRule: 'none', custom: function() { return []; }, text: { size: 0, color: 'transparent' } }
                         },
                         yAxis: { type: config.yAxisMode || 'normal' }
                     });
