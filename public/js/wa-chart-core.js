@@ -1,6 +1,6 @@
 // ==========================================
 // 🚀 FILE: public/js/wa-chart-core.js
-// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - FIX UI CHỈ BÁO & OHLC
+// 🛡️ WAVE ALPHA CHART FIREWALL (GLOBAL WRAPPER) - FIX CHUẨN NÚT BẤM
 // ==========================================
 
 (function() {
@@ -53,17 +53,19 @@
                     const cellId = `wa-chart-cell-${i}`;
                     const cell = document.createElement('div');
                     cell.id = cellId; cell.className = `wa-chart-cell ${i === 0 ? 'active-cell' : ''}`;
+                    
+                    // Lắng nghe click để set Active (viền xanh)
                     cell.addEventListener('mousedown', () => this.setActiveChart(cellId));
                     gridWrapper.appendChild(cell);
                     
-                    // 🚀 1. LỚP HTML OHLC TÙY CHỈNH (Cắt bớt 65px bề ngang để KHÔNG ĐÈ TRỤC GIÁ)
+                    // 🚀 1. LỚP HTML OHLC TÙY CHỈNH
                     const uiLayer = document.createElement('div');
                     uiLayer.className = 'wa-custom-ui-layer';
-                    uiLayer.style.cssText = 'position: absolute; top: 0; left: 0; width: calc(100% - 65px); height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; padding: 6px 10px; overflow: hidden;';
+                    uiLayer.style.cssText = 'position: absolute; top: 0; left: 0; width: calc(100% - 65px); height: 100%; pointer-events: none; z-index: 50; display: flex; flex-direction: column; justify-content: space-between; padding: 6px 10px; overflow: hidden;';
                     
                     uiLayer.innerHTML = `
-                        <div style="font-family: Arial, sans-serif; font-size: 11px; font-weight: 600; display: flex; gap: 8px; flex-wrap: nowrap; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); pointer-events: auto; overflow: hidden;">
-                            <span id="wa-toggle-${cellId}" style="cursor:pointer; color:#848e9c; margin-right:4px;" onclick="document.getElementById('wa-ind-legend-${cellId}').style.display = document.getElementById('wa-ind-legend-${cellId}').style.display === 'none' ? 'flex' : 'none'; this.style.transform = document.getElementById('wa-ind-legend-${cellId}').style.display === 'none' ? 'rotate(-90deg)' : 'rotate(0deg)'; display:inline-block; transition:0.2s;">▼</span>
+                        <div style="font-family: Arial, sans-serif; font-size: 11px; font-weight: 600; display: flex; gap: 8px; flex-wrap: nowrap; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); pointer-events: auto; overflow: hidden; align-items: center;">
+                            <div id="wa-toggle-${cellId}" title="Ẩn/Hiện Danh sách Chỉ báo" style="cursor:pointer; color:#848e9c; padding: 2px 6px; margin-left: -4px; border-radius: 4px; display:inline-flex; align-items:center; transition:0.2s;">▼</div>
                             <span id="wa-sym-${cellId}" style="color: #EAECEF; margin-right: 4px; white-space: nowrap;">---</span>
                             <span style="white-space: nowrap;"><span style="color: #848e9c;">O</span> <span id="wa-o-${cellId}" style="color: #848e9c;">---</span></span>
                             <span style="white-space: nowrap;"><span style="color: #848e9c;">H</span> <span id="wa-h-${cellId}" style="color: #0ECB81;">---</span></span>
@@ -75,11 +77,34 @@
                     `;
                     cell.appendChild(uiLayer);
 
-                    // 🚀 2. CONTAINER CHỨA DANH SÁCH CHỈ BÁO XẾP DỌC TRADINGVIEW (Cũng né trục giá)
+                    // 🚀 2. CONTAINER CHỨA DANH SÁCH CHỈ BÁO XẾP DỌC TRADINGVIEW
                     const legendHtml = document.createElement('div');
                     legendHtml.id = `wa-ind-legend-${cellId}`;
-                    legendHtml.style.cssText = 'position: absolute; top: 28px; left: 10px; z-index: 11; display: flex; flex-direction: column; gap: 2px; pointer-events: none; max-width: calc(100% - 65px); overflow: hidden;';
+                    legendHtml.style.cssText = 'position: absolute; top: 28px; left: 10px; z-index: 51; display: flex; flex-direction: column; gap: 2px; pointer-events: none; max-width: calc(100% - 65px); overflow: hidden;';
                     cell.appendChild(legendHtml);
+
+                    // 🛡️ FIX CỐT LÕI: DÙNG JAVASCRIPT GẮN SỰ KIỆN CHỐNG ĂN CẮP CLICK
+                    setTimeout(() => {
+                        const toggleBtn = document.getElementById(`wa-toggle-${cellId}`);
+                        if (toggleBtn) {
+                            toggleBtn.onmouseover = () => { toggleBtn.style.color = '#EAECEF'; toggleBtn.style.background = 'rgba(255,255,255,0.1)'; };
+                            toggleBtn.onmouseout = () => { toggleBtn.style.color = '#848e9c'; toggleBtn.style.background = 'transparent'; };
+                            
+                            // CHẶN CHART ĂN CẮP EVENT MOUSEDOWN
+                            toggleBtn.onmousedown = (e) => e.stopPropagation(); 
+                            toggleBtn.ontouchstart = (e) => e.stopPropagation();
+
+                            toggleBtn.onclick = (e) => {
+                                e.stopPropagation(); // CHẶN CLICK
+                                const leg = document.getElementById(`wa-ind-legend-${cellId}`);
+                                if (leg) {
+                                    const isHidden = leg.style.display === 'none';
+                                    leg.style.display = isHidden ? 'flex' : 'none';
+                                    toggleBtn.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(-90deg)';
+                                }
+                            };
+                        }
+                    }, 50);
 
                     const chart = window.klinecharts.init(cell);
                     if (chart) {
@@ -121,7 +146,6 @@
             } catch(e) { console.error('[WA_Chart] Init Multi Error', e); return false; }
         },
 
-        // 🚀 CỖ MÁY IN VĂN BẢN VÀ CHỈ BÁO LÊN TỪNG Ô ĐỘC LẬP
         updateLegendSpecific: function(cellId, ohlc, dataIndex = -1) {
             if (!ohlc) return;
             const fmt = (v) => v >= 1 ? v.toFixed(2) : v.toFixed(6);
@@ -155,7 +179,6 @@
                 }
             }
 
-            // RENDER THÔNG SỐ CHỈ BÁO REALTIME TỪ CORE
             if (dataIndex >= 0) {
                 const chart = _instances[cellId];
                 if (!chart) return;
@@ -179,7 +202,6 @@
             }
         },
 
-        // 🚀 CỖ MÁY DỰNG DANH SÁCH CHỈ BÁO XẾP DỌC (CẮT CHỮ DÀI CHỐNG ĐÈ TRỤC GIÁ)
         renderHtmlLegend: function(cellId) {
             const chart = _instances[cellId];
             if (!chart) return;
@@ -201,8 +223,9 @@
                 const isVis = ind.visible !== false;
                 const eyeColor = isVis ? '#848e9c' : '#F6465D'; const eyeClass = isVis ? 'fa-eye' : 'fa-eye-slash';
                 
+                // 🛡️ CHẶN TIẾP SỰ KIỆN TẠI TỪNG DÒNG CHỈ BÁO
                 html += `
-                <div class="wa-leg-item" style="display:flex; align-items:center; gap:8px; font-size:11px; font-weight:600; color:#848e9c; pointer-events:auto; padding:2px 6px; border-radius:4px; transition:0.2s; background: transparent; width: 100%;">
+                <div class="wa-leg-item" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" style="display:flex; align-items:center; gap:8px; font-size:11px; font-weight:600; color:#848e9c; pointer-events:auto; padding:2px 6px; border-radius:4px; transition:0.2s; background: transparent; width: 100%;">
                     <span style="color:${isVis?'#00F0FF':'#5e6673'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ind.name} <span style="font-size:9px">(${params})</span></span>
                     <span id="wa-val-${cellId}-${ind.name}" style="color:#EAECEF; font-family:var(--font-num); flex-shrink: 0;"></span>
                     <div class="wa-leg-icons" style="display:none; gap:10px; cursor:pointer; margin-left: auto; flex-shrink: 0;">
@@ -220,7 +243,6 @@
             });
         },
 
-        // 🚀 ĐỒNG BỘ NÚT ẨN VÀ XÓA VÀO BỘ NHỚ LÕI ĐỂ KHÔNG BỊ "CÒN DÍNH TRONG CÀI ĐẶT"
         toggleInd: function(cellId, name, currentVis) { 
             if (window.scActiveIndicators) {
                 let ind = window.scActiveIndicators.find(x => x.name === name && x.cellId === cellId);
@@ -230,7 +252,6 @@
             this.renderHtmlLegend(cellId); 
             if(typeof window.saveIndicatorState === 'function') window.saveIndicatorState();
             
-            // Ép render lại Modal nếu đang bật
             const modal = document.getElementById('sc-indicator-modal');
             if (modal && modal.style.display !== 'none' && typeof window.renderIndicatorList === 'function') {
                 window.renderIndicatorList(document.getElementById('wa-ind-search')?.value);
@@ -243,7 +264,6 @@
         },
         removeInd: function(cellId, name) { 
             if (typeof window.removeIndicatorFromChart === 'function') {
-                // Xóa thẳng bằng hàm Gốc để dọn dẹp sạch cả Bảng Cài Đặt
                 window.removeIndicatorFromChart(name, cellId);
             } else {
                 _instances[cellId].removeIndicator('candle_pane', name); 
